@@ -1,0 +1,121 @@
+{
+  "fechaGeneracion": "2025-12-21T16:38:18.054Z",
+  "totalPedidos": 1,
+  "pedidos": [
+    {
+      "id": 2,
+      "numero": "P250001",
+      "serie": "P",
+      "fechaPedido": "2025-12-11",
+      "fechaEntrega": "2025-12-13",
+      "estado": "Pendiente",
+      "observaciones": null,
+      "cliente": {
+        "id": 808,
+        "nombre": "MACUCOS SL",
+        "dni_cif": "B05520911",
+        "email": "masmacu@gmail.com",
+        "telefono": "968881296"
+      },
+      "comercial": {
+        "id": 2,
+        "nombre": " Jesús Francisco Ros Medina",
+        "email": "rosmedi@yahoo.es"
+      },
+      "formaPago": {
+        "id": 1,
+        "nombre": "Contado",
+        "dias": 0
+      },
+      "tipoPedido": {
+        "id": 2,
+        "tipo": "Transfer Hefame"
+      },
+      "cooperativa": {
+        "numero": "10121509",
+        "nombre": "HEFAME"
+      },
+      "totales": {
+        "baseImponible": 51.1,
+        "totalDescuento": 2.69,
+        "totalIva": 10.74,
+        "totalPedido": 61.84
+      },
+      "lineas": {
+        "cantidad": 7,
+        "items": [
+          {
+            "id": 4,
+            "articuloId": 14,
+            "articulo": "Ialozon Clean Spray 100 Ml",
+            "cantidad": 1,
+            "precio": 10.41,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 9.89
+          },
+          {
+            "id": 5,
+            "articuloId": 15,
+            "articulo": "Ialozon Enjuague Bucal Azul 300 Ml",
+            "cantidad": 1,
+            "precio": 7.46,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 7.09
+          },
+          {
+            "id": 6,
+            "articuloId": 16,
+            "articulo": "Ialozon Enjuague Bucal Rosa 300 Ml",
+            "cantidad": 1,
+            "precio": 7.46,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 7.09
+          },
+          {
+            "id": 7,
+            "articuloId": 17,
+            "articulo": "Ialozon Enjuague Bucal Superhidradante 300 Ml",
+            "cantidad": 1,
+            "precio": 9.14,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 8.68
+          },
+          {
+            "id": 8,
+            "articuloId": 18,
+            "articulo": "Ialozon Gel Oral 15 Ml",
+            "cantidad": 1,
+            "precio": 10.99,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 10.44
+          },
+          {
+            "id": 9,
+            "articuloId": 19,
+            "articulo": "Ialozon Pasta Dentrifical Azul 100 Ml",
+            "cantidad": 1,
+            "precio": 3.99,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 3.79
+          },
+          {
+            "id": 10,
+            "articuloId": 20,
+            "articulo": "Ialozon Pasta Dentrifical Rosa 100 Ml",
+            "cantidad": 1,
+            "precio": 4.34,
+            "iva": 21,
+            "descuento": 5,
+            "subtotal": 4.12
+          }
+        ]
+      }
+    }
+  ]
+}

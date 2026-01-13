@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css" rel="stylesheet">
+    <style>
+        .fc {
+            background: #fff;
+            border-radius: 0.75rem;
+            padding: 1rem;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .fc-toolbar-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #0b7a3d;
+        }
+        .fc-button-primary {
+            background-color: #0b7a3d;
+            border-color: #0b7a3d;
+            color: #fff;
+        }
+        .fc-button-primary:hover {
+            background-color: #0a6b35;
+            border-color: #0a6b35;
+            color: #fff;
+        }
+        .fc-button-primary:not(:disabled).fc-button-active {
+            background-color: #0a6b35;
+            border-color: #0a6b35;
+            color: #fff;
+        }
+        .fc-button-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        /* Botones de navegación prev/next personalizados */
+        .fc-myPrevButton-button,
+        .fc-myNextButton-button {
+            background-color: #0b7a3d !important;
+            border-color: #0b7a3d !important;
+            color: #fff !important;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 1rem !important;
+            border-radius: 0.375rem !important;
+            min-width: 40px !important;
+            min-height: 38px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .fc-myPrevButton-button:hover,
+        .fc-myNextButton-button:hover {
+            background-color: #0a6b35 !important;
+            border-color: #0a6b35 !important;
+            color: #fff !important;
+        }
+        .fc-myPrevButton-button:focus,
+        .fc-myNextButton-button:focus {
+            box-shadow: 0 0 0 0.2rem rgba(11, 122, 61, 0.25) !important;
+        }
+        /* Asegurar que los iconos de Font Awesome se vean */
+        .fc-myPrevButton-button i,
+        .fc-myNextButton-button i {
+            font-size: 1rem !important;
+            line-height: 1 !important;
+            display: inline-block !important;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        /* También estilos para botones prev/next estándar por si acaso */
+        .fc-prev-button,
+        .fc-next-button {
+            background-color: #0b7a3d !important;
+            border-color: #0b7a3d !important;
+            color: #fff !important;
+            padding: 0.5rem 0.75rem !important;
+            font-size: 1rem !important;
+            border-radius: 0.375rem !important;
+            min-width: 40px !important;
+            min-height: 38px !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        .fc-prev-button:hover,
+        .fc-next-button:hover {
+            background-color: #0a6b35 !important;
+            border-color: #0a6b35 !important;
+            color: #fff !important;
+        }
+        /* Botón Today */
+        .fc-today-button {
+            background-color: #6c757d !important;
+            border-color: #6c757d !important;
+            color: #fff !important;
+            padding: 0.5rem 1rem !important;
+            font-size: 0.875rem !important;
+            border-radius: 0.375rem !important;
+            font-weight: 500 !important;
+        }
+        .fc-today-button:hover {
+            background-color: #5a6268 !important;
+            border-color: #545b62 !important;
+            color: #fff !important;
+        }
+        .fc-today-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        /* Toolbar del calendario */
+        .fc-toolbar {
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .fc-toolbar-chunk {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .fc-event {
+            cursor: pointer;
+            border-radius: 4px;
+            padding: 2px 4px;
+        }
+        .fc-event:hover {
+            opacity: 0.8;
+        }
+        .color-legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background: #f8f9fa;
+            border-radius: 0.5rem;
+        }
+        .color-legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div>
+                <h1 class="mb-1 fw-bold text-primary"><i class="fas fa-calendar-alt me-2 text-primary"></i>Agenda</h1>
+                <p class="text-muted mb-0">Visualiza tus citas en formato calendario</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/dashboard/agenda" class="btn btn-outline-primary">
+                    <i class="fas fa-list me-1"></i>Vista Lista
+                </a>
+                <a href="/dashboard/agenda/nuevo" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Nueva Cita
+                </a>
+            </div>
+        </div>
+
+        <% if (error) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+
+        <!-- Leyenda de colores -->
+        <div class="color-legend">
+            <strong>Leyenda de Comerciales:</strong>
+            <% 
+            const comercialesUnicos = {};
+            visitas.forEach(visita => {
+                if (visita.comercialId && !comercialesUnicos[visita.comercialId]) {
+                    comercialesUnicos[visita.comercialId] = {
+                        nombre: visita.comercial,
+                        color: visita.color
+                    };
+                }
+            });
+            %>
+            <% Object.values(comercialesUnicos).forEach(comercial => { %>
+                <div class="color-legend-item">
+                    <span class="color-legend-color" style="background-color: <%= comercial.color %>;"></span>
+                    <span><%= comercial.nombre %></span>
+                </div>
+            <% }); %>
+        </div>
+
+        <!-- Calendario -->
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <div id="calendar"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/locales/es.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const calendarEl = document.getElementById('calendar');
+            
+            // Preparar eventos para el calendario
+            // Asegurar que las fechas se formateen correctamente para la zona horaria de Madrid
+            const events = [
+                <% 
+                let eventosGenerados = 0;
+                visitas.forEach((visita, index) => { 
+                    // Si no tiene fechaHoraCompleta, intentar construirla desde fecha y hora
+                    let fechaParaCalendario = visita.fechaHoraCompleta;
+                    if (!fechaParaCalendario && visita.fechaFormateada) {
+                        const hora = visita.horaFormateada || visita.hora || '09:00';
+                        const horaFormateada = hora.includes(':') ? (hora.split(':').length === 2 ? hora + ':00' : hora) : hora + ':00';
+                        fechaParaCalendario = visita.fechaFormateada + 'T' + horaFormateada;
+                    }
+                    
+                    // Si aún no tiene fecha, intentar construirla desde visita.fecha
+                    if (!fechaParaCalendario && visita.fecha) {
+                        try {
+                            const fechaObj = new Date(visita.fecha);
+                            if (!isNaN(fechaObj.getTime())) {
+                                const year = fechaObj.getFullYear();
+                                const month = String(fechaObj.getMonth() + 1).padStart(2, '0');
+                                const day = String(fechaObj.getDate()).padStart(2, '0');
+                                const hora = visita.horaFormateada || visita.hora || '09:00';
+                                const horaFormateada = hora.includes(':') ? (hora.split(':').length === 2 ? hora + ':00' : hora) : hora + ':00';
+                                fechaParaCalendario = year + '-' + month + '-' + day + 'T' + horaFormateada;
+                            }
+                        } catch(e) {
+                            // Si falla, usar fecha de hoy
+                            const hoy = new Date();
+                            const year = hoy.getFullYear();
+                            const month = String(hoy.getMonth() + 1).padStart(2, '0');
+                            const day = String(hoy.getDate()).padStart(2, '0');
+                            const hora = visita.horaFormateada || visita.hora || '09:00';
+                            const horaFormateada = hora.includes(':') ? (hora.split(':').length === 2 ? hora + ':00' : hora) : hora + ':00';
+                            fechaParaCalendario = year + '-' + month + '-' + day + 'T' + horaFormateada;
+                        }
+                    }
+                    
+                    // Solo agregar si tiene fecha válida
+                    if (fechaParaCalendario) {
+                        eventosGenerados++;
+                %>
+                {
+                    id: '<%= visita.id %>',
+                    <% 
+                    let tituloEvento = (visita.emoji || "📅") + " ";
+                    if (visita.horaFormateada) {
+                        tituloEvento += visita.horaFormateada + " - ";
+                    }
+                    tituloEvento += (visita.cliente || visita.centroSalud || "Visita") + " - " + (visita.tipoVisita || visita.tipo || "General");
+                    %>
+                    title: '<%= tituloEvento.replace(/'/g, "\\'") %>',
+                    start: '<%= fechaParaCalendario %>',
+                    backgroundColor: '<%= visita.color || "#0b7a3d" %>',
+                    borderColor: '<%= visita.color || "#0b7a3d" %>',
+                    textColor: '#ffffff',
+                    extendedProps: {
+                        cliente: '<%= (visita.cliente || visita.centroSalud || "").replace(/'/g, "\\'") %>',
+                        comercial: '<%= (visita.comercial || "").replace(/'/g, "\\'") %>',
+                        tipoVisita: '<%= (visita.tipoVisita || "").replace(/'/g, "\\'") %>',
+                        tipo: '<%= (visita.tipo || "").replace(/'/g, "\\'") %>',
+                        estado: '<%= (visita.estado || "").replace(/'/g, "\\'") %>',
+                        observaciones: '<%= (visita.observaciones || "").replace(/'/g, "\\'").replace(/\n/g, " ") %>',
+                        direccion: '<%= (visita.direccion || "").replace(/'/g, "\\'") %>',
+                        telefono: '<%= (visita.telefono || "").replace(/'/g, "\\'") %>',
+                        emoji: '<%= visita.emoji || "📅" %>',
+                        hora: '<%= visita.horaFormateada || visita.hora || "" %>'
+                    }
+                }<%= index < visitas.length - 1 ? ',' : '' %>
+                <% 
+                    }
+                }); 
+                %>
+            ];
+            
+            console.log('📊 [AGENDA] Total visitas recibidas:', <%= visitas.length %>);
+            console.log('📊 [AGENDA] Eventos generados para calendario:', <%= eventosGenerados %>);
+
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                locale: 'es',
+                // Configurar zona horaria de Madrid/Europa
+                timeZone: 'Europe/Madrid',
+                // Crear botones personalizados con iconos de Font Awesome
+                customButtons: {
+                    myPrevButton: {
+                        html: '<i class="fas fa-chevron-left"></i>',
+                        click: function() {
+                            calendar.prev();
+                        }
+                    },
+                    myNextButton: {
+                        html: '<i class="fas fa-chevron-right"></i>',
+                        click: function() {
+                            calendar.next();
+                        }
+                    }
+                },
+                headerToolbar: {
+                    left: 'myPrevButton,myNextButton today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
+                },
+                // Personalizar textos de botones
+                buttonText: {
+                    today: 'Hoy',
+                    month: 'Mes',
+                    week: 'Semana',
+                    day: 'Día',
+                    list: 'Lista'
+                },
+                // Configuración de hora y formato
+                slotMinTime: '08:00:00',
+                slotMaxTime: '20:00:00',
+                slotDuration: '00:30:00',
+                slotLabelInterval: '01:00:00',
+                // Formato de hora
+                slotLabelFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+                // Formato de eventos con hora
+                eventTimeFormat: {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                },
+                // Formato de título de día
+                dayHeaderFormat: {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long'
+                },
+                events: events,
+                eventClick: function(info) {
+                    // Redirigir a la página de detalle de la visita
+                    window.location.href = '/dashboard/agenda/' + info.event.id;
+                },
+                eventMouseEnter: function(info) {
+                    info.el.style.cursor = 'pointer';
+                },
+                // Mostrar hora en los eventos
+                eventDisplay: 'block',
+                // Configuración para mostrar horas en vista de mes
+                displayEventTime: true,
+                displayEventEnd: false,
+                // Configuración para vistas con tiempo
+                allDaySlot: false,
+                dayMaxEvents: true,
+                moreLinkClick: 'popover',
+                height: 'auto',
+                // Formato de hora en tooltip
+                eventDidMount: function(info) {
+                    // Agregar tooltip con información de hora
+                    const hora = info.event.extendedProps.hora;
+                    if (hora) {
+                        info.el.setAttribute('title', 
+                            (info.event.extendedProps.cliente || info.event.extendedProps.centroSalud || 'Visita') + 
+                            ' - ' + hora
+                        );
+                    }
+                }
+            });
+
+            calendar.render();
+            
+            // Asegurar que los iconos de Font Awesome se rendericen correctamente
+            // Esperar a que el calendario se renderice completamente
+            setTimeout(function() {
+                const prevButton = document.querySelector('.fc-myPrevButton-button');
+                const nextButton = document.querySelector('.fc-myNextButton-button');
+                
+                if (prevButton && !prevButton.querySelector('i')) {
+                    prevButton.innerHTML = '<i class="fas fa-chevron-left"></i>';
+                }
+                if (nextButton && !nextButton.querySelector('i')) {
+                    nextButton.innerHTML = '<i class="fas fa-chevron-right"></i>';
+                }
+            }, 100);
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

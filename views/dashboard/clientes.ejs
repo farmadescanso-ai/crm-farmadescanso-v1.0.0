@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        /* Eliminar subrayado de enlaces en la vista */
+        .nav-link,
+        .nav-link:hover,
+        .nav-link:visited,
+        .nav-link:active,
+        .nav-link:focus,
+        .dropdown-item,
+        .dropdown-item:hover,
+        .dropdown-item:visited,
+        .dropdown-item:active,
+        .dropdown-item:focus {
+            text-decoration: none !important;
+        }
+        
+        a.nav-link,
+        a.dropdown-item {
+            text-decoration: none !important;
+        }
+        .table-container {
+            position: relative;
+            max-height: 75vh;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            -webkit-overflow-scrolling: touch;
+            /* Asegurar que el scroll horizontal sea visible */
+            scrollbar-width: thin;
+            scrollbar-color: #198754 #f1f1f1;
+            /* Asegurar que sticky funcione dentro de este contenedor */
+            contain: layout style;
+        }
+        
+        /* Estilos para scrollbar en WebKit (Chrome, Safari, Edge) */
+        .table-container::-webkit-scrollbar {
+            height: 12px;
+            width: 12px;
+        }
+        
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 6px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb {
+            background: #198754;
+            border-radius: 6px;
+        }
+        
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #156f43;
+        }
+        
+        .table-responsive {
+            overflow-x: visible;
+            width: 100%;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .table {
+            width: 100%;
+            margin-bottom: 0;
+            min-width: 2000px; /* Ancho mínimo aumentado para todas las columnas */
+            table-layout: auto;
+        }
+        
+        .table th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid #dee2e6;
+            padding: 0.75rem 0.5rem;
+            font-size: 0.875rem;
+            white-space: nowrap;
+            background-color: #198754 !important; /* Fondo sólido para que se vea al hacer scroll */
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1); /* Sombra sutil para separar del contenido */
+        }
+        
+        .table-dark th {
+            background-color: #198754 !important;
+            color: #fff !important;
+        }
+        
+        /* Asegurar que el thead completo sea sticky dentro del contenedor con scroll */
+        .table thead {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #198754;
+        }
+        
+        /* Asegurar que cada th mantenga su posición sticky */
+        .table thead th {
+            position: sticky;
+            top: 0;
+        }
+        
+        /* Estilos para encabezados ordenables */
+        .table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 1.5rem;
+        }
+        
+        .table th.sortable:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .table-dark th.sortable:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .sort-icon {
+            position: absolute;
+            right: 0.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        
+        .table th.sortable:hover .sort-icon {
+            opacity: 1;
+        }
+        
+        .table th.sortable.sort-asc .sort-icon::before {
+            content: '↑';
+            opacity: 1;
+        }
+        
+        .table th.sortable.sort-desc .sort-icon::before {
+            content: '↓';
+            opacity: 1;
+        }
+        
+        .table th.sortable .sort-icon::before {
+            content: '↑↓';
+            opacity: 0.6;
+        }
+        
+        /* Estilos para table-dark - fondo verde y texto claro */
+        .table-dark th {
+            background-color: #198754 !important;
+            color: #fff !important;
+            border-bottom: 2px solid #156f43;
+        }
+        
+        .table td {
+            white-space: nowrap;
+            padding: 0.5rem;
+            font-size: 0.875rem;
+            vertical-align: top;
+        }
+        
+        /* Estilo para columna Nombre/Razón Social - ancho ajustado para dos líneas */
+        .col-nombre-razon-social {
+            max-width: 400px !important;
+            min-width: 300px;
+            width: 400px !important;
+            white-space: normal !important;
+            overflow-wrap: break-word; /* Cortar palabras largas si es necesario, pero preferir espacios */
+            word-break: normal; /* Respetar espacios cuando sea posible */
+            line-height: 1.5;
+            padding: 0.75rem 0.5rem;
+            vertical-align: top;
+            overflow: hidden; /* Ocultar el desbordamiento */
+            box-sizing: border-box;
+        }
+        
+        .table-dark .col-nombre-razon-social {
+            white-space: normal !important;
+        }
+        
+        /* Estilo para columna Dirección - ancho ajustado para múltiples líneas */
+        .col-direccion {
+            max-width: 350px !important;
+            min-width: 250px;
+            width: 350px !important;
+            white-space: normal !important;
+            overflow-wrap: break-word;
+            word-break: normal;
+            line-height: 1.5;
+            padding: 0.75rem 0.5rem;
+            vertical-align: top;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        .table-dark .col-direccion {
+            white-space: normal !important;
+        }
+        
+        /* Estilo para columna Población - ancho ajustado para dos líneas */
+        .col-poblacion {
+            max-width: 200px !important;
+            min-width: 150px;
+            width: 200px !important;
+            white-space: normal !important;
+            overflow-wrap: break-word;
+            word-break: normal;
+            line-height: 1.5;
+            padding: 0.75rem 0.5rem;
+            vertical-align: top;
+            overflow: hidden;
+            box-sizing: border-box;
+        }
+        
+        .table-dark .col-poblacion {
+            white-space: normal !important;
+        }
+        
+        /* Permitir que las filas crezcan en altura cuando el contenido es largo */
+        .table tbody tr {
+            height: auto !important;
+        }
+        
+        /* Todas las celdas alineadas arriba */
+        .table tbody tr td {
+            vertical-align: top !important;
+        }
+        
+        /* Forzar que el texto se ajuste correctamente sin desbordarse */
+        .table tbody tr td.col-nombre-razon-social {
+            display: table-cell;
+            max-width: 400px !important;
+            width: 400px !important;
+            overflow: hidden !important;
+        }
+        
+        .table tbody tr td.col-direccion {
+            display: table-cell;
+            max-width: 350px !important;
+            width: 350px !important;
+            overflow: hidden !important;
+        }
+        
+        .table tbody tr td.col-poblacion {
+            display: table-cell;
+            max-width: 200px !important;
+            width: 200px !important;
+            overflow: hidden !important;
+        }
+        
+        /* Asegurar que la tabla respete el ancho de las columnas */
+        .table {
+            table-layout: auto; /* Mantener auto para flexibilidad */
+        }
+        
+        /* Forzar que las columnas no se expandan más allá de su ancho definido */
+        .table th.col-nombre-razon-social,
+        .table td.col-nombre-razon-social {
+            max-width: 400px !important;
+            width: 400px !important;
+        }
+        
+        .table th.col-direccion,
+        .table td.col-direccion {
+            max-width: 350px !important;
+            width: 350px !important;
+        }
+        
+        .table th.col-poblacion,
+        .table td.col-poblacion {
+            max-width: 200px !important;
+            width: 200px !important;
+        }
+        
+        .search-box {
+            position: sticky;
+            top: 0;
+            z-index: 20;
+            background: white;
+            padding: 1rem;
+            border-bottom: 1px solid #dee2e6;
+            margin-bottom: 0;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Sombra para separar del contenido */
+        }
+        
+        .scroll-to-top {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--farmadescaso-primary);
+            color: white;
+            border: none;
+            cursor: pointer;
+            display: none;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s;
+            opacity: 0;
+            visibility: hidden;
+        }
+        
+        .scroll-to-top-container {
+            position: relative;
+        }
+        
+        .scroll-to-top:hover {
+            background-color: var(--farmadescaso-primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.4);
+        }
+        
+        .scroll-to-top.show {
+            display: block;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .client-row:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .highlight {
+            background-color: yellow;
+            font-weight: bold;
+        }
+        
+        .stats-bar {
+            background-color: #f8f9fa;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+        }
+        
+        /* Responsive - Tablet */
+        @media (max-width: 991.98px) {
+            .table {
+                min-width: 2000px; /* Mantener ancho mínimo para scroll horizontal */
+            }
+            
+            .table th,
+            .table td {
+                padding: 0.5rem 0.4rem;
+                font-size: 0.8rem;
+            }
+            
+            .stats-bar {
+                padding: 0.75rem;
+            }
+            
+            .stats-bar .row > div {
+                margin-bottom: 0.5rem;
+            }
+        }
+        
+        /* Responsive - Mobile */
+        @media (max-width: 768px) {
+            .table-container {
+                max-height: 70vh;
+                overflow-x: auto; /* Asegurar scroll horizontal en móvil */
+                overflow-y: auto;
+            }
+            
+            .table {
+                min-width: 2000px; /* Mantener ancho mínimo para scroll horizontal */
+            }
+            
+            .table th,
+            .table td {
+                padding: 0.4rem 0.3rem;
+                font-size: 0.75rem;
+            }
+            
+            .search-box {
+                padding: 0.75rem;
+            }
+            
+            .stats-bar {
+                padding: 0.5rem;
+                font-size: 0.875rem;
+            }
+            
+            .scroll-to-top {
+                width: 45px;
+                height: 45px;
+                bottom: 15px;
+                right: 15px;
+            }
+            
+            .btn-sm {
+                padding: 0.25rem 0.4rem;
+                font-size: 0.75rem;
+            }
+        }
+        
+        /* Responsive - Small Mobile */
+        @media (max-width: 576px) {
+            .table-container {
+                overflow-x: auto; /* Asegurar scroll horizontal en móvil pequeño */
+                overflow-y: auto;
+            }
+            
+            .table {
+                min-width: 2000px; /* Mantener ancho mínimo para scroll horizontal */
+            }
+            
+            .table th,
+            .table td {
+                padding: 0.3rem 0.25rem;
+                font-size: 0.7rem;
+            }
+            
+            .container-fluid {
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <!-- Navigation -->
+    <%- include('../partials/navbar-dashboard') %>
+
+    <% 
+    // Definir variables globales al inicio del template para que estén disponibles en todo el scope
+    const comercialIdParaFiltro = typeof comercialIdAutenticado !== 'undefined' && comercialIdAutenticado 
+        ? comercialIdAutenticado 
+        : (user && (user.id || user.Id) ? (user.id || user.Id) : '');
+    
+    const esUsuarioAdmin = (typeof isAdmin !== 'undefined' && isAdmin === true) || 
+                          (typeof esAdmin !== 'undefined' && esAdmin === true);
+    
+    const idComercialFinal = comercialIdParaFiltro || (user && (user.id || user.Id)) || '';
+    %>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="mb-0 text-success"><i class="fas fa-users me-2 text-success"></i>Clientes</h1>
+                    <div class="d-flex gap-2">
+                        <a href="/dashboard" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-1"></i>Volver al Dashboard
+                        </a>
+                        <a href="/dashboard/clientes/nuevo" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Nuevo Cliente
+                        </a>
+                        <a href="/dashboard/clientes/duplicados" class="btn btn-warning">
+                            <i class="fas fa-copy me-1"></i>Ver Duplicados
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- Stats Bar -->
+                <div class="stats-bar">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <strong>Total de Clientes:</strong> <span id="totalClientes"><%= typeof totalClientes !== 'undefined' && totalClientes !== null ? totalClientes : (Array.isArray(clientes) ? clientes.length : 0) %></span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Clientes Mostrados:</strong> <span id="clientesMostrados"><%= typeof clientes !== 'undefined' && Array.isArray(clientes) ? clientes.length : 0 %></span>
+                            <% if (typeof filters !== 'undefined' && filters && (filters.tipoCliente || filters.provincia || filters.comercial || filters.conVentas)) { %>
+                            <span class="badge bg-info ms-2">Filtrado</span>
+                            <% } %>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Búsqueda:</strong> <span id="busquedaActiva">Inactiva</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Filtros -->
+                <div class="search-box mb-3">
+                    <form method="GET" action="/dashboard/clientes" id="filtersForm">
+                        <div class="row g-2">
+                            <div class="col-md-3">
+                                <label class="form-label small">Tipo de Cliente</label>
+                                <select name="tipoCliente" class="form-select form-select-sm" id="filterTipoCliente">
+                                    <option value="">Todos</option>
+                                    <% if (typeof tiposClientes !== 'undefined' && tiposClientes && Array.isArray(tiposClientes)) { %>
+                                        <% tiposClientes.forEach(function(tipo) { %>
+                                            <% 
+                                            const tipoId = tipo.id || tipo.Id;
+                                            const filterTipoId = typeof filters !== 'undefined' && filters && filters.tipoCliente ? String(filters.tipoCliente) : '';
+                                            const isSelected = filterTipoId && String(tipoId) === filterTipoId;
+                                            %>
+                                            <option value="<%= tipoId %>" <%= isSelected ? 'selected' : '' %>>
+                                                <%= tipo.Tipo || tipo.tipo || 'Sin nombre' %>
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Provincia</label>
+                                <select name="provincia" class="form-select form-select-sm" id="filterProvincia">
+                                    <option value="">Todas</option>
+                                    <% if (typeof provincias !== 'undefined' && provincias && Array.isArray(provincias)) { %>
+                                        <% provincias.forEach(function(prov) { %>
+                                            <% 
+                                            const provId = prov.id || prov.Id;
+                                            const filterProvId = typeof filters !== 'undefined' && filters && filters.provincia ? String(filters.provincia) : '';
+                                            const isSelected = filterProvId && String(provId) === filterProvId;
+                                            %>
+                                            <option value="<%= provId %>" <%= isSelected ? 'selected' : '' %>>
+                                                <%= prov.Nombre || prov.nombre || 'Sin nombre' %>
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Comercial</label>
+                                <% 
+                                // Las variables comercialIdParaFiltro, esUsuarioAdmin e idComercialFinal 
+                                // ya están definidas al inicio del template
+                                %>
+                                <% if (esUsuarioAdmin) { %>
+                                <!-- Admin: puede seleccionar cualquier comercial -->
+                                <select name="comercial" class="form-select form-select-sm" id="filterComercial">
+                                    <option value="">Todos</option>
+                                    <% if (typeof comerciales !== 'undefined' && comerciales && Array.isArray(comerciales)) { %>
+                                        <% comerciales.forEach(function(com) { %>
+                                            <% 
+                                            const comId = com.id || com.Id;
+                                            const filterComId = typeof filters !== 'undefined' && filters && filters.comercial ? String(filters.comercial) : '';
+                                            const isSelected = filterComId && String(comId) === filterComId;
+                                            %>
+                                            <option value="<%= comId %>" <%= isSelected ? 'selected' : '' %>>
+                                                <%= com.Nombre || com.nombre || 'Sin nombre' %>
+                                            </option>
+                                        <% }); %>
+                                    <% } %>
+                                </select>
+                                <% } else { %>
+                                <!-- No admin: mostrar comercial fijo y deshabilitado -->
+                                <% 
+                                const comercialAutenticado = typeof comerciales !== 'undefined' && comerciales && Array.isArray(comerciales) && comercialIdParaFiltro 
+                                    ? comerciales.find(c => {
+                                        const cId = c.id || c.Id;
+                                        return String(cId) === String(comercialIdParaFiltro);
+                                    })
+                                    : null;
+                                const nombreComercial = comercialAutenticado 
+                                    ? (comercialAutenticado.Nombre || comercialAutenticado.nombre || 'Sin nombre') 
+                                    : (user && (user.nombre || user.Nombre) ? (user.nombre || user.Nombre) : 'Sin asignar');
+                                %>
+                                <input type="hidden" name="comercial" value="<%= idComercialFinal %>" id="filterComercialHidden" required>
+                                <input type="text" 
+                                       class="form-control form-control-sm" 
+                                       value="<%= nombreComercial %>" 
+                                       disabled 
+                                       readonly 
+                                       style="background-color: #e9ecef; cursor: not-allowed;"
+                                       id="filterComercialDisabled"
+                                       tabindex="-1"
+                                       aria-label="Comercial asignado (no modificable)">
+                                <small class="text-muted d-block mt-1">
+                                    <i class="fas fa-lock me-1"></i>Solo puedes ver tus propios clientes
+                                </small>
+                                <% } %>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Ventas</label>
+                                <select name="conVentas" class="form-select form-select-sm" id="filterVentas">
+                                    <option value="">Todos</option>
+                                    <% 
+                                    const filterVentas = typeof filters !== 'undefined' && filters && filters.conVentas !== undefined ? String(filters.conVentas) : '';
+                                    const hasVentas = filterVentas === 'true' || filterVentas === '1';
+                                    const noVentas = filterVentas === 'false' || filterVentas === '0';
+                                    %>
+                                    <option value="true" <%= hasVentas ? 'selected' : '' %>>Con ventas</option>
+                                    <option value="false" <%= noVentas ? 'selected' : '' %>>Sin ventas</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row g-2 mt-2">
+                            <div class="col-md-12">
+                                <button type="submit" class="btn btn-success btn-sm me-2">
+                                    <i class="fas fa-filter"></i> Aplicar Filtros
+                                </button>
+                                <% 
+                                // Si no es admin, el botón de limpiar filtros debe mantener el filtro de comercial
+                                // idComercialFinal ya está definido al inicio del template
+                                const urlLimpiarFiltros = esUsuarioAdmin 
+                                    ? '/dashboard/clientes' 
+                                    : `/dashboard/clientes?comercial=${idComercialFinal}`;
+                                %>
+                                <a href="<%= urlLimpiarFiltros %>" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-times"></i> Limpiar Filtros
+                                </a>
+                                <% if (typeof filters !== 'undefined' && filters && (filters.tipoCliente || filters.provincia || filters.comercial || filters.conVentas)) { %>
+                                <span class="ms-2 text-muted small">
+                                    <i class="fas fa-info-circle"></i> Filtros activos
+                                </span>
+                                <% } %>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Search Box -->
+                <div class="search-box">
+                    <div class="row g-2">
+                        <div class="col-md-10">
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                <input type="text" class="form-control" id="searchInput" placeholder="Búsqueda inteligente: busca en todos los campos automáticamente...">
+                                <span class="input-group-text" id="searchInfo" title="Búsqueda inteligente activa - Busca en todos los campos">
+                                    <i class="fas fa-brain text-primary"></i>
+                                </span>
+                            </div>
+                            <small class="text-muted mt-1 d-block">
+                                <i class="fas fa-info-circle"></i> Búsqueda inteligente: encuentra clientes por nombre, DNI, email, teléfono, dirección, población, provincia, tipo de cliente, cuenta contable, IBAN, y más...
+                            </small>
+                        </div>
+                        <div class="col-md-2">
+                            <button class="btn btn-outline-danger w-100" type="button" id="clearSearch" title="Limpiar búsqueda">
+                                <i class="fas fa-times"></i> Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Error Alert -->
+                <% if (error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <%= error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <!-- Table Container -->
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover table-striped" id="clientesTable">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th class="text-center">Acciones</th>
+                                    <th class="sortable" data-column="tipoCliente">Tipo Cliente <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="dniCif">DNI/CIF <span class="sort-icon"></span></th>
+                                    <th class="sortable col-nombre-razon-social" data-column="nombreRazonSocial">Nombre/Razón Social <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="nombreComercial">Nombre Comercial <span class="sort-icon"></span></th>
+                                    <th class="sortable col-direccion" data-column="direccion">Dirección <span class="sort-icon"></span></th>
+                                    <th class="sortable col-poblacion" data-column="poblacion">Población <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="provincia">Provincia <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="codigoPostal">Código Postal <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="movil">Móvil <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="telefono">Teléfono <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="email">Email <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="codPais">Código País <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="pais">País <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="idioma">Idioma <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="moneda">Moneda <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="contacto">Contacto <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="tarifa">Tarifa <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="formaPago">Forma de Pago <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="dto">Dto (%) <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="cuentaContable">Cuenta Contable <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="re">RE (%) <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="banco">Banco <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="swift">Swift <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="iban">IBAN <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="cooperativas">Cooperativas <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="numeroFarmacia">Nº Farmacia <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="comercial">Comercial <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="estado">Estado <span class="sort-icon"></span></th>
+                                </tr>
+                            </thead>
+                            <tbody id="clientesTableBody">
+                                <% if (typeof clientes !== 'undefined' && clientes && Array.isArray(clientes)) { %>
+                                    <% clientes.forEach(function(cliente, index) { 
+                                        try {
+                                            const clienteJSON = JSON.stringify(cliente);
+                                            const clienteEncoded = encodeURIComponent(clienteJSON);
+                                    %>
+                                    <tr class="client-row" data-cliente-encoded="<%= clienteEncoded %>">
+                                        <% 
+                                        // Usar datos optimizados del JOIN (más rápido que buscar en arrays)
+                                        // Estos campos ya deberían estar normalizados por normalizeClienteUTF8
+                                        const comercialNombre = cliente.ComercialNombre || '-';
+                                        const provinciaNombre = cliente.ProvinciaNombre || '-';
+                                        const tipoClienteNombre = cliente.TipoClienteNombre || cliente.TipoCliente || '-';
+                                    
+                                    // Obtener nombre del idioma
+                                    let idiomaNombre = cliente.Idioma || '-';
+                                    if (cliente.Id_Idioma && typeof idiomas !== 'undefined' && idiomas && idiomas.length > 0) {
+                                        const idioma = idiomas.find(i => i.id === cliente.Id_Idioma);
+                                        idiomaNombre = idioma ? idioma.Idioma : cliente.Idioma || '-';
+                                    }
+                                    
+                                    // Obtener nombre de la moneda
+                                    let monedaNombre = cliente.Moneda || '-';
+                                    if (cliente.Id_Moneda && typeof monedas !== 'undefined' && monedas && monedas.length > 0) {
+                                        const moneda = monedas.find(m => m.id === cliente.Id_Moneda);
+                                        monedaNombre = moneda ? moneda.Moneda : cliente.Moneda || '-';
+                                    }
+                                    
+                                    // Obtener nombre de la forma de pago
+                                    let formaPagoNombre = '-';
+                                    if (cliente.Id_FormaPago && typeof formasPago !== 'undefined' && formasPago && formasPago.length > 0) {
+                                        const formaPago = formasPago.find(f => f.id === cliente.Id_FormaPago);
+                                        formaPagoNombre = formaPago ? formaPago.Nombre : cliente.Id_FormaPago;
+                                    }
+                                    
+                                    // Estado activo/inactivo (usar OK_KO)
+                                    // OK_KO puede ser 1/0 (booleano) o 'OK'/'KO' (legacy)
+                                    // Nota: MySQL puede devolver números como strings, por lo que debemos verificar ambos casos
+                                    const okKo = cliente.OK_KO;
+                                    let estadoActivo = false;
+                                    
+                                    if (okKo === null || okKo === undefined) {
+                                      // Por defecto activo si no está definido
+                                      estadoActivo = true;
+                                    } else if (typeof okKo === 'string') {
+                                      const okKoUpper = okKo.toUpperCase().trim();
+                                      // Verificar si es 'OK' o '1' (puede venir como string desde MySQL)
+                                      estadoActivo = (okKoUpper === 'OK' || okKoUpper === '1' || okKoUpper === 'TRUE');
+                                    } else if (typeof okKo === 'number') {
+                                      estadoActivo = (okKo === 1);
+                                    } else if (typeof okKo === 'boolean') {
+                                      estadoActivo = okKo;
+                                    } else {
+                                      // Por defecto activo si no está definido
+                                      estadoActivo = true;
+                                    }
+                                    %>
+                                    <td class="text-center">
+                                        <a class="btn btn-sm btn-outline-primary me-1 view-client" title="Ver" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" role="button">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-warning me-1 edit-client" title="Editar" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/editar" role="button">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <button class="btn btn-sm <%= estadoActivo ? 'btn-success' : 'btn-danger' %> toggle-estado" title="<%= estadoActivo ? 'Desactivar' : 'Activar' %>" data-id="<%= cliente.Id || cliente.id %>" data-estado="<%= estadoActivo ? 'OK' : 'KO' %>">
+                                            <i class="fas fa-toggle-<%= estadoActivo ? 'on' : 'off' %>"></i>
+                                        </button>
+                                        <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+                                        <button class="btn btn-sm btn-outline-danger ms-1 delete-client" title="Borrar Registro" data-id="<%= cliente.Id || cliente.id %>" data-nombre="<%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Cliente' %>">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                        <% } %>
+                                    </td>
+                                    <td><%= tipoClienteNombre %></td>
+                                    <td><%= cliente.DNI_CIF ? cliente.DNI_CIF : 'Pendiente' %></td>
+                                    <% 
+                                    // Aplicar normalización UTF-8 directamente en la vista
+                                    // Corregir patrón [áéíóúñ][A-Z] -> [áéíóúñ][a-z]
+                                    let nombreRazonSocial = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+                                    if (typeof nombreRazonSocial === 'string') {
+                                        nombreRazonSocial = nombreRazonSocial.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                            return accented + upper.toLowerCase();
+                                        });
+                                        // Aplicar múltiples veces para casos como "ClíNicas" -> "Clínicas"
+                                        let prev = '';
+                                        while (nombreRazonSocial !== prev) {
+                                            prev = nombreRazonSocial;
+                                            nombreRazonSocial = nombreRazonSocial.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                                return accented + upper.toLowerCase();
+                                            });
+                                        }
+                                    }
+                                    
+                                    let nombreCial = cliente.Nombre_Cial || '-';
+                                    if (typeof nombreCial === 'string') {
+                                        nombreCial = nombreCial.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                            return accented + upper.toLowerCase();
+                                        });
+                                        let prev = '';
+                                        while (nombreCial !== prev) {
+                                            prev = nombreCial;
+                                            nombreCial = nombreCial.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                                return accented + upper.toLowerCase();
+                                            });
+                                        }
+                                    }
+                                    
+                                    let direccion = cliente.Direccion || '-';
+                                    if (typeof direccion === 'string') {
+                                        direccion = direccion.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                            return accented + upper.toLowerCase();
+                                        });
+                                        let prev = '';
+                                        while (direccion !== prev) {
+                                            prev = direccion;
+                                            direccion = direccion.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                                return accented + upper.toLowerCase();
+                                            });
+                                        }
+                                    }
+                                    %>
+                                    <td class="col-nombre-razon-social"><%= nombreRazonSocial %></td>
+                                    <td><%= nombreCial %></td>
+                                    <td class="col-direccion"><%= direccion %></td>
+                                    <td class="col-poblacion"><%= cliente.Poblacion || '-' %></td>
+                                    <td><%= provinciaNombre %></td>
+                                    <td><%= cliente.CodigoPostal || '-' %></td>
+                                    <td><%= cliente.Movil || cliente['Móvil'] || '-' %></td>
+                                    <td><%= cliente.Telefono || cliente['Teléfono'] || '-' %></td>
+                                    <td><%= cliente.Email || '-' %></td>
+                                    <td><%= cliente.CodPais || '-' %></td>
+                                    <td><%= typeof normalizeUTF8 !== 'undefined' ? normalizeUTF8(cliente.Pais || '') : (cliente.Pais || '-') %></td>
+                                    <td><%= idiomaNombre %></td>
+                                    <td><%= monedaNombre %></td>
+                                    <td><%= cliente.NomContacto || '-' %></td>
+                                    <td><%= cliente.Tarifa || '-' %></td>
+                                    <td><%= formaPagoNombre %></td>
+                                    <td><%= cliente.Dto !== null && cliente.Dto !== undefined ? cliente.Dto : '-' %></td>
+                                    <td><%= cliente.CuentaContable || '-' %></td>
+                                    <td><%= cliente.RE !== null && cliente.RE !== undefined ? cliente.RE : '-' %></td>
+                                    <td><%= cliente.Banco || '-' %></td>
+                                    <td><%= cliente.Swift || '-' %></td>
+                                    <td><%= cliente.IBAN || '-' %></td>
+                                    <td>
+                                        <% 
+                                        const cooperativasCliente = cliente.cooperativas || [];
+                                        const cooperativasTexto = cooperativasCliente.length > 0 
+                                            ? cooperativasCliente.map(c => c.Nombre).join(', ') 
+                                            : 'Sin Asignar';
+                                        %>
+                                        <%= cooperativasTexto %>
+                                    </td>
+                                    <td><%= cliente.NumeroFarmacia || '-' %></td>
+                                    <td><%= comercialNombre %></td>
+                                    <td>
+                                        <span class="badge <%= estadoActivo ? 'bg-success' : 'bg-secondary' %>" id="badge-estado-<%= cliente.Id || cliente.id %>">
+                                            <%= estadoActivo ? 'Activo' : 'Inactivo' %>
+                                        </span>
+                                    </td>
+                                </tr>
+                                <% } catch (e) { 
+                                    console.error('Error renderizando cliente:', e);
+                                %>
+                                <!-- Error renderizando cliente -->
+                                <% } }); %>
+                                <% } else { %>
+                                <tr>
+                                    <td colspan="30" class="text-center">No hay clientes para mostrar</td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <!-- Scroll to Top Button Container -->
+                <div class="scroll-to-top-container">
+                    <button class="scroll-to-top" id="scrollToTop" title="Volver al inicio de la tabla">
+                        <i class="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Variables globales
+        let rows = [];
+        let originalContent = {};
+        let currentSort = { column: null, direction: null }; // 'asc' o 'desc'
+        
+        // Asegurar que el filtro de comercial esté fijado para no-admins
+        (function() {
+            <% 
+            // esUsuarioAdmin ya está declarado al inicio del template (línea 444)
+            // Usar esa variable en lugar de declararla de nuevo
+            const comercialIdFijo = typeof comercialIdAutenticado !== 'undefined' && comercialIdAutenticado 
+                ? comercialIdAutenticado 
+                : (user && (user.id || user.Id) ? (user.id || user.Id) : '');
+            %>
+            const esAdmin = <%= esUsuarioAdmin ? 'true' : 'false' %>;
+            const comercialIdFijo = '<%= comercialIdFijo %>';
+            
+            // Si no es admin, asegurar que el filtro de comercial esté fijado
+            if (!esAdmin && comercialIdFijo) {
+                const filterForm = document.getElementById('filtersForm');
+                const filterComercialHidden = document.getElementById('filterComercialHidden');
+                const filterComercialSelect = document.getElementById('filterComercial');
+                
+                // Si hay un select (no debería haberlo, pero por seguridad), deshabilitarlo
+                if (filterComercialSelect) {
+                    filterComercialSelect.disabled = true;
+                    filterComercialSelect.value = comercialIdFijo;
+                    filterComercialSelect.style.backgroundColor = '#e9ecef';
+                    filterComercialSelect.style.cursor = 'not-allowed';
+                }
+                
+                // Asegurar que el input hidden siempre tenga el valor correcto
+                if (filterComercialHidden) {
+                    filterComercialHidden.value = comercialIdFijo;
+                    
+                    // Prevenir manipulación del formulario
+                    if (filterForm) {
+                        // Interceptar el envío del formulario para forzar el valor
+                        filterForm.addEventListener('submit', function(e) {
+                            // Forzar el valor del comercial antes de enviar
+                            filterComercialHidden.value = comercialIdFijo;
+                            console.log('🔐 [FILTRO] Valor de comercial forzado antes de enviar:', comercialIdFijo);
+                        });
+                        
+                        // También asegurar el valor si alguien intenta modificarlo
+                        filterComercialHidden.addEventListener('change', function() {
+                            console.warn('⚠️ [FILTRO] Intento de modificar filtro de comercial bloqueado');
+                            this.value = comercialIdFijo;
+                        });
+                        
+                        // Proteger contra manipulación directa del DOM
+                        const observer = new MutationObserver(function(mutations) {
+                            if (filterComercialHidden.value !== comercialIdFijo) {
+                                console.warn('⚠️ [FILTRO] Detectado cambio en filtro de comercial, restaurando valor');
+                                filterComercialHidden.value = comercialIdFijo;
+                            }
+                        });
+                        
+                        observer.observe(filterComercialHidden, {
+                            attributes: true,
+                            attributeFilter: ['value'],
+                            childList: false,
+                            characterData: false
+                        });
+                    }
+                }
+            }
+        })();
+        
+        function normalizeText(text) {
+            if (!text) return '';
+            try {
+                return String(text).toLowerCase()
+                    .normalize('NFD')
+                    .replace(/[\u0300-\u036f]/g, '')
+                    .trim();
+            } catch (e) {
+                return String(text).toLowerCase().trim();
+            }
+        }
+        
+        function highlightText(text, term) {
+            if (!term || !text) return String(text || '');
+            try {
+                const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const regex = new RegExp(`(${escaped})`, 'gi');
+                return String(text).replace(regex, '<span class="highlight">$1</span>');
+            } catch (e) {
+                return String(text);
+            }
+        }
+        
+        function performSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const clientesMostrados = document.getElementById('clientesMostrados');
+            const busquedaActiva = document.getElementById('busquedaActiva');
+            
+            if (!searchInput) {
+                console.log('Elemento de búsqueda no encontrado');
+                return;
+            }
+            
+            const searchTerm = searchInput.value.trim();
+            
+            // Si no hay término de búsqueda, mostrar todos
+            if (!searchTerm) {
+                // Procesar en chunks para no bloquear
+                const chunkSize = 50;
+                let index = 0;
+                
+                function processChunk() {
+                    const end = Math.min(index + chunkSize, rows.length);
+                    for (let i = index; i < end; i++) {
+                        const row = rows[i];
+                        if (originalContent[i]) {
+                            const cells = row.querySelectorAll('td');
+                            const original = originalContent[i];
+                            cells.forEach((cell, idx) => {
+                                if (original && original[idx]) {
+                                    cell.innerHTML = original[idx];
+                                }
+                            });
+                        }
+                        row.style.display = '';
+                    }
+                    index = end;
+                    
+                    if (index < rows.length) {
+                        setTimeout(processChunk, 0);
+                    } else {
+                        if (clientesMostrados) clientesMostrados.textContent = rows.length;
+                        if (busquedaActiva) busquedaActiva.textContent = 'Inactiva';
+                    }
+                }
+                
+                processChunk();
+                return;
+            }
+            
+            // Normalizar término de búsqueda
+            const normalizedSearch = normalizeText(searchTerm);
+            
+            // Dividir en palabras para búsqueda múltiple
+            const searchWords = normalizedSearch.split(/\s+/).filter(w => w.length > 0);
+            
+            console.log('🔍 Búsqueda inteligente:', searchTerm, 'Palabras:', searchWords);
+            
+            let visibleCount = 0;
+            
+            // Refrescar rows
+            rows = Array.from(document.querySelectorAll('#clientesTableBody tr'));
+            
+            // Procesar en chunks para no bloquear el UI
+            const chunkSize = 20;
+            let index = 0;
+            
+            function processSearchChunk() {
+                const end = Math.min(index + chunkSize, rows.length);
+                
+                for (let rowIndex = index; rowIndex < end; rowIndex++) {
+                    const row = rows[rowIndex];
+                    try {
+                        // Restaurar contenido original
+                        if (originalContent[rowIndex]) {
+                            const cells = row.querySelectorAll('td');
+                            const original = originalContent[rowIndex];
+                            cells.forEach((cell, idx) => {
+                                if (original && original[idx]) {
+                                    cell.innerHTML = original[idx];
+                                }
+                            });
+                        }
+                        
+                        let found = false;
+                        const matchCells = [];
+                        
+                        const dataAttr = row.getAttribute('data-cliente-encoded');
+                        if (dataAttr) {
+                            try {
+                                const clienteData = JSON.parse(decodeURIComponent(dataAttr));
+                                
+                                // Obtener todos los valores del cliente (incluyendo valores calculados de la vista)
+                                const cells = row.querySelectorAll('td');
+                                const cellTexts = Array.from(cells).map(cell => normalizeText(cell.textContent || cell.innerText));
+                                
+                                // Buscar en todos los campos del objeto cliente
+                                const allValues = [];
+                                for (const key in clienteData) {
+                                    const value = clienteData[key];
+                                    if (value !== null && value !== undefined && value !== '') {
+                                        allValues.push(normalizeText(String(value)));
+                                    }
+                                }
+                                
+                                // También buscar en los textos visibles de las celdas (incluye nombres de provincias, tipos, etc.)
+                                allValues.push(...cellTexts);
+                                
+                                // Búsqueda inteligente: todas las palabras deben encontrarse (AND)
+                                if (searchWords.length > 0) {
+                                    found = searchWords.every(word => {
+                                        return allValues.some(value => value.includes(word));
+                                    });
+                                    
+                                    // Si se encontró, identificar qué celdas tienen coincidencias para resaltar
+                                    if (found) {
+                                        cells.forEach((cell, cellIndex) => {
+                                            const cellText = cell.textContent || cell.innerText;
+                                            const normalizedCellText = normalizeText(cellText);
+                                            
+                                            // Verificar si alguna palabra de búsqueda está en esta celda
+                                            const hasMatch = searchWords.some(word => normalizedCellText.includes(word));
+                                            if (hasMatch) {
+                                                matchCells.push(cellIndex);
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (parseError) {
+                                console.error('❌ Error parseando datos del cliente', rowIndex, parseError);
+                                // Si hay error, buscar en el texto visible de la fila
+                                const rowText = row.textContent || row.innerText;
+                                found = normalizeText(rowText).includes(normalizedSearch);
+                            }
+                        } else {
+                            // Si no hay atributo de datos, buscar en el texto visible
+                            const rowText = row.textContent || row.innerText;
+                            found = normalizeText(rowText).includes(normalizedSearch);
+                        }
+                        
+                        if (found) {
+                            row.style.display = '';
+                            visibleCount++;
+                            
+                            // Resaltar celdas con coincidencias
+                            if (normalizedSearch && matchCells.length > 0) {
+                                const cells = row.querySelectorAll('td');
+                                matchCells.forEach(cellIndex => {
+                                    const cell = cells[cellIndex];
+                                    if (cell) {
+                                        const text = cell.textContent || cell.innerText;
+                                        // Resaltar todas las palabras encontradas
+                                        let highlightedText = text;
+                                        searchWords.forEach(word => {
+                                            const regex = new RegExp(`(${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                                            highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
+                                        });
+                                        cell.innerHTML = highlightedText;
+                                    }
+                                });
+                            } else if (normalizedSearch) {
+                                // Si no se identificaron celdas específicas, resaltar en todas
+                                const cells = row.querySelectorAll('td');
+                                cells.forEach(cell => {
+                                    const text = cell.textContent || cell.innerText;
+                                    const normalizedText = normalizeText(text);
+                                    if (searchWords.some(word => normalizedText.includes(word))) {
+                                        let highlightedText = text;
+                                        searchWords.forEach(word => {
+                                            const regex = new RegExp(`(${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                                            highlightedText = highlightedText.replace(regex, '<span class="highlight">$1</span>');
+                                        });
+                                        cell.innerHTML = highlightedText;
+                                    }
+                                });
+                            }
+                        } else {
+                            row.style.display = 'none';
+                        }
+                    } catch (e) {
+                        console.error('❌ Error procesando fila', rowIndex, e);
+                        row.style.display = '';
+                        visibleCount++;
+                    }
+                }
+                
+                index = end;
+                
+                if (index < rows.length) {
+                    // Continuar procesando en el siguiente frame
+                    setTimeout(processSearchChunk, 0);
+                } else {
+                    // Finalizar búsqueda
+                    if (clientesMostrados) clientesMostrados.textContent = visibleCount;
+                    if (busquedaActiva) busquedaActiva.textContent = normalizedSearch ? `Activa (${visibleCount} resultados)` : 'Inactiva';
+                    console.log('✅ Búsqueda completada. Mostrados:', visibleCount, 'de', rows.length);
+                }
+            }
+            
+            // Iniciar procesamiento por chunks
+            processSearchChunk();
+        }
+        
+        function initSearch() {
+            const searchInput = document.getElementById('searchInput');
+            const clearSearch = document.getElementById('clearSearch');
+            const scrollToTopBtn = document.getElementById('scrollToTop');
+            
+            if (!searchInput) {
+                console.error('❌ Elemento de búsqueda no encontrado');
+                setTimeout(initSearch, 100);
+                return;
+            }
+            
+            console.log('✅ Inicializando búsqueda...');
+            
+            // Obtener todas las filas
+            rows = Array.from(document.querySelectorAll('#clientesTableBody tr'));
+            console.log('📊 Filas encontradas:', rows.length);
+            
+            // Guardar contenido original de cada celda
+            rows.forEach((row, rowIndex) => {
+                const cells = row.querySelectorAll('td');
+                const cellContent = [];
+                cells.forEach(cell => {
+                    cellContent.push(cell.innerHTML);
+                });
+                originalContent[rowIndex] = cellContent;
+            });
+            
+            // Event listeners para búsqueda inteligente optimizada
+            let searchTimeout;
+            let isSearching = false;
+            let searchAbortController = null;
+            
+            // Función optimizada de búsqueda con procesamiento asíncrono
+            function performSearchOptimized() {
+                if (isSearching) {
+                    // Si ya hay una búsqueda en curso, cancelarla
+                    if (searchAbortController) {
+                        searchAbortController.abort();
+                    }
+                }
+                
+                isSearching = true;
+                searchAbortController = new AbortController();
+                
+                // Usar requestAnimationFrame para no bloquear el UI
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        if (!searchAbortController.signal.aborted) {
+                            performSearch();
+                            isSearching = false;
+                        }
+                    }, 0);
+                });
+            }
+            
+            searchInput.addEventListener('input', function() {
+                // Debounce aumentado: esperar 500ms después de que el usuario deje de escribir
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(performSearchOptimized, 500);
+            });
+            
+            searchInput.addEventListener('keyup', function(e) {
+                // Si presiona Enter, buscar inmediatamente
+                if (e.key === 'Enter') {
+                    clearTimeout(searchTimeout);
+                    performSearchOptimized();
+                }
+            });
+            
+            if (clearSearch) {
+                clearSearch.addEventListener('click', function() {
+                    console.log('🧹 Limpiando búsqueda');
+                    searchInput.value = '';
+                    performSearch();
+                    searchInput.focus();
+                });
+            }
+            
+            // Scroll to top dentro de la tabla - aparece después de 10 registros y se mueve con el scroll
+            const tableContainer = document.querySelector('.table-container');
+            if (scrollToTopBtn && tableContainer) {
+                const tbody = document.getElementById('clientesTableBody');
+                let rowHeight = null;
+                let shouldShowButton = false;
+                
+                function getAverageRowHeight() {
+                    if (rowHeight) return rowHeight;
+                    const rows = tbody ? tbody.querySelectorAll('tr') : [];
+                    if (rows.length === 0) return 50; // altura por defecto
+                    
+                    let totalHeight = 0;
+                    let count = 0;
+                    for (let i = 0; i < Math.min(5, rows.length); i++) {
+                        totalHeight += rows[i].offsetHeight;
+                        count++;
+                    }
+                    rowHeight = count > 0 ? totalHeight / count : 50;
+                    return rowHeight;
+                }
+                
+                function updateButtonPosition() {
+                    if (!shouldShowButton) {
+                        scrollToTopBtn.classList.remove('show');
+                        return;
+                    }
+                    
+                    // Obtener la posición del contenedor de la tabla en la página
+                    const containerRect = tableContainer.getBoundingClientRect();
+                    const containerBottom = containerRect.bottom;
+                    const containerRight = containerRect.right;
+                    const windowHeight = window.innerHeight;
+                    
+                    // Calcular nueva posición: dentro del contenedor pero visible
+                    let newBottom = windowHeight - containerBottom + 20;
+                    let newRight = window.innerWidth - containerRight + 20;
+                    
+                    // Asegurar que esté dentro del viewport
+                    if (newBottom < 20) newBottom = 20;
+                    if (newRight < 20) newRight = 20;
+                    
+                    // Actualizar posición
+                    scrollToTopBtn.style.bottom = newBottom + 'px';
+                    scrollToTopBtn.style.right = newRight + 'px';
+                    scrollToTopBtn.classList.add('show');
+                }
+                
+                function toggleScrollButton() {
+                    if (!tbody) return;
+                    
+                    const scrollTop = tableContainer.scrollTop;
+                    const avgRowHeight = getAverageRowHeight();
+                    const threshold = avgRowHeight * 10; // 10 registros
+                    
+                    // Determinar si debe mostrarse (después de 10 registros)
+                    shouldShowButton = scrollTop >= threshold;
+                    updateButtonPosition();
+                }
+                
+                // Actualizar posición cuando se hace scroll en la ventana o en el contenedor
+                function handleScroll() {
+                    toggleScrollButton();
+                }
+                
+                // Verificar al cargar la página
+                setTimeout(toggleScrollButton, 200);
+                
+                // Verificar al hacer scroll dentro del contenedor de la tabla
+                tableContainer.addEventListener('scroll', handleScroll, { passive: true });
+                
+                // Actualizar posición al hacer scroll de la ventana
+                window.addEventListener('scroll', updateButtonPosition, { passive: true });
+                window.addEventListener('resize', updateButtonPosition, { passive: true });
+                
+                // Scroll suave al inicio de la tabla cuando se hace clic
+                scrollToTopBtn.addEventListener('click', function() {
+                    tableContainer.scrollTo({ 
+                        top: 0, 
+                        behavior: 'smooth' 
+                    });
+                });
+                
+                console.log('✅ Botón scroll-to-top de tabla inicializado (movible)');
+            } else {
+                if (!scrollToTopBtn) console.warn('⚠️ Botón scroll-to-top no encontrado');
+                if (!tableContainer) console.warn('⚠️ Contenedor de tabla no encontrado');
+            }
+            
+            // Acciones: Alternar Estado (Activo/Inactivo)
+            document.querySelectorAll('.toggle-estado').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const id = btn.getAttribute('data-id');
+                    const estadoActual = btn.getAttribute('data-estado'); // 'OK' o 'KO' (string)
+                    const row = btn.closest('tr');
+                    
+                    if (!id || !row) {
+                        console.error('❌ [TOGGLE] ID o fila no encontrada:', { id, row });
+                        alert('Error: No se pudo identificar el cliente');
+                        return;
+                    }
+
+                    // Deshabilitar botón durante la petición
+                    const originalHTML = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    try {
+                        // Determinar nuevo estado (alternar)
+                        const nuevoEstado = estadoActual === 'OK' ? 'KO' : 'OK';
+                        
+                        console.log('🔄 [TOGGLE] Cambiando estado:', { id, actual: estadoActual, nuevo: nuevoEstado });
+                        
+                        const res = await fetch(`/api/clientes/${id}/okko`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            },
+                            body: JSON.stringify({ value: nuevoEstado })
+                        });
+
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+                            throw new Error(errorData.error || `Error HTTP ${res.status}`);
+                        }
+
+                        const data = await res.json();
+                        
+                        if (!data.success) {
+                            throw new Error(data.error || 'Error al actualizar el estado');
+                        }
+
+                        console.log('✅ [TOGGLE] Estado actualizado correctamente');
+                        
+                        // Actualizar badge y botón en la UI
+                        const badge = row.querySelector(`#badge-estado-${id}`);
+                        if (badge) {
+                            const isActive = nuevoEstado === 'OK';
+                            badge.classList.remove('bg-success', 'bg-secondary');
+                            badge.classList.add(isActive ? 'bg-success' : 'bg-secondary');
+                            badge.textContent = isActive ? 'Activo' : 'Inactivo';
+                        }
+                        
+                        // Actualizar botón (verde para activo, rojo para inactivo)
+                        btn.setAttribute('data-estado', nuevoEstado);
+                        btn.classList.remove('btn-success', 'btn-danger');
+                        btn.classList.add(nuevoEstado === 'OK' ? 'btn-success' : 'btn-danger');
+                        btn.setAttribute('title', nuevoEstado === 'OK' ? 'Desactivar' : 'Activar');
+                        btn.innerHTML = `<i class="fas fa-toggle-${nuevoEstado === 'OK' ? 'on' : 'off'}"></i>`;
+                    } catch (err) {
+                        console.error('❌ [TOGGLE] Error completo:', err);
+                        alert(`No se pudo actualizar el estado del cliente: ${err.message || 'Error desconocido'}`);
+                        // Restaurar botón
+                        btn.innerHTML = originalHTML;
+                    } finally {
+                        // Restaurar estado del botón
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            // Acciones: Borrar Cliente (solo administradores)
+            document.querySelectorAll('.delete-client').forEach(btn => {
+                btn.addEventListener('click', async (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const id = btn.getAttribute('data-id');
+                    const nombre = btn.getAttribute('data-nombre') || 'Cliente';
+                    const row = btn.closest('tr');
+                    
+                    if (!id || !row) {
+                        console.error('❌ [BORRAR] ID o fila no encontrada:', { id, row });
+                        alert('Error: No se pudo identificar el cliente');
+                        return;
+                    }
+
+                    // Diálogo de confirmación
+                    const confirmar = confirm(`¿Estás seguro de que deseas borrar el cliente "${nombre}"?\n\nEsta acción moverá el cliente a la papelera y no se podrá deshacer fácilmente.`);
+                    
+                    if (!confirmar) {
+                        return; // Usuario canceló
+                    }
+
+                    // Deshabilitar botón durante la petición
+                    const originalHTML = btn.innerHTML;
+                    btn.disabled = true;
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                    try {
+                        console.log('🗑️ [BORRAR] Borrando cliente:', { id, nombre });
+                        
+                        const res = await fetch(`/api/clientes/${id}/borrar`, {
+                            method: 'POST',
+                            headers: { 
+                                'Content-Type': 'application/json',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (!res.ok) {
+                            const errorData = await res.json().catch(() => ({ error: `HTTP ${res.status}` }));
+                            throw new Error(errorData.error || `Error HTTP ${res.status}`);
+                        }
+
+                        const data = await res.json();
+                        
+                        if (!data.success) {
+                            throw new Error(data.error || 'Error al borrar el cliente');
+                        }
+
+                        console.log('✅ [BORRAR] Cliente movido a la papelera correctamente');
+                        
+                        // Mostrar mensaje de éxito
+                        alert(`Cliente "${nombre}" ha sido movido a la papelera correctamente.`);
+                        
+                        // Eliminar la fila de la tabla
+                        row.remove();
+                        
+                        // Actualizar contador de clientes mostrados
+                        const clientesMostrados = document.getElementById('clientesMostrados');
+                        if (clientesMostrados) {
+                            const count = parseInt(clientesMostrados.textContent) || 0;
+                            clientesMostrados.textContent = Math.max(0, count - 1);
+                        }
+                        
+                        // Actualizar contador total de clientes
+                        actualizarContadorClientes();
+                    } catch (err) {
+                        console.error('❌ [BORRAR] Error completo:', err);
+                        alert(`No se pudo borrar el cliente: ${err.message || 'Error desconocido'}`);
+                        // Restaurar botón
+                        btn.innerHTML = originalHTML;
+                    } finally {
+                        // Restaurar estado del botón
+                        btn.disabled = false;
+                    }
+                });
+            });
+
+            // Acciones: Ver y Editar (refuerzo de navegación)
+            document.querySelectorAll('a.view-client').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const href = a.getAttribute('href');
+                    if (href) window.location.href = href;
+                });
+            });
+            document.querySelectorAll('a.edit-client').forEach(a => {
+                a.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const href = a.getAttribute('href');
+                    if (href) window.location.href = href;
+                });
+            });
+
+            // Logo
+            const logoImg = document.getElementById('logo-img');
+            if (logoImg) {
+                logoImg.addEventListener('load', function() {
+                    this.style.display = 'inline';
+                    const logoIcon = document.getElementById('logo-icon');
+                    if (logoIcon) logoIcon.style.display = 'none';
+                });
+                
+                logoImg.addEventListener('error', function() {
+                    this.style.display = 'none';
+                    const logoIcon = document.getElementById('logo-icon');
+                    if (logoIcon) logoIcon.style.display = 'inline';
+                });
+                
+                // Intentar cargar
+                if (logoImg.src === '' || logoImg.src === window.location.href) {
+                    logoImg.src = '/images/logo.png';
+                }
+            }
+            
+            console.log('✅ Búsqueda inicializada correctamente');
+            
+            // Función para actualizar el contador de clientes
+            async function actualizarContadorClientes() {
+                try {
+                    const response = await fetch('/api/clientes/count');
+                    const data = await response.json();
+                    const totalElement = document.getElementById('totalClientes');
+                    if (totalElement && data.count !== undefined) {
+                        totalElement.textContent = data.count;
+                    }
+                } catch (error) {
+                    console.error('Error actualizando contador:', error);
+                }
+            }
+            
+            // Actualizar contador al cargar y después de operaciones
+            actualizarContadorClientes();
+            
+            // Actualizar contador cada 30 segundos
+            setInterval(actualizarContadorClientes, 30000);
+            
+            // Actualizar contador cuando se vuelve a la página (después de crear/editar/eliminar)
+            if (window.performance && window.performance.navigation.type === 1) {
+                // Navegación tipo 1 = recarga de página
+                actualizarContadorClientes();
+            }
+            
+            // Actualizar contador cuando la página vuelve a estar visible
+            document.addEventListener('visibilitychange', function() {
+                if (!document.hidden) {
+                    actualizarContadorClientes();
+                }
+            });
+            
+            // Inicializar ordenamiento
+            initSorting();
+        }
+        
+        // Función para inicializar el ordenamiento
+        function initSorting() {
+            const sortableHeaders = document.querySelectorAll('th.sortable');
+            
+            sortableHeaders.forEach(header => {
+                header.addEventListener('click', function() {
+                    const column = this.getAttribute('data-column');
+                    sortTable(column);
+                });
+            });
+        }
+        
+        // Función para ordenar la tabla
+        function sortTable(column) {
+            const tbody = document.getElementById('clientesTableBody');
+            if (!tbody) return;
+            
+            // Determinar dirección de ordenamiento
+            let direction = 'asc';
+            if (currentSort.column === column && currentSort.direction === 'asc') {
+                direction = 'desc';
+            }
+            
+            currentSort = { column, direction };
+            
+            // Actualizar indicadores visuales
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+            
+            const activeHeader = document.querySelector(`th[data-column="${column}"]`);
+            if (activeHeader) {
+                activeHeader.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+            
+            // Obtener todas las filas
+            const tableRows = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Ordenar las filas
+            tableRows.sort((a, b) => {
+                const aValue = getCellValue(a, column);
+                const bValue = getCellValue(b, column);
+                
+                // Comparar valores
+                let comparison = 0;
+                
+                // Intentar comparación numérica si ambos son números
+                const aNum = parseFloat(aValue);
+                const bNum = parseFloat(bValue);
+                if (!isNaN(aNum) && !isNaN(bNum)) {
+                    comparison = aNum - bNum;
+                } else {
+                    // Comparación de texto
+                    const aText = normalizeText(aValue);
+                    const bText = normalizeText(bValue);
+                    comparison = aText.localeCompare(bText, 'es', { numeric: true, sensitivity: 'base' });
+                }
+                
+                return direction === 'asc' ? comparison : -comparison;
+            });
+            
+            // Reordenar las filas en el DOM
+            tableRows.forEach(row => tbody.appendChild(row));
+            
+            // Actualizar contenido original después de reordenar
+            rows = Array.from(document.querySelectorAll('#clientesTableBody tr'));
+            rows.forEach((row, rowIndex) => {
+                const cells = row.querySelectorAll('td');
+                const cellContent = [];
+                cells.forEach(cell => {
+                    cellContent.push(cell.innerHTML);
+                });
+                originalContent[rowIndex] = cellContent;
+            });
+        }
+        
+        // Función para obtener el valor de una celda según la columna
+        function getCellValue(row, column) {
+            const cells = row.querySelectorAll('td');
+            const columnMap = {
+                'tipoCliente': 1,
+                'dniCif': 2,
+                'nombreRazonSocial': 3,
+                'nombreComercial': 4,
+                'direccion': 5,
+                'poblacion': 6,
+                'provincia': 7,
+                'codigoPostal': 8,
+                'movil': 9,
+                'telefono': 10,
+                'email': 11,
+                'codPais': 12,
+                'pais': 13,
+                'idioma': 14,
+                'moneda': 15,
+                'contacto': 16,
+                'tarifa': 17,
+                'formaPago': 18,
+                'dto': 19,
+                'cuentaContable': 20,
+                're': 21,
+                'banco': 22,
+                'swift': 23,
+                'iban': 24,
+                'cooperativas': 25,
+                'numeroFarmacia': 26,
+                'comercial': 27,
+                'estado': 28
+            };
+            
+            const cellIndex = columnMap[column];
+            if (cellIndex !== undefined && cells[cellIndex]) {
+                // Obtener texto sin HTML
+                return cells[cellIndex].textContent || cells[cellIndex].innerText || '';
+            }
+            
+            return '';
+        }
+        
+        // Inicializar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initSearch);
+        } else {
+            setTimeout(initSearch, 100);
+        }
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

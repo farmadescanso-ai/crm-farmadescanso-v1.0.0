@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <!-- Main Content -->
+    <div class="container-fluid main-content-wrapper">
+        <div class="row">
+            <!-- Main Content Area -->
+            <div class="col-12">
+                <div class="p-4">
+                    <!-- Page Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h2 class="fw-bold mb-1">
+                                <i class="fas fa-user-circle me-2 text-primary"></i>Mi Perfil
+                            </h2>
+                            <p class="text-muted mb-0">Información de tu cuenta</p>
+                        </div>
+                        <div>
+                            <a href="/dashboard/comerciales/<%= comercial.id || comercial.Id %>/editar" class="btn btn-primary">
+                                <i class="fas fa-edit me-2"></i>Editar Perfil
+                            </a>
+                            <a href="/dashboard" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                            </a>
+                        </div>
+                    </div>
+
+                    <% if (error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <%= error %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+                    
+                    <% if (typeof success !== 'undefined' && success) { %>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <%= success %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+
+                    <!-- Profile Information -->
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header text-white" style="background-color: #198754;">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="fas fa-info-circle me-2"></i>Información Personal
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Nombre</label>
+                                            <p class="form-control-plaintext"><%= comercial.Nombre || comercial.nombre || 'N/A' %></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Email</label>
+                                            <p class="form-control-plaintext">
+                                                <%= comercial.Email || comercial.email || 'N/A' %>
+                                                <% if (comercial.Email || comercial.email) { %>
+                                                    <a href="mailto:<%= comercial.Email || comercial.email %>" class="ms-2">
+                                                        <i class="fas fa-envelope text-primary"></i>
+                                                    </a>
+                                                <% } %>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">DNI</label>
+                                            <p class="form-control-plaintext"><%= comercial.DNI || comercial.dni || 'N/A' %></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Rol</label>
+                                            <p class="form-control-plaintext">
+                                                <% 
+                                                    const rol = comercial.Roll || comercial.roll || 'Comercial';
+                                                    let rolDisplay = rol;
+                                                    if (typeof rol === 'string' && rol.startsWith('[')) {
+                                                        try {
+                                                            const rolArray = JSON.parse(rol);
+                                                            rolDisplay = Array.isArray(rolArray) ? rolArray[0] : rol;
+                                                        } catch (e) {
+                                                            rolDisplay = rol;
+                                                        }
+                                                    }
+                                                %>
+                                                <span class="badge bg-<%= esAdmin ? 'danger' : 'primary' %>">
+                                                    <%= rolDisplay %>
+                                                </span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Contact Information -->
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header text-white" style="background-color: #198754;">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="fas fa-address-book me-2"></i>Información de Contacto
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Teléfono</label>
+                                            <p class="form-control-plaintext">
+                                                <%= comercial.Telefono || comercial.telefono || 'N/A' %>
+                                                <% if (comercial.Telefono || comercial.telefono) { %>
+                                                    <a href="tel:<%= comercial.Telefono || comercial.telefono %>" class="ms-2">
+                                                        <i class="fas fa-phone text-success"></i>
+                                                    </a>
+                                                <% } %>
+                                            </p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Móvil</label>
+                                            <p class="form-control-plaintext">
+                                                <%= comercial.Movil || comercial.movil || 'N/A' %>
+                                                <% if (comercial.Movil || comercial.movil) { %>
+                                                    <a href="tel:<%= comercial.Movil || comercial.movil %>" class="ms-2">
+                                                        <i class="fas fa-mobile-alt text-success"></i>
+                                                    </a>
+                                                <% } %>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-12">
+                                            <label class="form-label fw-semibold text-muted">Dirección</label>
+                                            <p class="form-control-plaintext">
+                                                <%= comercial.Direccion || comercial.direccion || 'N/A' %>
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div class="row mb-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Población</label>
+                                            <p class="form-control-plaintext"><%= comercial.Poblacion || comercial.poblacion || 'N/A' %></p>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label fw-semibold text-muted">Código Postal</label>
+                                            <p class="form-control-plaintext"><%= comercial.CodigoPostal || comercial.codigoPostal || 'N/A' %></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sidebar -->
+                        <div class="col-lg-4">
+                            <!-- Quick Actions -->
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header text-white" style="background-color: #198754;">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="fas fa-bolt me-2"></i>Acciones Rápidas
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <a href="/dashboard/comerciales/<%= comercial.id || comercial.Id %>/editar" class="btn btn-primary">
+                                            <i class="fas fa-edit me-2"></i>Editar Perfil
+                                        </a>
+                                        <a href="/dashboard/manual-instrucciones" class="btn btn-success">
+                                            <i class="fas fa-book me-2"></i>Manual de Instrucciones
+                                        </a>
+                                        <a href="/dashboard" class="btn btn-outline-secondary">
+                                            <i class="fas fa-tachometer-alt me-2"></i>Ir al Dashboard
+                                        </a>
+                                        <% if (esAdmin) { %>
+                                            <a href="/dashboard/comerciales" class="btn btn-outline-info">
+                                                <i class="fas fa-users me-2"></i>Gestionar Comerciales
+                                            </a>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Account Info -->
+                            <div class="card shadow-sm mb-4">
+                                <div class="card-header text-white" style="background-color: #198754;">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="fas fa-user-shield me-2"></i>Información de Cuenta
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold text-muted">ID de Usuario</label>
+                                        <p class="form-control-plaintext"><code><%= comercial.id || comercial.Id || 'N/A' %></code></p>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold text-muted">Estado</label>
+                                        <p class="form-control-plaintext">
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Activo
+                                            </span>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Change Password -->
+                            <div class="card shadow-sm">
+                                <div class="card-header text-white" style="background-color: #198754;">
+                                    <h5 class="mb-0 text-white">
+                                        <i class="fas fa-key me-2"></i>Cambiar Contraseña
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <form action="/auth/change-password" method="POST" id="changePasswordForm">
+                                        <div class="mb-3">
+                                            <label for="currentPassword" class="form-label">
+                                                <i class="fas fa-lock me-2"></i>Contraseña Actual
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="currentPassword" 
+                                                       name="currentPassword" 
+                                                       autocomplete="current-password"
+                                                       required 
+                                                       placeholder="Tu contraseña actual">
+                                                <button class="btn btn-outline-secondary" 
+                                                        type="button" 
+                                                        id="toggleCurrentPassword">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label for="newPassword" class="form-label">
+                                                <i class="fas fa-lock me-2"></i>Nueva Contraseña
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="newPassword" 
+                                                       name="newPassword" 
+                                                       autocomplete="new-password"
+                                                       required 
+                                                       placeholder="Mínimo 6 caracteres"
+                                                       minlength="6">
+                                                <button class="btn btn-outline-secondary" 
+                                                        type="button" 
+                                                        id="toggleNewPassword">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                            <small class="form-text text-muted">La contraseña debe tener al menos 6 caracteres</small>
+                                        </div>
+                                        
+                                        <div class="mb-4">
+                                            <label for="confirmPassword" class="form-label">
+                                                <i class="fas fa-lock me-2"></i>Confirmar Nueva Contraseña
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="password" 
+                                                       class="form-control" 
+                                                       id="confirmPassword" 
+                                                       name="confirmPassword" 
+                                                       autocomplete="new-password"
+                                                       required 
+                                                       placeholder="Repite la nueva contraseña"
+                                                       minlength="6">
+                                                <button class="btn btn-outline-secondary" 
+                                                        type="button" 
+                                                        id="toggleConfirmPassword">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="d-grid">
+                                            <button type="submit" class="btn btn-danger">
+                                                <i class="fas fa-key me-2"></i>Cambiar Contraseña
+                                            </button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <%- include('../partials/navbar-scripts') %>
+    <script>
+        // Toggle password visibility
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleCurrentPassword = document.getElementById('toggleCurrentPassword');
+            const currentPassword = document.getElementById('currentPassword');
+            const toggleNewPassword = document.getElementById('toggleNewPassword');
+            const newPassword = document.getElementById('newPassword');
+            const toggleConfirmPassword = document.getElementById('toggleConfirmPassword');
+            const confirmPassword = document.getElementById('confirmPassword');
+            const changePasswordForm = document.getElementById('changePasswordForm');
+            
+            if (toggleCurrentPassword && currentPassword) {
+                toggleCurrentPassword.addEventListener('click', function() {
+                    const type = currentPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                    currentPassword.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('fa-eye');
+                    this.querySelector('i').classList.toggle('fa-eye-slash');
+                });
+            }
+            
+            if (toggleNewPassword && newPassword) {
+                toggleNewPassword.addEventListener('click', function() {
+                    const type = newPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                    newPassword.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('fa-eye');
+                    this.querySelector('i').classList.toggle('fa-eye-slash');
+                });
+            }
+            
+            if (toggleConfirmPassword && confirmPassword) {
+                toggleConfirmPassword.addEventListener('click', function() {
+                    const type = confirmPassword.getAttribute('type') === 'password' ? 'text' : 'password';
+                    confirmPassword.setAttribute('type', type);
+                    this.querySelector('i').classList.toggle('fa-eye');
+                    this.querySelector('i').classList.toggle('fa-eye-slash');
+                });
+            }
+            
+            // Validar formulario de cambio de contraseña
+            if (changePasswordForm) {
+                changePasswordForm.addEventListener('submit', function(e) {
+                    const currentPasswordValue = currentPassword.value;
+                    const newPasswordValue = newPassword.value;
+                    const confirmPasswordValue = confirmPassword.value;
+                    
+                    if (!currentPasswordValue) {
+                        e.preventDefault();
+                        alert('Por favor, ingresa tu contraseña actual');
+                        return false;
+                    }
+                    
+                    if (newPasswordValue !== confirmPasswordValue) {
+                        e.preventDefault();
+                        alert('Las nuevas contraseñas no coinciden');
+                        return false;
+                    }
+                    
+                    if (newPasswordValue.length < 6) {
+                        e.preventDefault();
+                        alert('La nueva contraseña debe tener al menos 6 caracteres');
+                        return false;
+                    }
+                    
+                    if (currentPasswordValue === newPasswordValue) {
+                        e.preventDefault();
+                        alert('La nueva contraseña debe ser diferente a la actual');
+                        return false;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

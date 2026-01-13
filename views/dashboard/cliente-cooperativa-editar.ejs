@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        /* Estilos para búsqueda inteligente de clientes */
+        .cliente-search-container {
+            position: relative;
+        }
+        .cliente-search-input {
+            width: 100%;
+            padding: 0.375rem 2.5rem 0.375rem 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .cliente-search-input:focus {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .cliente-search-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            pointer-events: none;
+        }
+        .cliente-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            display: none;
+            margin-top: 0.25rem;
+        }
+        .cliente-dropdown.show {
+            display: block;
+        }
+        .cliente-dropdown-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        .cliente-dropdown-item:hover,
+        .cliente-dropdown-item.selected {
+            background-color: #e7f1ff;
+        }
+        .cliente-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .cliente-item-name {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 0.25rem;
+        }
+        .cliente-item-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .cliente-item-detail {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .cliente-item-detail i {
+            font-size: 0.75rem;
+        }
+        .cliente-loading {
+            padding: 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        .cliente-no-results {
+            padding: 1rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        .cliente-selected-display {
+            display: none;
+            padding: 0.5rem 0.75rem;
+            background-color: #e7f1ff;
+            border: 1px solid #86b7fe;
+            border-radius: 0.375rem;
+            margin-top: 0.25rem;
+        }
+        .cliente-selected-display.show {
+            display: block;
+        }
+        .cliente-selected-name {
+            font-weight: 600;
+            color: #0d6efd;
+        }
+        .cliente-selected-details {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        .cliente-hidden-input {
+            display: none;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas <%= isNew ? 'fa-plus' : 'fa-edit' %> me-2"></i>
+                            <%= isNew ? 'Nueva Relación Cliente-Cooperativa' : `Editar Relación #${clienteCooperativa.id}` %>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (error) { %>
+                        <div class="alert alert-danger"><%= error %></div>
+                        <% } %>
+
+                        <% const formAction = isNew ? '/dashboard/clientes-cooperativas' : `/dashboard/clientes-cooperativas/${clienteCooperativa.id}`; %>
+                        <form method="post" action="<%= formAction %>">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
+                                <div class="cliente-search-container">
+                                    <input 
+                                        type="text" 
+                                        id="clienteSearchInput" 
+                                        class="form-control cliente-search-input" 
+                                        placeholder="Buscar por nombre, DNI/CIF, email, teléfono..."
+                                        autocomplete="off"
+                                        required
+                                    >
+                                    <i class="fas fa-search cliente-search-icon"></i>
+                                    <div id="clienteDropdown" class="cliente-dropdown"></div>
+                                    <div id="clienteSelectedDisplay" class="cliente-selected-display">
+                                        <div class="cliente-selected-name" id="clienteSelectedName"></div>
+                                        <div class="cliente-selected-details" id="clienteSelectedDetails"></div>
+                                    </div>
+                                    <input type="hidden" name="Id_Cliente" id="clienteIdInput" class="cliente-hidden-input" required>
+                                </div>
+                                <div class="invalid-feedback">Selecciona un cliente.</div>
+                                <small class="form-text text-muted">Escribe al menos 2 caracteres para buscar</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Cooperativa <span class="text-danger">*</span></label>
+                                <select name="Id_Cooperativa" class="form-select" required>
+                                    <option value="">— Seleccionar cooperativa —</option>
+                                    <% cooperativas.forEach(function(cooperativa) { %>
+                                    <% 
+                                    const cooperativaId = cooperativa.id || cooperativa.Id;
+                                    const cooperativaSeleccionada = clienteCooperativa ? (clienteCooperativa.Id_Cooperativa || clienteCooperativa.id_Cooperativa) : '';
+                                    %>
+                                    <option value="<%= cooperativaId %>" <%= String(cooperativaSeleccionada) === String(cooperativaId) ? 'selected' : '' %>>
+                                        <%= cooperativa.Nombre || cooperativa.nombre %>
+                                    </option>
+                                    <% }); %>
+                                </select>
+                                <small class="form-text text-muted">Selecciona la cooperativa asociada al cliente</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Número de Asociado</label>
+                                <input type="text" name="NumAsociado" class="form-control" 
+                                       value="<%= clienteCooperativa ? (clienteCooperativa.NumAsociado || clienteCooperativa.numAsociado || '') : '' %>"
+                                       placeholder="Número de asociado del cliente en la cooperativa">
+                                <small class="form-text text-muted">Número de asociado del cliente en la cooperativa (opcional)</small>
+                            </div>
+                            <div class="d-flex justify-content-end gap-2">
+                                <a href="/dashboard/clientes-cooperativas" class="btn btn-secondary">Cancelar</a>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>Guardar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Búsqueda inteligente de clientes
+        const clienteSearchInput = document.getElementById('clienteSearchInput');
+        const clienteDropdown = document.getElementById('clienteDropdown');
+        const clienteIdInput = document.getElementById('clienteIdInput');
+        const clienteSelectedDisplay = document.getElementById('clienteSelectedDisplay');
+        const clienteSelectedName = document.getElementById('clienteSelectedName');
+        const clienteSelectedDetails = document.getElementById('clienteSelectedDetails');
+        
+        let clienteSearchTimeout = null;
+        let selectedCliente = null;
+        let currentSelectedIndex = -1;
+        
+        // Si hay un cliente inicial desde el formulario
+        <% if (clienteCooperativa && clienteCooperativa.Id_Cliente) { %>
+        <% const clienteInicial = clientes.find(c => String(c.Id || c.id) === String(clienteCooperativa.Id_Cliente || clienteCooperativa.id_Cliente)); %>
+        <% if (clienteInicial) { %>
+        selectedCliente = {
+            Id: <%= clienteInicial.Id || clienteInicial.id %>,
+            Nombre_Razon_Social: '<%= (clienteInicial.Nombre_Razon_Social || clienteInicial.Nombre || clienteInicial.nombre || '').replace(/'/g, "\\'") %>',
+            DNI_CIF: '<%= (clienteInicial.DNI_CIF || clienteInicial.dni_cif || '').replace(/'/g, "\\'") %>',
+            Email: '<%= (clienteInicial.Email || clienteInicial.email || '').replace(/'/g, "\\'") %>',
+            Telefono: '<%= (clienteInicial.Telefono || clienteInicial.telefono || '').replace(/'/g, "\\'") %>',
+            Movil: '<%= (clienteInicial.Movil || clienteInicial.movil || '').replace(/'/g, "\\'") %>',
+            Poblacion: '<%= (clienteInicial.Poblacion || clienteInicial.poblacion || '').replace(/'/g, "\\'") %>'
+        };
+        clienteIdInput.value = selectedCliente.Id;
+        clienteSearchInput.value = selectedCliente.Nombre_Razon_Social;
+        clienteSelectedName.textContent = selectedCliente.Nombre_Razon_Social;
+        const detalles = [];
+        if (selectedCliente.DNI_CIF) detalles.push(`DNI/CIF: ${selectedCliente.DNI_CIF}`);
+        if (selectedCliente.Email) detalles.push(`Email: ${selectedCliente.Email}`);
+        if (selectedCliente.Telefono || selectedCliente.Movil) detalles.push(`Tel: ${selectedCliente.Telefono || selectedCliente.Movil}`);
+        if (selectedCliente.Poblacion) detalles.push(`Población: ${selectedCliente.Poblacion}`);
+        clienteSelectedDetails.textContent = detalles.join(' · ');
+        clienteSelectedDisplay.classList.add('show');
+        clienteSearchInput.style.display = 'none';
+        <% } %>
+        <% } %>
+        
+        function buscarClientes(query) {
+            if (query.length < 2) {
+                clienteDropdown.classList.remove('show');
+                return;
+            }
+
+            clearTimeout(clienteSearchTimeout);
+            clienteSearchTimeout = setTimeout(async () => {
+                clienteDropdown.innerHTML = '<div class="cliente-loading"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>';
+                clienteDropdown.classList.add('show');
+
+                try {
+                    const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+                    const clientes = data.clientes || [];
+
+                    if (clientes.length === 0) {
+                        clienteDropdown.innerHTML = '<div class="cliente-no-results">No se encontraron clientes</div>';
+                        return;
+                    }
+
+                    clienteDropdown.innerHTML = clientes.map((cliente, index) => {
+                        const nombre = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+                        const detalles = [];
+                        if (cliente.DNI_CIF) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-id-card"></i> ${cliente.DNI_CIF}</span>`);
+                        if (cliente.Email) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-envelope"></i> ${cliente.Email}</span>`);
+                        if (cliente.Telefono || cliente.Movil) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-phone"></i> ${cliente.Telefono || cliente.Movil}</span>`);
+                        if (cliente.Poblacion) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-map-marker-alt"></i> ${cliente.Poblacion}</span>`);
+                        
+                        return `
+                            <div class="cliente-dropdown-item" data-cliente-id="${cliente.Id}" data-index="${index}">
+                                <div class="cliente-item-name">${nombre}</div>
+                                ${detalles.length > 0 ? `<div class="cliente-item-details">${detalles.join('')}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Agregar event listeners a los items
+                    clienteDropdown.querySelectorAll('.cliente-dropdown-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const clienteId = item.dataset.clienteId;
+                            const cliente = clientes.find(c => c.Id == clienteId);
+                            if (cliente) {
+                                seleccionarCliente(cliente);
+                            }
+                        });
+                    });
+
+                    currentSelectedIndex = -1;
+                } catch (error) {
+                    console.error('Error buscando clientes:', error);
+                    clienteDropdown.innerHTML = '<div class="cliente-no-results">Error al buscar clientes</div>';
+                }
+            }, 300);
+        }
+
+        function seleccionarCliente(cliente) {
+            selectedCliente = cliente;
+            clienteIdInput.value = cliente.Id;
+            clienteSearchInput.value = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+            clienteSelectedName.textContent = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+            
+            const detalles = [];
+            if (cliente.DNI_CIF) detalles.push(`DNI/CIF: ${cliente.DNI_CIF}`);
+            if (cliente.Email) detalles.push(`Email: ${cliente.Email}`);
+            if (cliente.Telefono || cliente.Movil) detalles.push(`Tel: ${cliente.Telefono || cliente.Movil}`);
+            if (cliente.Poblacion) detalles.push(`Población: ${cliente.Poblacion}`);
+            clienteSelectedDetails.textContent = detalles.join(' · ');
+            
+            clienteSelectedDisplay.classList.add('show');
+            clienteSearchInput.style.display = 'none';
+            clienteDropdown.classList.remove('show');
+        }
+
+        function limpiarSeleccionCliente() {
+            selectedCliente = null;
+            clienteIdInput.value = '';
+            clienteSearchInput.value = '';
+            clienteSelectedDisplay.classList.remove('show');
+            clienteSearchInput.style.display = 'block';
+            clienteDropdown.classList.remove('show');
+        }
+
+        clienteSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query.length >= 2) {
+                buscarClientes(query);
+            } else {
+                clienteDropdown.classList.remove('show');
+            }
+        });
+
+        clienteSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const items = clienteDropdown.querySelectorAll('.cliente-dropdown-item');
+                if (items.length > 0) {
+                    currentSelectedIndex = Math.min(currentSelectedIndex + 1, items.length - 1);
+                    items.forEach((item, index) => {
+                        item.classList.toggle('selected', index === currentSelectedIndex);
+                    });
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const items = clienteDropdown.querySelectorAll('.cliente-dropdown-item');
+                if (items.length > 0) {
+                    currentSelectedIndex = Math.max(currentSelectedIndex - 1, -1);
+                    items.forEach((item, index) => {
+                        item.classList.toggle('selected', index === currentSelectedIndex);
+                    });
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const items = clienteDropdown.querySelectorAll('.cliente-dropdown-item');
+                if (currentSelectedIndex >= 0 && currentSelectedIndex < items.length) {
+                    items[currentSelectedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                clienteDropdown.classList.remove('show');
+            }
+        });
+
+        // Cerrar dropdown al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!clienteSearchInput.contains(e.target) && !clienteDropdown.contains(e.target)) {
+                clienteDropdown.classList.remove('show');
+            }
+        });
+
+        // Permitir editar la selección
+        clienteSelectedDisplay.addEventListener('dblclick', () => {
+            limpiarSeleccionCliente();
+            clienteSearchInput.focus();
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

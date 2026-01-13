@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Rapeles - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/articulos">
+                                    <i class="fas fa-boxes me-2"></i>Artículos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes">
+                                    <i class="fas fa-users me-2"></i>Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/pedidos">
+                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/agenda">
+                                    <i class="fas fa-calendar-check me-2"></i>Agenda
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#comisionesSubmenu" aria-expanded="true" aria-controls="comisionesSubmenu" id="comisionesMenuToggle">
+                                    <i class="fas fa-euro-sign me-2"></i>Comisiones
+                                    <i class="fas fa-chevron-down ms-auto float-end" id="comisionesChevron" style="font-size: 0.75rem; transition: transform 0.3s; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="comisionesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'presupuestos' ? 'active' : '' %>" href="/dashboard/comisiones/presupuestos">
+                                            <i class="fas fa-chart-line me-2"></i>Presupuestos
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Comisiones
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles">
+                                            <i class="fas fa-trophy me-2"></i>Rapeles
+                                        </a>
+                                    </li>
+                                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'objetivos-marca' ? 'active' : '' %>" href="/dashboard/comisiones/objetivos-marca">
+                                            <i class="fas fa-bullseye me-2"></i>Objetivos por Marca
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'condiciones-especiales' ? 'active' : '' %>" href="/dashboard/comisiones/condiciones-especiales">
+                                            <i class="fas fa-star me-2"></i>Condiciones Especiales
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles-configuracion' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles-configuracion">
+                                            <i class="fas fa-cog me-2"></i>Config. Rapeles
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'config-comisiones-tipo-pedido' ? 'active' : '' %>" href="/dashboard/comisiones/config-comisiones-tipo-pedido">
+                                            <i class="fas fa-percent me-2"></i>Config. % Tipo Pedido
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'config-rappel-presupuesto' ? 'active' : '' %>" href="/dashboard/comisiones/config-rappel-presupuesto">
+                                            <i class="fas fa-chart-line me-2"></i>Config. Rappel Presup.
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'config-fijo-mensual' ? 'active' : '' %>" href="/dashboard/comisiones/config-fijo-mensual">
+                                            <i class="fas fa-calendar me-2"></i>Config. Fijo Mensual
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'config-descuento-transporte' ? 'active' : '' %>" href="/dashboard/comisiones/config-descuento-transporte">
+                                            <i class="fas fa-truck me-2"></i>Config. Desc. Transp.
+                                        </a>
+                                    </li>
+                                    <% } %>
+                                </ul>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Comerciales
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-cog me-2 text-primary"></i>Configuración de Rapeles
+                    </h1>
+                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaConfiguracion">
+                        <i class="fas fa-plus me-1"></i>Nueva Configuración
+                    </button>
+                    <% } %>
+                </div>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <% if (req.query.success === 'configuracion_creada') { %>
+                        Configuración creada exitosamente.
+                    <% } else if (req.query.success === 'configuracion_actualizada') { %>
+                        Configuración actualizada exitosamente.
+                    <% } else { %>
+                        <%= req.query.success %>
+                    <% } %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i><%= req.query.error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Configuración de Rapeles:</strong> Define los porcentajes de rapel según el nivel de cumplimiento del objetivo.
+                    <ul class="mb-0 mt-2">
+                        <li><strong>80-100%:</strong> 2% de rapel sobre el exceso</li>
+                        <li><strong>100-120%:</strong> 3% de rapel sobre el exceso</li>
+                        <li><strong>+120%:</strong> 5% de rapel sobre el exceso</li>
+                    </ul>
+                </div>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/dashboard/comisiones/rapeles-configuracion" class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">Marca</label>
+                                <select name="marca" class="form-select">
+                                    <option value="">Todas</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>" <%= filters.marca === marca ? 'selected' : '' %>><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="true" <%= filters.activo === true ? 'selected' : '' %>>Activas</option>
+                                    <option value="false" <%= filters.activo === false ? 'selected' : '' %>>Inactivas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-filter me-1"></i>Filtrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabla de configuraciones -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Marca</th>
+                                        <th class="text-end">% Cumplimiento Min</th>
+                                        <th class="text-end">% Cumplimiento Max</th>
+                                        <th class="text-end">% Rapel</th>
+                                        <th>Observaciones</th>
+                                        <th class="text-center">Estado</th>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <th class="text-center">Acciones</th>
+                                        <% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (configuraciones && configuraciones.length > 0) { %>
+                                    <% configuraciones.forEach(config => { %>
+                                    <tr>
+                                        <td><strong><%= config.marca || '-' %></strong></td>
+                                        <td class="text-end"><%= parseFloat(config.porcentaje_cumplimiento_min || 0).toFixed(2) %>%</td>
+                                        <td class="text-end"><%= parseFloat(config.porcentaje_cumplimiento_max || 0).toFixed(2) %>%</td>
+                                        <td class="text-end fw-bold text-primary"><%= parseFloat(config.porcentaje_rapel || 0).toFixed(2) %>%</td>
+                                        <td><%= config.observaciones || '-' %></td>
+                                        <td class="text-center">
+                                            <% if (config.activo) { %>
+                                            <span class="badge bg-success">Activa</span>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Inactiva</span>
+                                            <% } %>
+                                        </td>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarConfiguracion(<%= config.id %>)" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarConfiguracion(<%= config.id %>)" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <% }) %>
+                                    <% } else { %>
+                                    <tr>
+                                        <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '7' : '6' %>" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            No hay configuraciones registradas
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Configuración -->
+    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+    <div class="modal fade" id="modalNuevaConfiguracion" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nueva Configuración de Rapel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/dashboard/comisiones/rapeles-configuracion">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Marca <span class="text-danger">*</span></label>
+                                <select name="marca" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>"><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">% Cumplimiento Mínimo <span class="text-danger">*</span></label>
+                                <input type="number" name="porcentaje_cumplimiento_min" class="form-control" step="0.01" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">% Cumplimiento Máximo <span class="text-danger">*</span></label>
+                                <input type="number" name="porcentaje_cumplimiento_max" class="form-control" step="0.01" min="0" max="1000" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">% Rapel <span class="text-danger">*</span></label>
+                                <input type="number" name="porcentaje_rapel" class="form-control" step="0.01" min="0" max="100" required>
+                                <small class="text-muted">Porcentaje de rapel a aplicar sobre el exceso del objetivo</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="true" selected>Activa</option>
+                                    <option value="false">Inactiva</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea name="observaciones" class="form-control" rows="3" placeholder="Ej: Rapel aplicable cuando el cumplimiento está entre 80% y 100%"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar Configuración
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Configuración -->
+    <div class="modal fade" id="modalEditarConfiguracion" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Configuración de Rapel</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEditarConfiguracion">
+                    <div class="modal-body">
+                        <input type="hidden" id="editConfiguracionId" name="id">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Marca <span class="text-danger">*</span></label>
+                                <select id="editMarca" name="marca" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>"><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">% Cumplimiento Mínimo <span class="text-danger">*</span></label>
+                                <input type="number" id="editPorcentajeMin" name="porcentaje_cumplimiento_min" class="form-control" step="0.01" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">% Cumplimiento Máximo <span class="text-danger">*</span></label>
+                                <input type="number" id="editPorcentajeMax" name="porcentaje_cumplimiento_max" class="form-control" step="0.01" min="0" max="1000" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">% Rapel <span class="text-danger">*</span></label>
+                                <input type="number" id="editPorcentajeRapel" name="porcentaje_rapel" class="form-control" step="0.01" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select id="editActivo" name="activo" class="form-select">
+                                    <option value="true">Activa</option>
+                                    <option value="false">Inactiva</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="editObservaciones" name="observaciones" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Actualizar Configuración
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mantener submenú de comisiones abierto
+        document.addEventListener('DOMContentLoaded', function() {
+            const comisionesSubmenu = document.getElementById('comisionesSubmenu');
+            if (comisionesSubmenu) {
+                comisionesSubmenu.classList.add('show');
+            }
+        });
+
+        async function editarConfiguracion(id) {
+            try {
+                const response = await fetch(`/dashboard/comisiones/rapeles-configuracion/${id}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const config = data.data;
+                    document.getElementById('editConfiguracionId').value = config.id;
+                    document.getElementById('editMarca').value = config.marca || '';
+                    document.getElementById('editPorcentajeMin').value = config.porcentaje_cumplimiento_min || 0;
+                    document.getElementById('editPorcentajeMax').value = config.porcentaje_cumplimiento_max || 0;
+                    document.getElementById('editPorcentajeRapel').value = config.porcentaje_rapel || 0;
+                    document.getElementById('editActivo').value = config.activo ? 'true' : 'false';
+                    document.getElementById('editObservaciones').value = config.observaciones || '';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('modalEditarConfiguracion'));
+                    modal.show();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo cargar la configuración'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar la configuración');
+            }
+        }
+
+        document.getElementById('formEditarConfiguracion')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const configData = {
+                id: formData.get('id'),
+                marca: formData.get('marca'),
+                porcentaje_cumplimiento_min: formData.get('porcentaje_cumplimiento_min'),
+                porcentaje_cumplimiento_max: formData.get('porcentaje_cumplimiento_max'),
+                porcentaje_rapel: formData.get('porcentaje_rapel'),
+                activo: formData.get('activo'),
+                observaciones: formData.get('observaciones')
+            };
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/rapeles-configuracion/${configData.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(configData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.href = '/dashboard/comisiones/rapeles-configuracion?success=configuracion_actualizada';
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo actualizar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la configuración');
+            }
+        });
+
+        async function eliminarConfiguracion(id) {
+            if (!confirm('¿Estás seguro de eliminar esta configuración?')) return;
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/rapeles-configuracion/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la configuración');
+            }
+        }
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>

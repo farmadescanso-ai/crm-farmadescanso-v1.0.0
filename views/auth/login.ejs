@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/auth.css" rel="stylesheet">
+</head>
+<body class="auth-body">
+    <div class="container-fluid">
+        <div class="row min-vh-100">
+            <!-- Left Side - Branding -->
+            <div class="col-lg-6 d-none d-lg-flex auth-branding">
+                <div class="d-flex flex-column justify-content-center align-items-center text-white p-5 branding-content">
+                    <div class="brand-logo mb-4">
+                        <img src="/images/logo.png" alt="Farmadescaso" class="img-fluid" style="max-height: 120px; max-width: 100%; display: none;" id="logo-img">
+                        <i class="fas fa-pills display-1" id="logo-icon"></i>
+                    </div>
+                    <h2 class="fw-bold mb-3">Farmadescaso 2021 SL</h2>
+                    <p class="lead text-center">
+                        Portal comercial profesional para la gestión farmacéutica
+                    </p>
+                    <div class="features-list mt-4">
+                        <div class="feature-item mb-2">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Partner Gemavip
+                        </div>
+                        <div class="feature-item mb-2">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Partner Youbelle
+                        </div>
+                        <div class="feature-item mb-2">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Venta Mayoristas y Farmacias
+                        </div>
+                    </div>
+                    <% const partnerLogos = [
+                        { name: 'Bluecube', logo: '/images/logos/bluecube.png' },
+                        { name: 'Serenity', logo: '/images/logos/serenity.png' },
+                        { name: 'Gemavip', logo: '/images/logos/gemavip.png' },
+                        { name: 'Youbelle', logo: '/images/logos/youbelle-logo.jpg' },
+                        { name: 'Farmadescaso', logo: '/images/logo.png' }
+                    ];
+                    const carouselItems = partnerLogos.concat(partnerLogos);
+                    %>
+                    <div class="brand-carousel mt-5">
+                        <div class="brand-fade brand-fade--left"></div>
+                        <div class="brand-fade brand-fade--right"></div>
+                        <div class="brand-track">
+                            <% carouselItems.forEach((brand, index) => { %>
+                                <div class="brand-item" data-brand="<%= brand.name %>">
+                                    <img src="<%= brand.logo %>" alt="<%= brand.name %>" class="brand-logo-img" loading="lazy">
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Side - Login Form -->
+            <div class="col-lg-6 d-flex align-items-center justify-content-center">
+                <div class="auth-form-container w-100 p-4">
+                    <div class="text-center mb-4">
+                        <h3 class="fw-bold text-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                        </h3>
+                        <p class="text-muted">Accede a tu cuenta comercial</p>
+                    </div>
+                    
+                    <% if (error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <%= error %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+                    
+                    <% if (typeof success !== 'undefined' && success) { %>
+                        <div class="alert alert-success alert-dismissible fade show" role="alert">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <%= success %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+                    
+                    <form action="/auth/login" method="POST" class="auth-form">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope me-2"></i>Email
+                            </label>
+                            <input type="email" 
+                                   class="form-control form-control-lg" 
+                                   id="email" 
+                                   name="email" 
+                                   autocomplete="email"
+                                   value="<%= typeof email !== 'undefined' ? email : '' %>"
+                                   required 
+                                   placeholder="tu@email.com">
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label for="password" class="form-label">
+                                <i class="fas fa-lock me-2"></i>Contraseña
+                            </label>
+                            <div class="input-group">
+                                <input type="password" 
+                                       class="form-control form-control-lg" 
+                                       id="password" 
+                                       name="password" 
+                                       autocomplete="current-password"
+                                       required 
+                                       placeholder="Tu contraseña">
+                                <button class="btn btn-outline-secondary" 
+                                        type="button" 
+                                        id="togglePassword">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Iniciar Sesión
+                            </button>
+                        </div>
+                        
+                        <div class="text-center">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="remember">
+                                <label class="form-check-label" for="remember">
+                                    Recordar mi sesión
+                                </label>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="text-center mt-4">
+                        <p class="mb-3">
+                            <a href="/auth/forgot-password" class="text-primary text-decoration-none fw-semibold" style="font-size: 0.95rem;">
+                                <i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?
+                            </a>
+                        </p>
+                        <p class="text-muted">
+                            ¿No tienes cuenta? 
+                            <a href="/contact" class="text-primary text-decoration-none">
+                                Contacta con administración
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/auth.js"></script>
+    <script>
+        // Manejo del logo
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoImg = document.getElementById('logo-img');
+            const logoIcon = document.getElementById('logo-icon');
+            if (logoImg && logoIcon) {
+                logoImg.addEventListener('load', function() {
+                    this.style.display = 'block';
+                    logoIcon.style.display = 'none';
+                });
+                logoImg.addEventListener('error', function() {
+                    this.style.display = 'none';
+                    logoIcon.style.display = 'block';
+                });
+                // Forzar verificación
+                if (logoImg.src) {
+                    const img = new Image();
+                    img.onload = function() {
+                        logoImg.style.display = 'block';
+                        logoIcon.style.display = 'none';
+                    };
+                    img.onerror = function() {
+                        logoImg.style.display = 'none';
+                        logoIcon.style.display = 'block';
+                    };
+                    img.src = logoImg.src;
+                }
+            }
+
+            const brandItems = document.querySelectorAll('.brand-item');
+            brandItems.forEach(item => {
+                const img = item.querySelector('img');
+                const brandName = item.dataset.brand || 'Socio';
+                if (!img) return;
+
+                const setFallback = () => {
+                    item.classList.add('brand-item--fallback');
+                    item.innerHTML = '';
+                    const span = document.createElement('span');
+                    span.className = 'brand-fallback';
+                    span.textContent = brandName;
+                    item.appendChild(span);
+                };
+
+                if (!img.complete) {
+                    img.addEventListener('error', setFallback);
+                } else if (img.naturalWidth === 0) {
+                    setFallback();
+                }
+                img.addEventListener('error', setFallback);
+            });
+        });
+    </script>
+</body>
+</html>

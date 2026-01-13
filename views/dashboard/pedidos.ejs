@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .table-container {
+            max-height: 75vh;
+            overflow: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+        }
+        .table th.sortable {
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            padding-right: 25px;
+        }
+        .table th.sortable:hover {
+            background-color: #f8f9fa;
+        }
+        .table th.sortable .sort-icons {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        .table th.sortable.sort-asc .sort-icons .fa-arrow-up,
+        .table th.sortable.sort-desc .sort-icons .fa-arrow-down {
+            color: #0b891b;
+        }
+        .pedido-row:hover {
+            background-color: rgba(11, 137, 27, 0.05);
+        }
+        .search-box {
+            background: #ffffff;
+            padding: 1rem 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.05);
+        }
+        .highlight {
+            background-color: #fff3cd;
+            font-weight: 600;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div>
+                <h1 class="mb-1 fw-bold text-success"><i class="fas fa-shopping-cart me-2 text-success"></i>Pedidos</h1>
+                <p class="text-muted mb-0">Visualiza y gestiona todos los pedidos registrados en el CRM</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/dashboard/pedidos/informe" class="btn btn-info text-white">
+                    <i class="fas fa-file-alt me-1"></i>Ver Informe
+                </a>
+                <a href="/dashboard/pedidos/nuevo" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Nuevo Pedido
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="card shadow-sm border-0 bg-primary text-white">
+                    <div class="card-body">
+                        <h6 class="text-uppercase fw-semibold">Total de pedidos</h6>
+                        <h3 class="mb-0"><%= formatearNumeroES(resumen.totalPedidos || 0) %></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card shadow-sm border-0 bg-warning text-dark">
+                    <div class="card-body">
+                        <h6 class="text-uppercase fw-semibold">Pendientes</h6>
+                        <h3 class="mb-0"><%= formatearNumeroES(resumen.pendientes || 0) %></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card shadow-sm border-0 bg-success text-white">
+                    <div class="card-body">
+                        <h6 class="text-uppercase fw-semibold">Completados</h6>
+                        <h3 class="mb-0"><%= formatearNumeroES(resumen.completados || 0) %></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="card shadow-sm border-0 bg-info text-white">
+                    <div class="card-body">
+                        <h6 class="text-uppercase fw-semibold">Importe total</h6>
+                        <h3 class="mb-0">€ <%= formatearMonedaES(resumen.totalImporte || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <% if (error) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+        <% if (query && query.success === 'pedido_eliminado') { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>El pedido se eliminó correctamente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+
+        <div class="search-box">
+            <div class="row g-3 align-items-end">
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label fw-semibold text-muted">Estado</label>
+                    <select class="form-select" id="filterEstado">
+                        <option value="todos">Todos</option>
+                        <option value="activos">Activos</option>
+                        <option value="cancelados">Cancelados</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 col-md-4">
+                    <label class="form-label fw-semibold text-muted">Marca</label>
+                    <select class="form-select" id="filterMarca">
+                        <option value="todas">Todas</option>
+                        <option value="mixto">Mixto</option>
+                        <% if (marcasDisponibles && marcasDisponibles.length > 0) { %>
+                            <% marcasDisponibles.forEach(marca => { %>
+                                <option value="<%= marca.nombre %>"><%= marca.nombre %></option>
+                            <% }) %>
+                        <% } %>
+                    </select>
+                </div>
+                <div class="col-lg-3 col-md-4">
+                    <label class="form-label fw-semibold text-muted">Buscar por</label>
+                    <select class="form-select" id="searchField">
+                        <option value="all">Todos los campos</option>
+                        <option value="numero">Número Pedido</option>
+                        <option value="cliente">Cliente</option>
+                        <option value="estado">Estado</option>
+                        <option value="formaPago">Forma de pago</option>
+                        <option value="tipoPedido">Tipo de pedido</option>
+                    </select>
+                </div>
+                <div class="col-lg-5 col-md-6">
+                    <label class="form-label fw-semibold text-muted">Término</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+                        <input type="text" class="form-control" id="searchInput" placeholder="Ingresa tu búsqueda...">
+                    </div>
+                </div>
+                <div class="col-lg-2 col-md-2">
+                    <button class="btn btn-outline-secondary w-100" type="button" id="clearSearch">
+                        <i class="fas fa-eraser me-1"></i>Limpiar
+                    </button>
+                </div>
+            </div>
+            <div class="mt-3 small text-muted">
+                Mostrando <span id="pedidosMostrados"><%= pedidos.length %></span> de <%= pedidos.length %> pedidos
+            </div>
+        </div>
+
+        <div class="table-container">
+            <div class="table-responsive">
+                <table class="table table-hover" id="pedidosTable">
+                    <thead class="table-light text-uppercase small">
+                        <tr>
+                            <th class="sortable" data-sort="numero">
+                                Nº Pedido
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="cliente">
+                                Cliente
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="fecha">
+                                Fecha
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="fechaEntrega">
+                                Entrega
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="estado">
+                                Estado
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="sortable" data-sort="formaPago">
+                                Forma de pago
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th>Asociado</th>
+                            <th class="sortable" data-sort="tipoPedido">
+                                Tipo
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="text-end sortable" data-sort="total">
+                                Total (€)
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="text-center sortable" data-sort="lineas">
+                                Líneas
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if (pedidos.length === 0) { %>
+                        <tr>
+                            <td colspan="11" class="text-center text-muted py-4">
+                                <i class="fas fa-inbox me-2"></i>No hay pedidos registrados todavía.
+                            </td>
+                        </tr>
+                        <% } else { %>
+                            <% 
+                            // Función helper para formatear fechas en DD/MM/YYYY
+                            function formatearFechaDDMMYYYY(fecha) {
+                                if (!fecha) return '—';
+                                try {
+                                    const date = fecha instanceof Date ? fecha : new Date(fecha);
+                                    if (isNaN(date.getTime())) return '—';
+                                    const dia = String(date.getDate()).padStart(2, '0');
+                                    const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                    const año = date.getFullYear();
+                                    return `${dia}/${mes}/${año}`;
+                                } catch (e) {
+                                    return '—';
+                                }
+                            }
+                            %>
+                            <% pedidos.forEach(pedido => { %>
+                            <tr class="pedido-row" data-pedido='<%- JSON.stringify(pedido) %>'>
+                                <td><%= pedido.numero || pedido.id %></td>
+                                <td><%= pedido.cliente %></td>
+                                <td><%= formatearFechaDDMMYYYY(pedido.fecha) %></td>
+                                <td><%= formatearFechaDDMMYYYY(pedido.fechaEntrega) %></td>
+                                <td>
+                                    <% 
+                                    // Función para obtener la clase CSS según el estado del pedido
+                                    function getEstadoClass(estado) {
+                                        if (!estado) return 'bg-secondary';
+                                        const estadoLower = estado.toLowerCase();
+                                        
+                                        if (estadoLower === 'pendiente' || estadoLower.includes('pend')) {
+                                            return 'bg-warning text-dark';
+                                        } else if (estadoLower === 'tramitado' || estadoLower.includes('tramit')) {
+                                            return 'bg-info text-white';
+                                        } else if (estadoLower === 'enviado' || estadoLower.includes('envi')) {
+                                            return 'bg-primary text-white';
+                                        } else if (estadoLower === 'entregado' || estadoLower.includes('entreg')) {
+                                            return 'bg-success text-white';
+                                        } else if (estadoLower === 'cancelado' || estadoLower === 'anulado' || estadoLower.includes('cancel') || estadoLower.includes('anul')) {
+                                            return 'bg-secondary text-white';
+                                        } else if (estadoLower === 'cerrado' || estadoLower.includes('cerr')) {
+                                            return 'bg-dark text-white';
+                                        } else {
+                                            return 'bg-secondary text-white';
+                                        }
+                                    }
+                                    const estadoPedido = pedido.estado || 'Pendiente';
+                                    const estadoClass = getEstadoClass(estadoPedido);
+                                    %>
+                                    <span class="badge <%= estadoClass %>">
+                                        <%= estadoPedido %>
+                                    </span>
+                                </td>
+                                <td><%= pedido.formaPago || '—' %></td>
+                                <td>
+                                    <% if (pedido.numero_cooperativa && pedido.tipoPedido && pedido.tipoPedido.toLowerCase().includes('transfer')) { %>
+                                        <span class="badge bg-info text-white" title="Número de asociado al mayorista <%= pedido.cooperativa_nombre || '' %>">
+                                            <%= pedido.numero_cooperativa %>
+                                        </span>
+                                    <% } else { %>
+                                        —
+                                    <% } %>
+                                </td>
+                                <td><%= pedido.tipoPedido || '—' %></td>
+                                <td class="text-end fw-semibold">
+                                    € <%= formatearMonedaES(pedido.total || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                                </td>
+                                <td class="text-center"><%= pedido.lineas || 0 %></td>
+                                <td class="text-center">
+                                    <div class="d-flex flex-column align-items-center gap-1">
+                                        <% if (pedido.esMixto) { %>
+                                            <span class="badge bg-info mb-1" title="Este pedido contiene productos de múltiples marcas">
+                                                <i class="fas fa-layer-group me-1"></i>Mixto
+                                            </span>
+                                        <% } %>
+                                        <div class="btn-group" role="group">
+                                            <a href="/dashboard/pedidos/<%= pedido.id %>" class="btn btn-sm btn-primary" title="Ver">
+                                                <i class="fas fa-eye text-white"></i>
+                                            </a>
+                                            <a href="/dashboard/pedidos/<%= pedido.id %>/editar" class="btn btn-sm btn-warning text-white" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm <%= estadoLower === 'cancelado' ? 'btn-success' : 'btn-danger' %> toggle-estado-pedido" data-id="<%= pedido.id %>" data-estado="<%= pedido.estado || 'Pendiente' %>">
+                                                <i class="fas <%= estadoLower === 'cancelado' ? 'fa-undo' : 'fa-ban' %>"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% }) %>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const searchInput = document.getElementById('searchInput');
+        const searchField = document.getElementById('searchField');
+        const clearSearch = document.getElementById('clearSearch');
+        const filterEstado = document.getElementById('filterEstado');
+        const filterMarca = document.getElementById('filterMarca');
+        const pedidosMostrados = document.getElementById('pedidosMostrados');
+        let rows = Array.from(document.querySelectorAll('#pedidosTable tbody tr'));
+        
+        // Variables para ordenamiento
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc'; // 'asc' o 'desc'
+
+        function normalize(text) {
+            if (!text) return '';
+            return String(text)
+                .toLowerCase()
+                .normalize('NFD')
+                .replace(/[^a-z0-9\s.-]/g, '')
+                .trim();
+        }
+
+        function highlight(text, term) {
+            if (!term || !text) return text;
+            const regex = new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+            return text.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        function performSearch() {
+            const field = searchField.value;
+            const term = normalize(searchInput.value);
+            const estadoFiltro = filterEstado.value;
+            const marcaFiltro = filterMarca.value;
+            let visible = 0;
+            const highlightMap = {
+                numero: 0,
+                cliente: 1,
+                estado: 4,
+                formaPago: 5,
+                tipoPedido: 6
+            };
+
+            rows.forEach(row => {
+                const data = JSON.parse(row.dataset.pedido || '{}');
+                const cells = row.querySelectorAll('td');
+                let match = false;
+
+                if (!term) {
+                    match = true;
+                } else if (field === 'all') {
+                    const pool = [
+                        data.numero,
+                        data.cliente,
+                        data.estado,
+                        data.formaPago,
+                        data.tipoPedido
+                    ];
+                    match = pool.some(value => normalize(value).includes(term));
+                } else {
+                    let value;
+                    switch (field) {
+                        case 'numero': value = data.numero || data.id; break;
+                        case 'cliente': value = data.cliente; break;
+                        case 'estado': value = data.estado; break;
+                        case 'formaPago': value = data.formaPago; break;
+                        case 'tipoPedido': value = data.tipoPedido; break;
+                        default: value = ''; break;
+                    }
+                    match = normalize(value).includes(term);
+                }
+
+                // Aplicar filtro de estado
+                if (match) {
+                    const estadoActual = (data.estado || '').toLowerCase();
+                    if (estadoFiltro === 'activos' && estadoActual === 'cancelado') {
+                        match = false;
+                    } else if (estadoFiltro === 'cancelados' && estadoActual !== 'cancelado') {
+                        match = false;
+                    }
+                }
+
+                // Aplicar filtro de marca
+                if (match && marcaFiltro !== 'todas') {
+                    if (marcaFiltro === 'mixto') {
+                        // Solo mostrar pedidos mixtos
+                        match = data.esMixto === true;
+                    } else {
+                        // Mostrar pedidos que contengan la marca seleccionada
+                        const marcas = data.marcas || [];
+                        match = marcas.some(marca => normalize(marca) === normalize(marcaFiltro));
+                    }
+                }
+
+                if (match) {
+                    row.style.display = '';
+                    visible++;
+
+                    if (term) {
+                        const fieldsToHighlight = field === 'all'
+                            ? ['numero', 'cliente', 'estado', 'formaPago', 'tipoPedido']
+                            : [field];
+                        fieldsToHighlight.forEach(key => {
+                            const index = highlightMap[key];
+                            const cell = cells[index];
+                            if (cell) {
+                                const originalText = cell.textContent;
+                                cell.innerHTML = highlight(originalText, searchInput.value);
+                            }
+                        });
+                    } else {
+                        Object.values(highlightMap).forEach(index => {
+                            const cell = cells[index];
+                            if (cell) {
+                                cell.innerHTML = cell.textContent;
+                            }
+                        });
+                    }
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            pedidosMostrados.textContent = visible;
+        }
+
+        searchInput.addEventListener('input', performSearch);
+        searchField.addEventListener('change', performSearch);
+        filterEstado.addEventListener('change', performSearch);
+        filterMarca.addEventListener('change', performSearch);
+        clearSearch.addEventListener('click', () => {
+            searchInput.value = '';
+            searchField.value = 'all';
+            filterEstado.value = 'todos';
+            filterMarca.value = 'todas';
+            performSearch();
+        });
+
+        performSearch();
+
+        // Función para formatear fechas en DD/MM/YYYY (para comparación)
+        function parsearFechaDDMMYYYY(fechaStr) {
+            if (!fechaStr || fechaStr === '—') return null;
+            const partes = fechaStr.split('/');
+            if (partes.length !== 3) return null;
+            const dia = parseInt(partes[0], 10);
+            const mes = parseInt(partes[1], 10) - 1;
+            const año = parseInt(partes[2], 10);
+            return new Date(año, mes, dia);
+        }
+
+        // Función para obtener el valor de una celda según el tipo de columna
+        function obtenerValorCelda(row, columnIndex, sortType) {
+            const cells = row.querySelectorAll('td');
+            const cell = cells[columnIndex];
+            if (!cell) return '';
+
+            const text = cell.textContent.trim();
+            
+            if (sortType === 'numero') {
+                // Extraer número del formato P250001
+                const match = text.match(/P?(\d+)/);
+                return match ? parseInt(match[1], 10) : 0;
+            } else if (sortType === 'fecha' || sortType === 'fechaEntrega') {
+                const fecha = parsearFechaDDMMYYYY(text);
+                return fecha ? fecha.getTime() : 0;
+            } else if (sortType === 'total') {
+                // Extraer número del formato "€ 1,234.56" o "€ 1.234,56"
+                // Eliminar símbolo de euro y espacios
+                let numeroStr = text.replace(/[€\s]/g, '');
+                // Detectar formato: si tiene punto como separador de miles y coma como decimal
+                if (numeroStr.includes('.') && numeroStr.includes(',')) {
+                    // Formato español: 1.234,56 -> 1234.56
+                    numeroStr = numeroStr.replace(/\./g, '').replace(',', '.');
+                } else if (numeroStr.includes(',')) {
+                    // Solo coma, puede ser decimal
+                    numeroStr = numeroStr.replace(',', '.');
+                }
+                return parseFloat(numeroStr) || 0;
+            } else if (sortType === 'lineas') {
+                return parseInt(text, 10) || 0;
+            } else {
+                // Texto normal
+                return text.toLowerCase();
+            }
+        }
+
+        // Función para ordenar las filas
+        function ordenarFilas(columnIndex, sortType) {
+            const tbody = document.querySelector('#pedidosTable tbody');
+            // Obtener todas las filas del tbody (incluyendo las ocultas)
+            const todasLasFilas = Array.from(tbody.querySelectorAll('tr'));
+            
+            // Determinar dirección de ordenamiento
+            if (currentSortColumn === columnIndex) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = columnIndex;
+                currentSortDirection = 'asc';
+            }
+
+            // Ordenar todas las filas
+            todasLasFilas.sort((a, b) => {
+                const valorA = obtenerValorCelda(a, columnIndex, sortType);
+                const valorB = obtenerValorCelda(b, columnIndex, sortType);
+
+                let comparacion = 0;
+                if (typeof valorA === 'number' && typeof valorB === 'number') {
+                    comparacion = valorA - valorB;
+                } else {
+                    comparacion = String(valorA).localeCompare(String(valorB), 'es', { numeric: true, sensitivity: 'base' });
+                }
+
+                return currentSortDirection === 'asc' ? comparacion : -comparacion;
+            });
+
+            // Actualizar el DOM - reinsertar todas las filas en orden
+            todasLasFilas.forEach(fila => tbody.appendChild(fila));
+            
+            // Actualizar la referencia de rows
+            rows = todasLasFilas;
+
+            // Actualizar clases CSS en las cabeceras
+            document.querySelectorAll('.table th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            const thActual = document.querySelector(`.table th.sortable[data-sort="${sortType}"]`);
+            if (thActual) {
+                thActual.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+
+            // Reaplicar búsqueda/filtros después de ordenar
+            performSearch();
+        }
+
+        // Añadir event listeners a las cabeceras ordenables
+        document.querySelectorAll('.table th.sortable').forEach(th => {
+            th.addEventListener('click', () => {
+                const sortType = th.getAttribute('data-sort');
+                const columnIndex = Array.from(th.parentElement.children).indexOf(th);
+                ordenarFilas(columnIndex, sortType);
+            });
+        });
+
+        document.querySelectorAll('.toggle-estado-pedido').forEach(button => {
+            button.addEventListener('click', async () => {
+                if (button.dataset.loading === 'true') return;
+                const id = button.getAttribute('data-id');
+                const estadoActual = button.getAttribute('data-estado') || 'Pendiente';
+                const esCancelado = estadoActual.toLowerCase() === 'cancelado';
+                const nuevoEstado = esCancelado ? 'Pendiente' : 'Cancelado';
+
+                const confirmado = confirm(`¿Seguro que deseas ${esCancelado ? 'reactivar' : 'cancelar'} este pedido?`);
+                if (!confirmado) return;
+
+                button.dataset.loading = 'true';
+                button.disabled = true;
+
+                try {
+                    const response = await fetch(`/api/pedidos/${id}/estado`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json'
+                        },
+                        body: JSON.stringify({ estado: nuevoEstado })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+                        throw new Error(errorData.error || `Error HTTP ${response.status}`);
+                    }
+
+                    window.location.reload();
+                } catch (error) {
+                    console.error('❌ [TOGGLE PEDIDO LISTADO] Error:', error);
+                    alert(`No se pudo cambiar el estado del pedido: ${error.message || 'Error desconocido'}`);
+                } finally {
+                    button.disabled = false;
+                    button.dataset.loading = 'false';
+                }
+            });
+        });
+
+        document.querySelectorAll('.pedido-delete-form').forEach(form => {
+            form.addEventListener('submit', event => {
+                const numero = form.dataset.numero || 'este pedido';
+                const confirmed = confirm(`¿Seguro que deseas anular el pedido ${numero}? Esta acción no se puede deshacer.`);
+                if (!confirmed) {
+                    event.preventDefault();
+                }
+            });
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Condiciones Especiales - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/articulos">
+                                    <i class="fas fa-boxes me-2"></i>Artículos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes">
+                                    <i class="fas fa-users me-2"></i>Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/pedidos">
+                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/agenda">
+                                    <i class="fas fa-calendar-check me-2"></i>Agenda
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#comisionesSubmenu" aria-expanded="true" aria-controls="comisionesSubmenu" id="comisionesMenuToggle">
+                                    <i class="fas fa-euro-sign me-2"></i>Comisiones
+                                    <i class="fas fa-chevron-down ms-auto float-end" id="comisionesChevron" style="font-size: 0.75rem; transition: transform 0.3s; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="comisionesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'presupuestos' ? 'active' : '' %>" href="/dashboard/comisiones/presupuestos">
+                                            <i class="fas fa-chart-line me-2"></i>Presupuestos
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Comisiones
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles">
+                                            <i class="fas fa-trophy me-2"></i>Rapeles
+                                        </a>
+                                    </li>
+                                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'objetivos-marca' ? 'active' : '' %>" href="/dashboard/comisiones/objetivos-marca">
+                                            <i class="fas fa-bullseye me-2"></i>Objetivos por Marca
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'condiciones-especiales' ? 'active' : '' %>" href="/dashboard/comisiones/condiciones-especiales">
+                                            <i class="fas fa-star me-2"></i>Condiciones Especiales
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles-configuracion' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles-configuracion">
+                                            <i class="fas fa-cog me-2"></i>Config. Rapeles
+                                        </a>
+                                    </li>
+                                    <% } %>
+                                </ul>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Comerciales
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-star me-2 text-primary"></i>Condiciones Especiales
+                    </h1>
+                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaCondicion">
+                        <i class="fas fa-plus me-1"></i>Nueva Condición
+                    </button>
+                    <% } %>
+                </div>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <% if (req.query.success === 'condicion_creada') { %>
+                        Condición creada exitosamente.
+                    <% } else if (req.query.success === 'condicion_actualizada') { %>
+                        Condición actualizada exitosamente.
+                    <% } else { %>
+                        <%= req.query.success %>
+                    <% } %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i><%= req.query.error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/dashboard/comisiones/condiciones-especiales" class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Comercial</label>
+                                <select name="comercial_id" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="null" <%= filters.comercial_id === null ? 'selected' : '' %>>Sin comercial específico</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>" <%= filters.comercial_id == (comercial.id || comercial.Id) ? 'selected' : '' %>>
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Artículo</label>
+                                <select name="articulo_id" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="null" <%= filters.articulo_id === null ? 'selected' : '' %>>Sin artículo específico</option>
+                                    <% articulos.forEach(articulo => { %>>
+                                    <option value="<%= articulo.id || articulo.Id %>" <%= filters.articulo_id == (articulo.id || articulo.Id) ? 'selected' : '' %>>
+                                        <%= articulo.Nombre || articulo.nombre %> <% if (articulo.SKU) { %>(<%= articulo.SKU %>)<% } %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Marca</label>
+                                <select name="marca" class="form-select">
+                                    <option value="">Todas</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>" <%= filters.marca === marca ? 'selected' : '' %>><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="true" <%= filters.activo === true ? 'selected' : '' %>>Activas</option>
+                                    <option value="false" <%= filters.activo === false ? 'selected' : '' %>>Inactivas</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-filter me-1"></i>Filtrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabla de condiciones especiales -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Comercial</th>
+                                        <th>Artículo</th>
+                                        <th>Marca</th>
+                                        <th>Tipo</th>
+                                        <th class="text-end">Valor (%)</th>
+                                        <th>Vigencia</th>
+                                        <th class="text-center">Estado</th>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <th class="text-center">Acciones</th>
+                                        <% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (condiciones && condiciones.length > 0) { %>
+                                    <% condiciones.forEach(condicion => { %>
+                                    <tr>
+                                        <td><%= condicion.comercial_nombre || 'Todos' %></td>
+                                        <td>
+                                            <% if (condicion.articulo_nombre) { %>
+                                            <%= condicion.articulo_nombre %>
+                                            <% if (condicion.articulo_sku) { %>
+                                            <br><small class="text-muted">SKU: <%= condicion.articulo_sku %></small>
+                                            <% } %>
+                                            <% } else { %>
+                                            Todos
+                                            <% } %>
+                                        </td>
+                                        <td><%= condicion.marca || 'Todas' %></td>
+                                        <td><%= condicion.tipo_condicion || '-' %></td>
+                                        <td class="text-end fw-bold"><%= parseFloat(condicion.valor || 0).toFixed(2) %>%</td>
+                                        <td>
+                                            <% if (condicion.fecha_inicio || condicion.fecha_fin) { %>
+                                            <%= condicion.fecha_inicio ? new Date(condicion.fecha_inicio).toLocaleDateString('es-ES') : 'Sin inicio' %>
+                                            <% if (condicion.fecha_fin) { %>
+                                            - <%= new Date(condicion.fecha_fin).toLocaleDateString('es-ES') %>
+                                            <% } %>
+                                            <% } else { %>
+                                            Permanente
+                                            <% } %>
+                                        </td>
+                                        <td class="text-center">
+                                            <% if (condicion.activo) { %>
+                                            <span class="badge bg-success">Activa</span>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Inactiva</span>
+                                            <% } %>
+                                        </td>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarCondicion(<%= condicion.id %>)" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarCondicion(<%= condicion.id %>)" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <% }) %>
+                                    <% } else { %>
+                                    <tr>
+                                        <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '8' : '7' %>" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            No hay condiciones especiales registradas
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Nueva Condición -->
+    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+    <div class="modal fade" id="modalNuevaCondicion" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nueva Condición Especial</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/dashboard/comisiones/condiciones-especiales">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial</label>
+                                <select name="comercial_id" class="form-select">
+                                    <option value="">Todos los comerciales</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>">
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                                <small class="text-muted">Dejar vacío para aplicar a todos los comerciales</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Artículo</label>
+                                <select name="articulo_id" class="form-select">
+                                    <option value="">Todos los artículos</option>
+                                    <% articulos.forEach(articulo => { %>
+                                    <option value="<%= articulo.id || articulo.Id %>">
+                                        <%= articulo.Nombre || articulo.nombre %> <% if (articulo.SKU) { %>(<%= articulo.SKU %>)<% } %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                                <small class="text-muted">Dejar vacío para aplicar a todos los artículos</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marca</label>
+                                <select name="marca" class="form-select">
+                                    <option value="">Todas las marcas</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>"><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                                <small class="text-muted">Dejar vacío para aplicar a todas las marcas</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Condición <span class="text-danger">*</span></label>
+                                <select name="tipo_condicion" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="fijo_articulo">Fijo por Artículo</option>
+                                    <option value="extra_volumen">Extra por Volumen</option>
+                                    <option value="bonificacion">Bonificación</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Valor (%) <span class="text-danger">*</span></label>
+                                <input type="number" name="valor" class="form-control" step="0.01" min="0" max="100" required>
+                                <small class="text-muted">Porcentaje de comisión o valor de la condición</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="true" selected>Activa</option>
+                                    <option value="false">Inactiva</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Inicio</label>
+                                <input type="date" name="fecha_inicio" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Fin</label>
+                                <input type="date" name="fecha_fin" class="form-control">
+                                <small class="text-muted">Opcional: dejar vacío para condición permanente</small>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea name="observaciones" class="form-control" rows="3" placeholder="Observaciones sobre la condición especial..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar Condición
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Condición -->
+    <div class="modal fade" id="modalEditarCondicion" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Condición Especial</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEditarCondicion">
+                    <div class="modal-body">
+                        <input type="hidden" id="editCondicionId" name="id">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial</label>
+                                <select id="editComercialId" name="comercial_id" class="form-select">
+                                    <option value="">Todos los comerciales</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>">
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Artículo</label>
+                                <select id="editArticuloId" name="articulo_id" class="form-select">
+                                    <option value="">Todos los artículos</option>
+                                    <% articulos.forEach(articulo => { %>
+                                    <option value="<%= articulo.id || articulo.Id %>">
+                                        <%= articulo.Nombre || articulo.nombre %> <% if (articulo.SKU) { %>(<%= articulo.SKU %>)<% } %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marca</label>
+                                <select id="editMarca" name="marca" class="form-select">
+                                    <option value="">Todas las marcas</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>"><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Tipo de Condición <span class="text-danger">*</span></label>
+                                <select id="editTipoCondicion" name="tipo_condicion" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <option value="fijo_articulo">Fijo por Artículo</option>
+                                    <option value="extra_volumen">Extra por Volumen</option>
+                                    <option value="bonificacion">Bonificación</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Valor (%) <span class="text-danger">*</span></label>
+                                <input type="number" id="editValor" name="valor" class="form-control" step="0.01" min="0" max="100" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select id="editActivo" name="activo" class="form-select">
+                                    <option value="true">Activa</option>
+                                    <option value="false">Inactiva</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Inicio</label>
+                                <input type="date" id="editFechaInicio" name="fecha_inicio" class="form-control" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Fin</label>
+                                <input type="date" id="editFechaFin" name="fecha_fin" class="form-control">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="editObservaciones" name="observaciones" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Actualizar Condición
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mantener submenú de comisiones abierto
+        document.addEventListener('DOMContentLoaded', function() {
+            const comisionesSubmenu = document.getElementById('comisionesSubmenu');
+            if (comisionesSubmenu) {
+                comisionesSubmenu.classList.add('show');
+            }
+        });
+
+        async function editarCondicion(id) {
+            try {
+                const response = await fetch(`/dashboard/comisiones/condiciones-especiales/${id}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const condicion = data.data;
+                    document.getElementById('editCondicionId').value = condicion.id;
+                    document.getElementById('editComercialId').value = condicion.comercial_id || '';
+                    document.getElementById('editArticuloId').value = condicion.articulo_id || '';
+                    document.getElementById('editMarca').value = condicion.marca || '';
+                    document.getElementById('editTipoCondicion').value = condicion.tipo_condicion || '';
+                    document.getElementById('editValor').value = condicion.valor || 0;
+                    document.getElementById('editActivo').value = condicion.activo ? 'true' : 'false';
+                    document.getElementById('editFechaInicio').value = condicion.fecha_inicio ? condicion.fecha_inicio.split('T')[0] : '';
+                    document.getElementById('editFechaFin').value = condicion.fecha_fin ? condicion.fecha_fin.split('T')[0] : '';
+                    document.getElementById('editObservaciones').value = condicion.observaciones || '';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('modalEditarCondicion'));
+                    modal.show();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo cargar la condición'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar la condición');
+            }
+        }
+
+        document.getElementById('formEditarCondicion')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const condicionData = {
+                id: formData.get('id'),
+                comercial_id: formData.get('comercial_id') || null,
+                articulo_id: formData.get('articulo_id') || null,
+                marca: formData.get('marca') || null,
+                tipo_condicion: formData.get('tipo_condicion'),
+                valor: formData.get('valor'),
+                fecha_inicio: formData.get('fecha_inicio'),
+                fecha_fin: formData.get('fecha_fin') || null,
+                activo: formData.get('activo'),
+                observaciones: formData.get('observaciones')
+            };
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/condiciones-especiales/${condicionData.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(condicionData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.href = '/dashboard/comisiones/condiciones-especiales?success=condicion_actualizada';
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo actualizar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la condición');
+            }
+        });
+
+        async function eliminarCondicion(id) {
+            if (!confirm('¿Estás seguro de eliminar esta condición especial?')) return;
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/condiciones-especiales/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la condición');
+            }
+        }
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>

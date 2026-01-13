@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "server-crm-completo.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "server-crm-completo.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

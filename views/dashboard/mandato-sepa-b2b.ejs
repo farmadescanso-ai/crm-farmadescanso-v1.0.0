@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mandato SEPA B2B - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        @media print {
+            .no-print { display: none !important; }
+            .print-page { 
+                page-break-after: always;
+                page-break-inside: avoid;
+                height: 277mm; /* Altura A4 menos márgenes */
+                width: 190mm; /* Ancho A4 menos márgenes */
+                margin: 0;
+                padding: 15mm;
+                padding-top: 20px; /* 20px desde el inicio para la segunda página */
+                padding-bottom: calc(15mm + 20px); /* 20px adicionales al final de la página */
+                display: flex;
+                flex-direction: column;
+                justify-content: flex-start;
+                box-sizing: border-box;
+            }
+            .print-page:first-of-type {
+                padding-top: 15mm; /* Mantener padding normal en la primera página */
+            }
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .mandato-container {
+                width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+        }
+        .mandato-container {
+            max-width: 210mm;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+        }
+        .print-page {
+            width: 100%;
+            min-height: 277mm;
+            padding: 15mm;
+            padding-top: 20px; /* 20px desde el inicio para la segunda página */
+            padding-bottom: calc(15mm + 20px);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+        }
+        .print-page:first-of-type {
+            padding-top: 15mm; /* Mantener padding normal en la primera página */
+        }
+        .mandato-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #333;
+        }
+        .mandato-logo {
+            font-size: 24px;
+            font-weight: bold;
+            color: #28a745;
+        }
+        .mandato-title {
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        .mandato-section {
+            border: 1px solid #333;
+            padding: 15px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            background-color: #f9f9f9;
+            page-break-inside: avoid;
+        }
+        .mandato-section h6 {
+            margin-bottom: 15px;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+        .mandato-field {
+            margin-bottom: 8px;
+            line-height: 1.6;
+        }
+        .mandato-field label {
+            font-weight: bold;
+            display: inline-block;
+            min-width: 200px;
+        }
+        .mandato-field input, .mandato-field select {
+            border: none;
+            border-bottom: 1px solid #333;
+            padding: 2px 5px;
+            min-width: 300px;
+            background: transparent;
+        }
+        .mandato-field input:focus, .mandato-field select:focus {
+            outline: none;
+            border-bottom: 2px solid #007bff;
+        }
+        .mandato-instructions {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 11px;
+            line-height: 1.6;
+            page-break-inside: avoid;
+        }
+        .mandato-instructions:last-child {
+            margin-bottom: 20px;
+        }
+        .mandato-disclaimer {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin-top: 0;
+            margin-bottom: 20px;
+            font-size: 10px;
+            line-height: 1.5;
+            page-break-inside: avoid;
+        }
+        .iban-boxes {
+            display: flex;
+            gap: 2px;
+            margin: 10px 0;
+        }
+        .iban-box {
+            width: 20px;
+            height: 25px;
+            border: 1px solid #333;
+            text-align: center;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 25px;
+        }
+        .bic-boxes {
+            display: flex;
+            gap: 2px;
+            margin: 10px 0;
+        }
+        .bic-box {
+            width: 20px;
+            height: 25px;
+            border: 1px solid #333;
+            text-align: center;
+            font-family: monospace;
+            font-size: 12px;
+            line-height: 25px;
+        }
+        .payment-type {
+            margin: 15px 0;
+        }
+        .signature-field {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <div class="container py-4">
+        <!-- Navigation -->
+        <% if (typeof isPdf === 'undefined' || !isPdf) { %>
+        <%- include('../partials/navbar-dashboard') %>
+        <% } %>
+
+        <% if (error && (typeof isPdf === 'undefined' || !isPdf)) { %>
+        <div class="alert alert-danger no-print">
+            <strong>Error:</strong> <%= error %>
+        </div>
+        <% } %>
+
+        <% if (typeof query !== 'undefined' && query.success === 'mandato_enviado' && (typeof isPdf === 'undefined' || !isPdf)) { %>
+        <div class="alert alert-success alert-dismissible fade show no-print">
+            <i class="fas fa-check-circle me-2"></i>Mandato SEPA B2B enviado correctamente por email.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+
+        <!-- Mandato SEPA B2B Form -->
+        <div class="mandato-container" id="mandatoForm">
+            <!-- Página 1: Secciones principales -->
+            <div class="print-page">
+                <!-- Header -->
+                <div class="mandato-header">
+                    <div class="mandato-logo">
+                        <i class="fas fa-leaf"></i> FARMADESCANSO
+                    </div>
+                    <div style="text-align: right; font-size: 10px;">
+                        <div>Orden de domiciliación de adeudo directo SEPA B2B</div>
+                        <div>SEPA Business-to-Business Direct Debit Mandate</div>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <div class="mandato-title">
+                    ORDEN DE DOMICILIACIÓN DE ADEUDO DIRECTO SEPA B2B
+                    <br>
+                    <small style="font-size: 12px; font-weight: normal;">SEPA Business-to-Business Direct Debit Mandate</small>
+                </div>
+
+                <!-- Sección Acreedor -->
+                <div class="mandato-section">
+                    <h6>A cumplimentar por el acreedor / To be completed by the creditor</h6>
+                    
+                    <div class="mandato-field">
+                        <label>Referencia de la orden de domiciliación / Mandate reference:</label>
+                        <input type="text" id="mandateReference" name="mandateReference" 
+                               value="<%= mandateReference || '' %>" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Identificador del acreedor / Creditor Identifier:</label>
+                        <input type="text" value="B75359596" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Nombre del acreedor / Creditor's name:</label>
+                        <input type="text" value="FARMADESCANSO 2021 SL" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Dirección / Address:</label>
+                        <input type="text" value="Calle Huerta, 15 Bajo" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Código postal - Población - Provincia / Postal Code - City - Town:</label>
+                        <input type="text" value="30193 Yéchar - Mula - Murcia" readonly style="background-color: #e9ecef;">
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>País / Country:</label>
+                        <input type="text" value="ESPAÑA" readonly style="background-color: #e9ecef;">
+                    </div>
+                </div>
+
+                <!-- Sección Deudor -->
+                <div class="mandato-section">
+                    <h6>A cumplimentar por el deudor / To be completed by the debtor</h6>
+                    
+                    <div class="mandato-field">
+                        <label>Nombre del deudor/es / Debtor's name: (titulares de la cuenta de cargo)</label>
+                        <input type="text" id="debtorName" name="debtorName" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.debtorName ? mandatoData.debtorName : (cliente.Nombre || cliente.nombre || cliente.Razon_Social || cliente.RAZON_SOCIAL || '') %>" required>
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Dirección del deudor / Address of the debtor:</label>
+                        <input type="text" id="debtorAddress" name="debtorAddress" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.debtorAddress ? mandatoData.debtorAddress : (cliente.Direccion || cliente.direccion || cliente.CALLE || cliente.Calle || '') %>" required>
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Código postal - Población - Provincia / Postal Code - City - Town:</label>
+                        <input type="text" id="debtorPostal" name="debtorPostal" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.debtorPostal ? mandatoData.debtorPostal : ((cliente.Codigo_Postal || cliente.CODIGO_POSTAL || cliente.codigo_postal || '') + ' - ' + (cliente.Poblacion || cliente.POBLACION || cliente.poblacion || cliente.Localidad || cliente.localidad || '') + ' - ' + (cliente.Provincia || cliente.PROVINCIA || cliente.provincia || '')) %>" required>
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>País del deudor / Country of the debtor:</label>
+                        <input type="text" id="debtorCountry" name="debtorCountry" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.debtorCountry ? mandatoData.debtorCountry : 'ESPAÑA' %>" required>
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Swift BIC / Swift BIC:</label>
+                        <div class="bic-boxes" id="bicContainer">
+                            <% 
+                            const bic = typeof mandatoData !== 'undefined' && mandatoData.debtorBIC ? mandatoData.debtorBIC : '';
+                            for(let i = 0; i < 11; i++) {
+                                const char = bic && bic.length > i ? bic[i] : '';
+                            %>
+                                <div class="bic-box"><%= char %></div>
+                            <% } %>
+                        </div>
+                        <input type="text" id="debtorBIC" name="debtorBIC" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.debtorBIC ? mandatoData.debtorBIC : '' %>"
+                               placeholder="Ej: BIC-XXXX-XX" maxlength="11" 
+                               style="margin-top: 5px; max-width: 200px;"
+                               oninput="updateBICBoxes(this.value)">
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Número de cuenta - IBAN / Account number - IBAN:</label>
+                        <div class="iban-boxes" id="ibanContainer">
+                            <% 
+                            const iban = typeof mandatoData !== 'undefined' && mandatoData.debtorIBAN ? mandatoData.debtorIBAN : '';
+                            for(let i = 0; i < 24; i++) {
+                                const char = iban && iban.length > i ? iban[i] : '';
+                            %>
+                                <div class="iban-box"><%= char %></div>
+                            <% } %>
+                        </div>
+                        <input type="text" id="debtorIBAN" name="debtorIBAN" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.debtorIBAN ? mandatoData.debtorIBAN : '' %>"
+                               placeholder="ESXX XXXX XXXX XXXX XXXX XXXX" maxlength="24"
+                               style="margin-top: 5px; max-width: 350px;"
+                               oninput="updateIBANBoxes(this.value)">
+                        <div style="font-size: 10px; color: #666; margin-top: 5px;">
+                            En España el IBAN consta de 24 posiciones comenzando siempre por ES / Spanish IBAN of 24 positions always starting by ES
+                        </div>
+                    </div>
+
+                    <div class="payment-type">
+                        <label><strong>Tipo de pago / Type of payment:</strong></label>
+                        <div style="margin-top: 10px;">
+                            <input type="radio" id="paymentRecurring" name="paymentType" value="recurring" 
+                                   <%= typeof mandatoData !== 'undefined' && mandatoData.paymentType === 'recurring' ? 'checked' : 'checked' %>>
+                            <label for="paymentRecurring" style="min-width: auto; margin-left: 5px;">Pago recurrente / Recurrent payment</label>
+                            <span style="margin: 0 10px;">o / or</span>
+                            <input type="radio" id="paymentSingle" name="paymentType" value="single"
+                                   <%= typeof mandatoData !== 'undefined' && mandatoData.paymentType === 'single' ? 'checked' : '' %>>
+                            <label for="paymentSingle" style="min-width: auto; margin-left: 5px;">Pago único / One-off payment</label>
+                        </div>
+                    </div>
+
+                    <div class="mandato-field">
+                        <label>Fecha - Localidad / Date - location in which you are signing:</label>
+                        <input type="text" id="signingDate" name="signingDate" 
+                               value="<%= typeof mandatoData !== 'undefined' && mandatoData.signingDate ? mandatoData.signingDate : new Date().toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) %>" required>
+                    </div>
+
+                    <div class="signature-field">
+                        <label><strong>Firma del deudor / Signature of the debtor:</strong></label>
+                        <div style="margin-top: 30px; border-bottom: 1px solid #333; min-height: 50px;"></div>
+                    </div>
+                </div>
+
+                <!-- Botones de acción -->
+                <% if (typeof isPdf === 'undefined' || !isPdf) { %>
+                <div class="text-center mt-4 no-print" style="margin-top: 20px;">
+                    <form id="sendMandateForm" method="POST" action="/dashboard/clientes/<%= cliente.Id || cliente.id %>/mandato-sepa/send">
+                        <input type="hidden" id="formDebtorName" name="debtorName" value="<%= cliente.Nombre || cliente.nombre || cliente.Razon_Social || cliente.RAZON_SOCIAL || '' %>">
+                        <input type="hidden" id="formDebtorAddress" name="debtorAddress" value="<%= cliente.Direccion || cliente.direccion || cliente.CALLE || cliente.Calle || '' %>">
+                        <input type="hidden" id="formDebtorPostal" name="debtorPostal" value="<%= (cliente.Codigo_Postal || cliente.CODIGO_POSTAL || cliente.codigo_postal || '') + ' - ' + (cliente.Poblacion || cliente.POBLACION || cliente.poblacion || cliente.Localidad || cliente.localidad || '') + ' - ' + (cliente.Provincia || cliente.PROVINCIA || cliente.provincia || '') %>">
+                        <input type="hidden" id="formDebtorCountry" name="debtorCountry" value="ESPAÑA">
+                        <input type="hidden" id="formDebtorBIC" name="debtorBIC">
+                        <input type="hidden" id="formDebtorIBAN" name="debtorIBAN">
+                        <input type="hidden" id="formPaymentType" name="paymentType" value="recurring">
+                        <input type="hidden" id="formSigningDate" name="signingDate">
+                        <input type="hidden" id="formMandateReference" name="mandateReference" value="<%= mandateReference || '' %>">
+                        <input type="hidden" id="formClientEmail" name="clientEmail" value="<%= cliente.Email || cliente.email || cliente.Email_Contacto || cliente.EMAIL_CONTACTO || '' %>">
+                        
+                        <div class="mb-3">
+                            <label for="emailTo" class="form-label"><strong>Email del destinatario:</strong></label>
+                            <input type="email" class="form-control" id="emailTo" name="emailTo" 
+                                   value="<%= cliente.Email || cliente.email || cliente.Email_Contacto || cliente.EMAIL_CONTACTO || '' %>" 
+                                   required style="max-width: 400px; margin: 0 auto;">
+                        </div>
+
+                        <button type="button" class="btn btn-primary" onclick="prepareAndSend()">
+                            <i class="fas fa-envelope me-2"></i>Enviar Mandato por Email
+                        </button>
+                    </form>
+                </div>
+                <% } %>
+            </div>
+
+            <!-- Página 2: Disclaimer e Instrucciones -->
+            <div class="print-page">
+                <!-- Disclaimer -->
+                <div class="mandato-disclaimer">
+                    <p><strong>TODOS LOS CAMPOS HAN DE SER CUMPLIMENTADOS OBLIGATORIAMENTE. / ALL GAPS ARE MANDATORY.</strong></p>
+                    <p>UNA VEZ FIRMADA ESTA ORDEN DE DOMICILIACIÓN DEBE SER ENVIADA AL ACREEDOR PARA SU CUSTODIA. / ONCE THIS MANDATE HAS BEEN SIGNED MUST BE SENT TO CREDITOR FOR STORAGE.</p>
+                    <p>LA ENTIDAD DEL DEUDOR REQUIERE AUTORIZACIÓN DE ESTE PREVIA AL CARGO EN CUENTA DE LOS ADEUDOS DIRECTOS B2B. / NEVERTHELESS, THE BANK OF DEBTOR REQUIRES DEBTOR'S AUTHORIZATION BEFORE DEBITING B2B DIRECT DEBITS IN THE ACCOUNT.</p>
+                    <p>EL DEUDOR PODRÁ GESTIONAR DICHA AUTORIZACIÓN CON LOS MEDIOS QUE SU ENTIDAD PONGA A SU DISPOSICIÓN. / THE DEBTOR WILL BE ABLE TO MANAGE THE MENTIONED AUTHORIZATION THROUGH THE MEANS PROVIDED BY HIS BANK.</p>
+                </div>
+
+                <!-- Instrucciones -->
+                <div class="mandato-instructions">
+                    <p><strong>INSTRUCCIONES / INSTRUCTIONS:</strong></p>
+                    <p>
+                        Al firmar esta orden de domiciliación, usted autoriza (el acreedor) a enviar instrucciones 
+                        a su entidad para que cargue en su cuenta y autoriza a su entidad a cargar su cuenta de 
+                        conformidad con las instrucciones del acreedor.
+                    </p>
+                    <p style="margin-top: 10px;">
+                        <strong>Esta orden de domiciliación se utiliza exclusivamente para operaciones entre empresas (B2B).</strong>
+                    </p>
+                    <p style="margin-top: 10px;">
+                        By signing this mandate, you authorize (the creditor) to send instructions to your bank to debit 
+                        your account and you authorize your bank to debit your account in accordance with the instructions 
+                        from the creditor.
+                    </p>
+                    <p style="margin-top: 10px;">
+                        <strong>This mandate is exclusively for business-to-business (B2B) transactions.</strong>
+                    </p>
+                    <p style="margin-top: 10px; font-size: 10px;">
+                        Como parte de sus derechos, usted tiene derecho a solicitar a su entidad que no cobre el adeudo 
+                        hasta la fecha de vencimiento indicada, pero no tiene derecho al reembolso una vez que su cuenta 
+                        haya sido cargada. Para más información sobre sus derechos, póngase en contacto con su entidad.
+                    </p>
+                    <p style="margin-top: 10px; font-size: 10px;">
+                        As part of your rights, you are entitled to request your bank not to debit the account until the 
+                        due date indicated, but you are not entitled to a refund once your account has been debited. 
+                        For more information on your rights, contact your bank.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updateIBANBoxes(value) {
+            const container = document.getElementById('ibanContainer');
+            const boxes = container.querySelectorAll('.iban-box');
+            const cleaned = value.replace(/\s/g, '').toUpperCase().substring(0, 24);
+            
+            boxes.forEach((box, index) => {
+                box.textContent = cleaned[index] || '';
+            });
+        }
+
+        function updateBICBoxes(value) {
+            const container = document.getElementById('bicContainer');
+            const boxes = container.querySelectorAll('.bic-box');
+            const cleaned = value.replace(/\s/g, '').toUpperCase().substring(0, 11);
+            
+            boxes.forEach((box, index) => {
+                box.textContent = cleaned[index] || '';
+            });
+        }
+
+        function prepareAndSend() {
+            // Validar campos requeridos
+            const iban = document.getElementById('debtorIBAN').value.replace(/\s/g, '').toUpperCase();
+            const bic = document.getElementById('debtorBIC').value.replace(/\s/g, '').toUpperCase();
+            const emailTo = document.getElementById('emailTo').value;
+            
+            if (!iban || iban.length !== 24) {
+                alert('Por favor, complete el IBAN correctamente (24 caracteres).');
+                return;
+            }
+            
+            if (!bic || bic.length < 8) {
+                alert('Por favor, complete el BIC correctamente (mínimo 8 caracteres).');
+                return;
+            }
+            
+            if (!emailTo) {
+                alert('Por favor, ingrese el email del destinatario.');
+                return;
+            }
+            
+            // Actualizar valores en el formulario
+            document.getElementById('formDebtorName').value = document.getElementById('debtorName').value;
+            document.getElementById('formDebtorAddress').value = document.getElementById('debtorAddress').value;
+            document.getElementById('formDebtorPostal').value = document.getElementById('debtorPostal').value;
+            document.getElementById('formDebtorCountry').value = document.getElementById('debtorCountry').value;
+            document.getElementById('formDebtorBIC').value = bic;
+            document.getElementById('formDebtorIBAN').value = iban;
+            document.getElementById('formPaymentType').value = document.querySelector('input[name="paymentType"]:checked').value;
+            document.getElementById('formSigningDate').value = document.getElementById('signingDate').value;
+            document.getElementById('formMandateReference').value = document.getElementById('mandateReference').value;
+            
+            // Confirmar envío
+            if (confirm('¿Está seguro de que desea enviar el mandato SEPA B2B por email?')) {
+                document.getElementById('sendMandateForm').submit();
+            }
+        }
+
+        // Auto-actualizar IBAN y BIC cuando se escriben
+        document.addEventListener('DOMContentLoaded', function() {
+            const ibanInput = document.getElementById('debtorIBAN');
+            const bicInput = document.getElementById('debtorBIC');
+            
+            if (ibanInput && ibanInput.value) {
+                updateIBANBoxes(ibanInput.value);
+            }
+            
+            if (bicInput && bicInput.value) {
+                updateBICBoxes(bicInput.value);
+            }
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

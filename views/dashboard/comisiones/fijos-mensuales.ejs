@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fijos Mensuales - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comisiones/comisiones">
+                                    <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-money-bill me-2 text-primary"></i>Fijos Mensuales
+                    </h1>
+                </div>
+
+                <!-- Tabla de fijos mensuales por marca -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Comercial</th>
+                                        <th>Email</th>
+                                        <% if (marcas && marcas.length > 0) { %>
+                                            <% marcas.forEach(marca => { %>
+                                                <th class="text-end"><%= marca.Nombre || marca.nombre %></th>
+                                            <% }) %>
+                                        <% } %>
+                                        <th class="text-end">Total</th>
+                                        <th class="text-center">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (comerciales && comerciales.length > 0) { %>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <tr>
+                                        <td>
+                                            <strong><%= comercial.Nombre || comercial.nombre %></strong>
+                                        </td>
+                                        <td><%= comercial.Email || comercial.email || '-' %></td>
+                                        <% 
+                                        const comercialId = comercial.id || comercial.Id;
+                                        const fijosComercial = (typeof fijosPorComercial !== 'undefined' && fijosPorComercial && fijosPorComercial[comercialId]) ? fijosPorComercial[comercialId] : {};
+                                        let totalFijo = 0;
+                                        %>
+                                        <% if (marcas && marcas.length > 0) { %>
+                                            <% marcas.forEach(marca => { %>
+                                                <% 
+                                                const marcaId = marca.id || marca.Id;
+                                                const importe = fijosComercial[marcaId] || 0;
+                                                totalFijo += parseFloat(importe);
+                                                %>
+                                                <td class="text-end">
+                                                    <span id="fijo-display-<%= comercialId %>-<%= marcaId %>">
+                                                        € <%= parseFloat(importe).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                                    </span>
+                                                </td>
+                                            <% }) %>
+                                        <% } %>
+                                        <td class="text-end fw-bold">
+                                            <span id="fijo-total-<%= comercialId %>">
+                                                € <%= parseFloat(totalFijo).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarFijoMensual(<%= comercialId %>, '<%= (comercial.Nombre || comercial.nombre).replace(/'/g, "\\'") %>')" title="Editar Fijos Mensuales">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <% }) %>
+                                    <% } else { %>
+                                    <tr>
+                                        <td colspan="<%= (marcas && marcas.length > 0 ? marcas.length + 4 : 4) %>" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            No hay comerciales registrados
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Editar Fijo Mensual -->
+    <div class="modal fade" id="modalEditarFijoMensual" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Fijos Mensuales por Marca</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEditarFijoMensual">
+                    <div class="modal-body">
+                        <input type="hidden" id="editComercialId" name="comercial_id">
+                        <div class="mb-3">
+                            <label class="form-label">Comercial</label>
+                            <input type="text" id="editComercialNombre" class="form-control" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Fijos Mensuales por Marca (€)</label>
+                            <div class="row g-3">
+                                <% if (marcas && marcas.length > 0) { %>
+                                    <% marcas.forEach(marca => { %>
+                                        <div class="col-md-6">
+                                            <label class="form-label"><%= marca.Nombre || marca.nombre %></label>
+                                            <input type="number" 
+                                                   class="form-control fijo-marca-input" 
+                                                   data-marca-id="<%= marca.id || marca.Id %>"
+                                                   data-marca-nombre="<%= marca.Nombre || marca.nombre %>"
+                                                   step="0.01" 
+                                                   min="0" 
+                                                   placeholder="0.00">
+                                        </div>
+                                    <% }) %>
+                                <% } else { %>
+                                    <div class="col-12">
+                                        <p class="text-muted">No hay marcas registradas</p>
+                                    </div>
+                                <% } %>
+                            </div>
+                            <small class="text-muted">Establece el importe fijo mensual para cada marca</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mantener submenú de comisiones abierto
+        document.addEventListener('DOMContentLoaded', function() {
+            const comisionesConfigSubmenu = document.getElementById('comisionesConfigSubmenu');
+            if (comisionesConfigSubmenu) {
+                comisionesConfigSubmenu.classList.add('show');
+            }
+        });
+
+        // Datos de marcas desde el servidor
+        <% try { %>
+        const marcas = <%- JSON.stringify(typeof marcas !== 'undefined' ? (marcas || []) : []) %>;
+        const fijosPorComercial = <%- JSON.stringify(typeof fijosPorComercial !== 'undefined' ? (fijosPorComercial || {}) : {}) %>;
+        <% } catch (e) { %>
+        const marcas = [];
+        const fijosPorComercial = {};
+        console.error('Error serializando datos:', '<%= e.message %>');
+        <% } %>
+
+        function editarFijoMensual(comercialId, nombre) {
+            document.getElementById('editComercialId').value = comercialId;
+            document.getElementById('editComercialNombre').value = nombre;
+            
+            // Limpiar todos los campos
+            document.querySelectorAll('.fijo-marca-input').forEach(input => {
+                input.value = '';
+            });
+            
+            // Cargar valores existentes (incluyendo 0)
+            const fijosComercial = fijosPorComercial[comercialId] || {};
+            marcas.forEach(marca => {
+                const marcaId = marca.id || marca.Id;
+                const importe = fijosComercial[marcaId] !== undefined ? fijosComercial[marcaId] : 0;
+                const input = document.querySelector(`.fijo-marca-input[data-marca-id="${marcaId}"]`);
+                if (input) {
+                    // Mostrar el valor incluso si es 0
+                    input.value = importe || '';
+                }
+            });
+            
+            const modal = new bootstrap.Modal(document.getElementById('modalEditarFijoMensual'));
+            modal.show();
+        }
+
+        document.getElementById('formEditarFijoMensual')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const comercialId = parseInt(document.getElementById('editComercialId').value);
+            const inputs = document.querySelectorAll('.fijo-marca-input');
+            
+            // Recopilar todos los fijos por marca
+            const fijosPorMarca = [];
+            let totalFijo = 0;
+            
+            inputs.forEach(input => {
+                const marcaId = parseInt(input.getAttribute('data-marca-id'));
+                const importe = parseFloat(input.value || 0);
+                // Guardar TODOS los valores, incluso 0
+                fijosPorMarca.push({ marca_id: marcaId, importe: importe });
+                totalFijo += importe;
+            });
+
+            try {
+                // Actualizar TODAS las marcas (incluso las que tienen valor 0)
+                const promesas = fijosPorMarca.map(fijo => 
+                    fetch(`/dashboard/comisiones/fijos-mensuales/${comercialId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ 
+                            marca_id: fijo.marca_id, 
+                            importe: fijo.importe 
+                        })
+                    })
+                );
+                
+                const resultados = await Promise.all(promesas);
+                const errores = [];
+                
+                for (let i = 0; i < resultados.length; i++) {
+                    const response = resultados[i];
+                    const data = await response.json();
+                    if (!data.success) {
+                        errores.push(data.error || 'Error desconocido');
+                    }
+                }
+                
+                if (errores.length === 0) {
+                    // Actualizar TODOS los valores en la tabla (incluso los que son 0)
+                    fijosPorMarca.forEach(fijo => {
+                        const displayElement = document.getElementById(`fijo-display-${comercialId}-${fijo.marca_id}`);
+                        if (displayElement) {
+                            displayElement.textContent = `€ ${fijo.importe.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                        }
+                    });
+                    
+                    // Actualizar total
+                    const totalElement = document.getElementById(`fijo-total-${comercialId}`);
+                    if (totalElement) {
+                        totalElement.textContent = `€ ${totalFijo.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    }
+                    
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarFijoMensual'));
+                    modal.hide();
+                    
+                    // Mostrar mensaje de éxito
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 start-50 translate-middle-x mt-3';
+                    alertDiv.style.zIndex = '9999';
+                    alertDiv.innerHTML = `
+                        <i class="fas fa-check-circle me-2"></i>Fijos mensuales actualizados correctamente
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    `;
+                    document.body.appendChild(alertDiv);
+                    setTimeout(() => alertDiv.remove(), 3000);
+                    
+                    // Recargar la página para asegurar que los datos estén actualizados
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    alert('Error: ' + errores.join(', '));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar los fijos mensuales');
+            }
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

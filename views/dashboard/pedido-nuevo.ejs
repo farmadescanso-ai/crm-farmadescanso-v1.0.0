@@ -1,0 +1,2009 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .linea-row input[type="number"] {
+            min-width: 110px;
+        }
+        .totales-card {
+            max-width: 420px;
+        }
+        .articulo-search-container {
+            position: relative;
+        }
+        .articulo-search-input {
+            width: 100%;
+            padding: 0.375rem 2.5rem 0.375rem 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .articulo-search-input:focus {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .articulo-search-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            pointer-events: none;
+        }
+        .articulo-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            max-height: 300px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            display: none;
+        }
+        .articulo-dropdown.show {
+            display: block;
+        }
+        .articulo-dropdown-item {
+            padding: 0.5rem 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .articulo-dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        .articulo-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .articulo-dropdown-item.selected {
+            background-color: #0d6efd;
+            color: white;
+        }
+        .articulo-item-id {
+            font-size: 0.875rem;
+            color: #6c757d;
+            font-weight: 600;
+        }
+        .articulo-dropdown-item.selected .articulo-item-id {
+            color: rgba(255, 255, 255, 0.8);
+        }
+        .articulo-item-name {
+            font-weight: 500;
+        }
+        .articulo-selected-display {
+            display: none;
+            padding: 0.375rem 0.75rem;
+            background-color: #e7f1ff;
+            border: 1px solid #86b7fe;
+            border-radius: 0.375rem;
+            margin-top: 0.25rem;
+        }
+        .articulo-selected-display.show {
+            display: block;
+        }
+        .articulo-hidden-input {
+            display: none;
+        }
+        /* Estilos para búsqueda inteligente de clientes */
+        .cliente-search-container {
+            position: relative;
+        }
+        .cliente-search-input {
+            width: 100%;
+            padding: 0.375rem 2.5rem 0.375rem 0.75rem;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+        }
+        .cliente-search-input:focus {
+            border-color: #86b7fe;
+            outline: 0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+        }
+        .cliente-search-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            pointer-events: none;
+        }
+        .cliente-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+            display: none;
+            margin-top: 0.25rem;
+        }
+        .cliente-dropdown.show {
+            display: block;
+        }
+        .cliente-dropdown-item {
+            padding: 0.75rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background-color 0.2s;
+        }
+        .cliente-dropdown-item:hover,
+        .cliente-dropdown-item.selected {
+            background-color: #e7f1ff;
+        }
+        .cliente-dropdown-item:last-child {
+            border-bottom: none;
+        }
+        .cliente-item-name {
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 0.25rem;
+        }
+        .cliente-item-details {
+            font-size: 0.875rem;
+            color: #6c757d;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .cliente-item-detail {
+            display: flex;
+            align-items: center;
+            gap: 0.25rem;
+        }
+        .cliente-item-detail i {
+            width: 14px;
+            font-size: 0.75rem;
+        }
+        .cliente-selected-display {
+            display: none;
+            padding: 0.5rem 0.75rem;
+            background-color: #e7f1ff;
+            border: 1px solid #86b7fe;
+            border-radius: 0.375rem;
+            margin-top: 0.25rem;
+        }
+        .cliente-selected-display.show {
+            display: block;
+        }
+        .cliente-selected-name {
+            font-weight: 600;
+            color: #0d6efd;
+        }
+        .cliente-selected-details {
+            font-size: 0.875rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+        .cliente-hidden-input {
+            display: none;
+        }
+        .cliente-loading {
+            padding: 0.75rem;
+            text-align: center;
+            color: #6c757d;
+        }
+        .cliente-no-results {
+            padding: 0.75rem;
+            text-align: center;
+            color: #6c757d;
+            font-style: italic;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0 text-primary"><i class="fas fa-plus-circle me-2"></i>Nuevo Pedido</h3>
+            <span class="badge bg-primary">Paso 1 · Borrador</span>
+        </div>
+
+        <% if (error) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Error al guardar el pedido:</strong> <%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        <% } %>
+
+        <% const initialValues = (typeof formValues !== 'undefined' && formValues) ? formValues : {}; %>
+        <% const lineasValoresIniciales = (typeof lineasValores !== 'undefined' && Array.isArray(lineasValores)) ? lineasValores : []; %>
+        <% const numeroPedidoGenerado = initialValues.numero_pedido || nuevaReferencia || ''; %>
+        <form id="pedidoForm" action="/dashboard/pedidos" method="POST" novalidate>
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Cabecera</h5>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
+                            <div class="cliente-search-container">
+                                <input 
+                                    type="text" 
+                                    id="clienteSearchInput" 
+                                    class="form-control cliente-search-input" 
+                                    placeholder="Buscar por nombre, DNI/CIF, email, teléfono..."
+                                    autocomplete="off"
+                                    required
+                                >
+                                <i class="fas fa-search cliente-search-icon"></i>
+                                <div id="clienteDropdown" class="cliente-dropdown"></div>
+                                <div id="clienteSelectedDisplay" class="cliente-selected-display">
+                                    <div class="cliente-selected-name" id="clienteSelectedName"></div>
+                                    <div class="cliente-selected-details" id="clienteSelectedDetails"></div>
+                                </div>
+                                <input type="hidden" name="cliente_id" id="clienteIdInput" class="cliente-hidden-input" required>
+                            </div>
+                            <div class="invalid-feedback">Selecciona un cliente.</div>
+                            <small class="text-muted">Escribe al menos 2 caracteres para buscar</small>
+                        </div>
+                        <% if (esAdmin) { %>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Comercial</label>
+                            <select name="comercial_id" class="form-select">
+                                <option value="">— Seleccionar comercial —</option>
+                                <% if (typeof comerciales !== 'undefined' && comerciales && comerciales.length > 0) { %>
+                                    <% comerciales.forEach(comercial => { %>
+                                        <option value="<%= comercial.Id || comercial.id %>" <%= String(initialValues.comercial_id || comercialLogueadoId || '') === String(comercial.Id || comercial.id) ? 'selected' : '' %>>
+                                            <%= comercial.Nombre || comercial.nombre %> <% if (comercial.Email) { %>(<%= comercial.Email %>)<% } %>
+                                        </option>
+                                    <% }) %>
+                                <% } else { %>
+                                    <option value="" disabled>No hay comerciales disponibles</option>
+                                <% } %>
+                            </select>
+                            <small class="text-muted">Selecciona el comercial asignado a este pedido. Si no seleccionas, se asignará el comercial logueado.</small>
+                        </div>
+                        <% } else { %>
+                        <input type="hidden" name="comercial_id" value="<%= comercialLogueadoId || '' %>">
+                        <% } %>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Número de pedido</label>
+                            <input type="text" class="form-control bg-light fw-bold" value="<%= numeroPedidoGenerado || '—' %>" readonly>
+                            <input type="hidden" name="numero_pedido" value="<%= numeroPedidoGenerado %>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha pedido <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha_pedido" class="form-control" value="<%= initialValues.fecha_pedido || '' %>" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Fecha entrega</label>
+                            <input type="date" name="fecha_entrega" class="form-control" value="<%= initialValues.fecha_entrega || '' %>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tipo de pedido</label>
+                            <select name="tipo_pedido" class="form-select">
+                                <option value="">— Seleccionar —</option>
+                                <% const tiposPedido = ['Directo', 'Transfer Hefame', 'Transfer Alliance', 'Transfer Cofares']; %>
+                                <% tiposPedido.forEach(tipo => { %>
+                                    <option value="<%= tipo %>" <%= (initialValues.tipo_pedido || '').toLowerCase() === tipo.toLowerCase() ? 'selected' : '' %>><%= tipo %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Forma de pago</label>
+                            <select name="forma_pago" class="form-select">
+                                <option value="">— Seleccionar —</option>
+                                <% if (typeof formasPago !== 'undefined' && formasPago && formasPago.length > 0) { %>
+                                    <% formasPago.forEach(forma => { %>
+                                        <% const formaId = forma.Id || forma.id; %>
+                                        <% const formaNombre = forma.FormaPago || forma.formaPago || forma.Forma || forma.forma || ''; %>
+                                        <% const formaValue = initialValues.forma_pago || ''; %>
+                                        <% const isSelected = (typeof formaValue === 'number' && formaValue === formaId) || 
+                                                              (typeof formaValue === 'string' && (formaValue === String(formaId) || formaValue.toLowerCase() === formaNombre.toLowerCase())); %>
+                                        <option value="<%= formaId %>" <%= isSelected ? 'selected' : '' %>><%= formaNombre %></option>
+                                    <% }) %>
+                                <% } else { %>
+                                    <option value="1">Contado</option>
+                                    <option value="2">Giro 30 Días</option>
+                                    <option value="3">Transferencia Bancaría</option>
+                                    <option value="4">Transferencia Inmediata</option>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div class="col-md-4" id="cooperativaInfo" style="display: none;">
+                            <label class="form-label fw-semibold" id="cooperativaLabel">Número de asociado</label>
+                            <input type="text" name="numero_cooperativa" id="numeroCooperativa" class="form-control" placeholder="Introduce el número de asociado" value="<%= initialValues.numero_cooperativa || '' %>">
+                            <div class="form-text" id="cooperativaHelper"></div>
+                            <input type="hidden" name="cooperativa_nombre" id="cooperativaNombre" value="<%= initialValues.cooperativa_nombre || '' %>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Estado</label>
+                            <select name="estado" class="form-select">
+                                <% const estadosPedido = ['Pendiente', 'Tramitado', 'Enviado', 'Entregado', 'Cancelado', 'Cerrado']; %>
+                                <% const estadoInicial = (initialValues.estado || 'Pendiente').toLowerCase(); %>
+                                <% estadosPedido.forEach(estado => { %>
+                                    <option value="<%= estado %>" <%= estadoInicial === estado.toLowerCase() ? 'selected' : '' %>><%= estado %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Observaciones</label>
+                            <textarea name="observaciones" class="form-control" rows="2" placeholder="Instrucciones adicionales, notas internas, etc."><%= initialValues.observaciones || '' %></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h5 class="card-title mb-0">Líneas de pedido</h5>
+                    </div>
+
+                    <!-- Búsqueda de artículos en la cabecera -->
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Buscar artículo para añadir</label>
+                        <div class="articulo-search-container">
+                            <input type="text" class="form-control articulo-search-input" id="busquedaArticuloCabecera" placeholder="Buscar por ID o nombre..." autocomplete="off">
+                            <i class="fas fa-search articulo-search-icon"></i>
+                            <div class="articulo-dropdown" id="dropdownArticuloCabecera"></div>
+                        </div>
+                    </div>
+
+                    <!-- Modal para cantidad y descuento -->
+                    <div class="modal fade" id="modalCantidadDescuento" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Añadir artículo</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">Artículo seleccionado</label>
+                                        <div class="form-control-plaintext" id="modalArticuloNombre"></div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="modalCantidad" class="form-label">Cantidad <span class="text-danger">*</span></label>
+                                        <input type="number" class="form-control" id="modalCantidad" min="1" step="1" value="1" required>
+                                        <div class="invalid-feedback">La cantidad debe ser mayor que 0</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="modalDescuento" class="form-label">Descuento (%)</label>
+                                        <input type="number" class="form-control" id="modalDescuento" min="0" max="100" step="0.01" value="0">
+                                        <small class="text-muted">Porcentaje de descuento para esta línea</small>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                    <button type="button" class="btn btn-primary" id="btnConfirmarArticulo">Añadir línea</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle" id="lineasTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 25%">Artículo</th>
+                                    <th class="text-center" style="width: 8%">Cantidad</th>
+                                    <th class="text-center" style="width: 12%">Precio (€)</th>
+                                    <th class="text-center" style="width: 8%">Descuento (%)</th>
+                                    <th class="text-end" style="width: 12%">Subtotal</th>
+                                    <th class="text-center" style="width: 8%">IVA (%)</th>
+                                    <th class="text-end" style="width: 12%">Total línea</th>
+                                    <th style="width: 5%"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="lineasBody"></tbody>
+                        </table>
+                    </div>
+
+                    <small class="text-muted">Los importes se recalculan automáticamente cuando cambias artículo, cantidad, precio o IVA.</small>
+                </div>
+            </div>
+
+            <div class="row g-3 justify-content-end">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card totales-card shadow-sm">
+                        <div class="card-body">
+                            <h6 class="fw-semibold mb-3">Resumen</h6>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Subtotal</span>
+                                <span id="sumSubtotal" class="fw-semibold">€ 0,00</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <span class="text-muted">Descuento general</span>
+                                <div class="d-flex align-items-center gap-2" style="max-width: 150px;">
+                                    <input type="number" id="descuentoGeneral" class="form-control form-control-sm text-end" min="0" max="100" step="0.01" value="0" style="width: 80px;">
+                                    <span class="text-muted small">%</span>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between" id="descuentoGeneralRow" style="display: none;">
+                                <span class="text-muted">Descuento aplicado</span>
+                                <span id="sumDescuentoGeneral" class="fw-semibold text-danger">€ 0,00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Subtotal con descuento</span>
+                                <span id="sumSubtotalConDescuento" class="fw-semibold">€ 0,00</span>
+                            </div>
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Impuestos</span>
+                                <span id="sumImpuestos" class="fw-semibold">€ 0,00</span>
+                            </div>
+                            <div class="d-flex justify-content-between border-top pt-2 mt-2">
+                                <span class="fw-bold">Total</span>
+                                <span id="sumTotal" class="fw-bold text-success">€ 0,00</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="/dashboard/pedidos" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary" id="submitPedidoBtn">
+                    <i class="fas fa-save me-2"></i>Guardar pedido
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <template id="lineaTemplate">
+        <tr class="linea-row">
+            <td>
+                <div class="articulo-display">
+                    <span class="articulo-nombre fw-semibold"></span>
+                    <input type="hidden" class="articulo-hidden-input" required>
+                </div>
+            </td>
+            <td>
+                <input type="number" class="form-control text-center cantidad-input" min="1" step="1" value="1" required>
+            </td>
+            <td>
+                <input type="number" class="form-control text-center precio-input" min="0" step="0.01" value="0" required>
+            </td>
+            <td>
+                <input type="number" class="form-control text-center descuento-input" min="0" max="100" step="0.01" value="0">
+            </td>
+            <td class="text-end subtotal-cell">€ 0,00</td>
+            <td>
+                <input type="number" class="form-control text-center iva-input" min="0" step="0.5" value="21">
+            </td>
+            <td class="text-end total-cell">€ 0,00</td>
+            <td class="text-center">
+                <button type="button" class="btn btn-outline-danger btn-sm eliminar-linea" title="Eliminar línea">
+                    <i class="fas fa-times"></i>
+                </button>
+            </td>
+        </tr>
+    </template>
+
+    <!-- Modal de confirmación de grabación -->
+    <div class="modal fade" id="modalConfirmarGrabacion" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fas fa-check-circle me-2"></i>Confirmar Grabación de Pedido</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body" id="modalConfirmarGrabacionBody">
+                    <!-- Se llenará dinámicamente -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-success" id="btnConfirmarGrabacion">
+                        <i class="fas fa-save me-1"></i>Confirmar y Grabar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const articulos = <%- JSON.stringify(articulos || []) %>;
+        const clientesCooperativa = <%- JSON.stringify(clientesCooperativa || []) %>;
+        const initialState = <%- JSON.stringify(initialValues || {}) %>;
+        const lineasIniciales = <%- JSON.stringify(lineasValoresIniciales || []) %>;
+ 
+        const lineasBody = document.getElementById('lineasBody');
+        const lineaTemplate = document.getElementById('lineaTemplate');
+        const pedidoForm = document.getElementById('pedidoForm');
+        const submitPedidoBtn = document.getElementById('submitPedidoBtn');
+        const busquedaArticuloCabecera = document.getElementById('busquedaArticuloCabecera');
+        const dropdownArticuloCabecera = document.getElementById('dropdownArticuloCabecera');
+        
+        // Verificar que los elementos existan
+        if (!pedidoForm) {
+            console.error('❌ [PEDIDO] No se encontró el formulario pedidoForm');
+        }
+        if (!submitPedidoBtn) {
+            console.error('❌ [PEDIDO] No se encontró el botón submitPedidoBtn');
+        } else {
+            console.log('✅ [PEDIDO] Botón de submit encontrado');
+        }
+        const subtotalEl = document.getElementById('sumSubtotal');
+        const descuentoGeneralInput = document.getElementById('descuentoGeneral');
+        const descuentoGeneralRow = document.getElementById('descuentoGeneralRow');
+        const sumDescuentoGeneral = document.getElementById('sumDescuentoGeneral');
+        const subtotalConDescuentoEl = document.getElementById('sumSubtotalConDescuento');
+        const impuestosEl = document.getElementById('sumImpuestos');
+        const totalEl = document.getElementById('sumTotal');
+        const tipoPedidoSelect = document.querySelector('select[name="tipo_pedido"]');
+        // Búsqueda inteligente de clientes
+        const clienteSearchInput = document.getElementById('clienteSearchInput');
+        const clienteDropdown = document.getElementById('clienteDropdown');
+        const clienteIdInput = document.getElementById('clienteIdInput');
+        const clienteSelectedDisplay = document.getElementById('clienteSelectedDisplay');
+        const clienteSelectedName = document.getElementById('clienteSelectedName');
+        const clienteSelectedDetails = document.getElementById('clienteSelectedDetails');
+        
+        let clienteSearchTimeout = null;
+        let selectedCliente = null;
+        let currentSelectedIndex = -1;
+        
+        // Si hay un cliente inicial desde la URL o formValues
+        <% if (initialValues.cliente_id) { %>
+        <% const clienteInicial = clientes.find(c => String(c.Id || c.id) === String(initialValues.cliente_id)); %>
+        <% if (clienteInicial) { %>
+        selectedCliente = {
+            Id: <%= clienteInicial.Id || clienteInicial.id %>,
+            Nombre_Razon_Social: '<%= (clienteInicial.Nombre_Razon_Social || clienteInicial.Nombre || clienteInicial.nombre || '').replace(/'/g, "\\'") %>',
+            DNI_CIF: '<%= (clienteInicial.DNI_CIF || clienteInicial.dni_cif || '').replace(/'/g, "\\'") %>',
+            Email: '<%= (clienteInicial.Email || clienteInicial.email || '').replace(/'/g, "\\'") %>',
+            Telefono: '<%= (clienteInicial.Telefono || clienteInicial.telefono || '').replace(/'/g, "\\'") %>',
+            Movil: '<%= (clienteInicial.Movil || clienteInicial.movil || '').replace(/'/g, "\\'") %>',
+            Poblacion: '<%= (clienteInicial.Poblacion || clienteInicial.poblacion || '').replace(/'/g, "\\'") %>'
+        };
+        clienteIdInput.value = selectedCliente.Id;
+        clienteSearchInput.value = selectedCliente.Nombre_Razon_Social;
+        clienteSelectedName.textContent = selectedCliente.Nombre_Razon_Social;
+        const detalles = [];
+        if (selectedCliente.DNI_CIF) detalles.push(`DNI/CIF: ${selectedCliente.DNI_CIF}`);
+        if (selectedCliente.Email) detalles.push(`Email: ${selectedCliente.Email}`);
+        if (selectedCliente.Telefono || selectedCliente.Movil) detalles.push(`Tel: ${selectedCliente.Telefono || selectedCliente.Movil}`);
+        if (selectedCliente.Poblacion) detalles.push(`Población: ${selectedCliente.Poblacion}`);
+        clienteSelectedDetails.textContent = detalles.join(' · ');
+        clienteSelectedDisplay.classList.add('show');
+        clienteSearchInput.style.display = 'none';
+        <% } %>
+        <% } %>
+        
+        function buscarClientes(query) {
+            if (query.length < 2) {
+                clienteDropdown.classList.remove('show');
+                return;
+            }
+
+            clearTimeout(clienteSearchTimeout);
+            clienteSearchTimeout = setTimeout(async () => {
+                clienteDropdown.innerHTML = '<div class="cliente-loading"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>';
+                clienteDropdown.classList.add('show');
+
+                try {
+                    const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(query)}`);
+                    const data = await response.json();
+                    const clientes = data.clientes || [];
+
+                    if (clientes.length === 0) {
+                        clienteDropdown.innerHTML = '<div class="cliente-no-results">No se encontraron clientes</div>';
+                        return;
+                    }
+
+                    clienteDropdown.innerHTML = clientes.map((cliente, index) => {
+                        const nombre = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+                        const detalles = [];
+                        if (cliente.DNI_CIF) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-id-card"></i> ${cliente.DNI_CIF}</span>`);
+                        if (cliente.Email) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-envelope"></i> ${cliente.Email}</span>`);
+                        if (cliente.Telefono || cliente.Movil) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-phone"></i> ${cliente.Telefono || cliente.Movil}</span>`);
+                        if (cliente.Poblacion) detalles.push(`<span class="cliente-item-detail"><i class="fas fa-map-marker-alt"></i> ${cliente.Poblacion}</span>`);
+                        
+                        return `
+                            <div class="cliente-dropdown-item" data-cliente-id="${cliente.Id}" data-index="${index}">
+                                <div class="cliente-item-name">${nombre}</div>
+                                ${detalles.length > 0 ? `<div class="cliente-item-details">${detalles.join('')}</div>` : ''}
+                            </div>
+                        `;
+                    }).join('');
+
+                    // Agregar event listeners a los items
+                    clienteDropdown.querySelectorAll('.cliente-dropdown-item').forEach(item => {
+                        item.addEventListener('click', () => {
+                            const clienteId = item.dataset.clienteId;
+                            const cliente = clientes.find(c => c.Id == clienteId);
+                            if (cliente) {
+                                seleccionarCliente(cliente);
+                            }
+                        });
+                    });
+
+                    currentSelectedIndex = -1;
+                } catch (error) {
+                    console.error('Error buscando clientes:', error);
+                    clienteDropdown.innerHTML = '<div class="cliente-no-results">Error al buscar clientes</div>';
+                }
+            }, 300);
+        }
+
+        function seleccionarCliente(cliente) {
+            console.log('✅ [PEDIDO] Seleccionando cliente:', cliente);
+            selectedCliente = cliente;
+            const clienteId = cliente.Id || cliente.id;
+            console.log('✅ [PEDIDO] ID del cliente a establecer:', clienteId);
+            
+            if (clienteIdInput) {
+                clienteIdInput.value = clienteId;
+                console.log('✅ [PEDIDO] clienteIdInput.value establecido a:', clienteIdInput.value);
+                // Disparar evento change para asegurar que otros listeners se ejecuten
+                clienteIdInput.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+                console.error('❌ [PEDIDO] clienteIdInput no encontrado!');
+            }
+            
+            clienteSearchInput.value = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+            clienteSelectedName.textContent = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+            
+            const detalles = [];
+            if (cliente.DNI_CIF) detalles.push(`DNI/CIF: ${cliente.DNI_CIF}`);
+            if (cliente.Email) detalles.push(`Email: ${cliente.Email}`);
+            if (cliente.Telefono || cliente.Movil) detalles.push(`Tel: ${cliente.Telefono || cliente.Movil}`);
+            if (cliente.Poblacion) detalles.push(`Población: ${cliente.Poblacion}`);
+            clienteSelectedDetails.textContent = detalles.join(' · ');
+            
+            clienteSelectedDisplay.classList.add('show');
+            clienteSearchInput.style.display = 'none';
+            clienteDropdown.classList.remove('show');
+            
+            // Actualizar cooperativa si existe
+            if (typeof actualizarCooperativa === 'function') {
+                actualizarCooperativa();
+            }
+        }
+
+        function limpiarSeleccionCliente() {
+            selectedCliente = null;
+            clienteIdInput.value = '';
+            clienteSearchInput.value = '';
+            clienteSelectedDisplay.classList.remove('show');
+            clienteSearchInput.style.display = 'block';
+            clienteDropdown.classList.remove('show');
+        }
+
+        clienteSearchInput.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            if (query.length >= 2) {
+                buscarClientes(query);
+            } else {
+                clienteDropdown.classList.remove('show');
+            }
+        });
+
+        clienteSearchInput.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                const items = clienteDropdown.querySelectorAll('.cliente-dropdown-item');
+                if (items.length > 0) {
+                    currentSelectedIndex = Math.min(currentSelectedIndex + 1, items.length - 1);
+                    items.forEach((item, index) => {
+                        item.classList.toggle('selected', index === currentSelectedIndex);
+                    });
+                }
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                const items = clienteDropdown.querySelectorAll('.cliente-dropdown-item');
+                if (items.length > 0) {
+                    currentSelectedIndex = Math.max(currentSelectedIndex - 1, -1);
+                    items.forEach((item, index) => {
+                        item.classList.toggle('selected', index === currentSelectedIndex);
+                    });
+                }
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                const items = clienteDropdown.querySelectorAll('.cliente-dropdown-item');
+                if (currentSelectedIndex >= 0 && currentSelectedIndex < items.length) {
+                    items[currentSelectedIndex].click();
+                }
+            } else if (e.key === 'Escape') {
+                clienteDropdown.classList.remove('show');
+            }
+        });
+
+        // Cerrar dropdown al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!clienteSearchInput.contains(e.target) && !clienteDropdown.contains(e.target)) {
+                clienteDropdown.classList.remove('show');
+            }
+        });
+
+        // Permitir editar la selección
+        clienteSelectedDisplay.addEventListener('dblclick', () => {
+            limpiarSeleccionCliente();
+            clienteSearchInput.focus();
+        });
+
+        // Referencia para compatibilidad con código existente
+        const clienteSelect = {
+            value: () => clienteIdInput.value,
+            addEventListener: (event, callback) => {
+                if (event === 'change') {
+                    clienteIdInput.addEventListener('change', callback);
+                }
+            }
+        };
+        const cooperativaInfo = document.getElementById('cooperativaInfo');
+        const cooperativaLabel = document.getElementById('cooperativaLabel');
+        const cooperativaHelper = document.getElementById('cooperativaHelper');
+        const numeroCooperativaInput = document.getElementById('numeroCooperativa');
+        const cooperativaNombreInput = document.getElementById('cooperativaNombre');
+        const formAlert = document.getElementById('formAlert');
+ 
+        const lineasPayloadInput = document.createElement('input');
+        lineasPayloadInput.type = 'hidden';
+        lineasPayloadInput.name = 'lineas_payload';
+        pedidoForm.appendChild(lineasPayloadInput);
+ 
+        function mostrarAlerta(mensaje, tipo = 'danger') {
+            if (!formAlert) return;
+            formAlert.innerHTML = `<div class="alert alert-${tipo} mt-3" role="alert">${mensaje}</div>`;
+        }
+ 
+        function limpiarAlerta() {
+            if (formAlert) {
+                formAlert.innerHTML = '';
+            }
+        }
+ 
+        // Función para formatear moneda en formato español (punto para miles, coma para decimales)
+        function formatearEuro(valor) {
+            const numero = Number(valor || 0);
+            const partes = numero.toFixed(2).split('.');
+            const parteEntera = partes[0];
+            const parteDecimal = partes[1] || '00';
+            
+            // Agregar puntos como separadores de miles
+            const parteEnteraFormateada = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            
+            // Combinar con coma como separador decimal
+            return '€ ' + parteEnteraFormateada + ',' + parteDecimal;
+        }
+        
+        // Función para formatear números enteros con punto como separador de miles
+        function formatearNumero(valor) {
+            const numero = Number(valor || 0);
+            const parteEntera = Math.floor(Math.abs(numero)).toString();
+            const parteEnteraFormateada = parteEntera.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            return numero < 0 ? '-' + parteEnteraFormateada : parteEnteraFormateada;
+        }
+ 
+        function recalcularTotales() {
+            let subtotal = 0;
+            const descuentoGeneral = Number(descuentoGeneralInput.value) || 0;
+
+            // Primera pasada: calcular subtotales con descuentos por línea
+            lineasBody.querySelectorAll('.linea-row').forEach(row => {
+                const cantidad = Number(row.querySelector('.cantidad-input').value) || 0;
+                const precio = Number(row.querySelector('.precio-input').value) || 0;
+                const iva = Number(row.querySelector('.iva-input').value) || 0;
+                const descuentoLinea = Number(row.querySelector('.descuento-input').value) || 0;
+
+                // Calcular subtotal sin descuento
+                const subtotalLineaSinDescuento = cantidad * precio;
+                
+                // Aplicar descuento por línea
+                const descuentoLineaValor = subtotalLineaSinDescuento * (descuentoLinea / 100);
+                const subtotalLinea = subtotalLineaSinDescuento - descuentoLineaValor;
+
+                row.querySelector('.subtotal-cell').textContent = formatearEuro(subtotalLinea);
+
+                subtotal += subtotalLinea;
+            });
+
+            // Aplicar descuento general después del subtotal
+            const descuentoGeneralValor = subtotal * (descuentoGeneral / 100);
+            const subtotalConDescuento = subtotal - descuentoGeneralValor;
+            
+            // Segunda pasada: recalcular impuestos y totales con descuento general aplicado
+            let impuestosTotal = 0;
+            lineasBody.querySelectorAll('.linea-row').forEach(row => {
+                const cantidad = Number(row.querySelector('.cantidad-input').value) || 0;
+                const precio = Number(row.querySelector('.precio-input').value) || 0;
+                const iva = Number(row.querySelector('.iva-input').value) || 0;
+                const descuentoLinea = Number(row.querySelector('.descuento-input').value) || 0;
+                
+                const subtotalLineaSinDescuento = cantidad * precio;
+                const descuentoLineaValor = subtotalLineaSinDescuento * (descuentoLinea / 100);
+                const subtotalLinea = subtotalLineaSinDescuento - descuentoLineaValor;
+                
+                // Aplicar descuento general al subtotal de la línea (proporcional)
+                const factorDescuentoGeneral = subtotal > 0 ? (subtotalConDescuento / subtotal) : 1;
+                const subtotalLineaConDescuentoGeneral = subtotalLinea * factorDescuentoGeneral;
+                
+                // Calcular impuestos sobre el subtotal con descuento general
+                const impuestoLinea = subtotalLineaConDescuentoGeneral * (iva / 100);
+                const totalLinea = subtotalLineaConDescuentoGeneral + impuestoLinea;
+
+                row.querySelector('.total-cell').textContent = formatearEuro(totalLinea);
+                impuestosTotal += impuestoLinea;
+            });
+
+            subtotalEl.textContent = formatearEuro(subtotal);
+            
+            // Mostrar/ocultar fila de descuento general
+            if (descuentoGeneral > 0) {
+                descuentoGeneralRow.style.display = 'flex';
+                sumDescuentoGeneral.textContent = formatearEuro(descuentoGeneralValor);
+            } else {
+                descuentoGeneralRow.style.display = 'none';
+                sumDescuentoGeneral.textContent = formatearEuro(0);
+            }
+            
+            subtotalConDescuentoEl.textContent = formatearEuro(subtotalConDescuento);
+            impuestosEl.textContent = formatearEuro(impuestosTotal);
+            totalEl.textContent = formatearEuro(subtotalConDescuento + impuestosTotal);
+        }
+ 
+        // Función para filtrar artículos por búsqueda
+        function filtrarArticulos(termino, articulosList) {
+            if (!termino || termino.trim() === '') {
+                return articulosList;
+            }
+            const terminoLower = termino.toLowerCase().trim();
+            return articulosList.filter(articulo => {
+                const id = String(articulo.Id || articulo.id || '');
+                const nombre = String(articulo.Nombre || articulo.nombre || '').toLowerCase();
+                return id.includes(terminoLower) || nombre.includes(terminoLower);
+            });
+        }
+
+        // Función para renderizar dropdown de artículos
+        function renderizarDropdownArticulos(dropdown, articulosFiltrados, onSelect) {
+            dropdown.innerHTML = '';
+            if (articulosFiltrados.length === 0) {
+                dropdown.innerHTML = '<div class="articulo-dropdown-item text-muted text-center">No se encontraron artículos</div>';
+                return;
+            }
+            articulosFiltrados.forEach(articulo => {
+                const item = document.createElement('div');
+                item.className = 'articulo-dropdown-item';
+                item.innerHTML = `
+                    <div class="articulo-item-id">ID: ${articulo.Id || articulo.id}</div>
+                    <div class="articulo-item-name">${articulo.Nombre || articulo.nombre}</div>
+                `;
+                item.addEventListener('click', () => {
+                    onSelect(articulo);
+                });
+                dropdown.appendChild(item);
+            });
+        }
+
+        function crearLinea(data = null) {
+            const clone = lineaTemplate.content.firstElementChild.cloneNode(true);
+            const articuloDisplay = clone.querySelector('.articulo-display');
+            const articuloNombre = clone.querySelector('.articulo-nombre');
+            const hiddenInput = clone.querySelector('.articulo-hidden-input');
+            const cantidadInput = clone.querySelector('.cantidad-input');
+            const precioInput = clone.querySelector('.precio-input');
+            const ivaInput = clone.querySelector('.iva-input');
+            const descuentoInput = clone.querySelector('.descuento-input');
+
+            // Si hay datos iniciales, configurar el artículo
+            if (data && (data.articuloId || data.articulo || data.articulo_id)) {
+                const articuloId = data.articuloId || data.articulo || data.articulo_id;
+                const articulo = articulos.find(a => String(a.Id || a.id) === String(articuloId));
+                if (articulo) {
+                    hiddenInput.value = articulo.Id || articulo.id;
+                    articuloNombre.textContent = `${articulo.Id || articulo.id} - ${articulo.Nombre || articulo.nombre}`;
+                    precioInput.value = Number(articulo.PVL || articulo.Pvl || articulo.precio || data.precio || 0).toFixed(2);
+                }
+            }
+ 
+            [cantidadInput, precioInput, ivaInput, descuentoInput].forEach(input => {
+                input.addEventListener('input', recalcularTotales);
+            });
+            
+            // Añadir listener para el descuento general
+            descuentoGeneralInput.addEventListener('input', recalcularTotales);
+ 
+            clone.querySelector('.eliminar-linea').addEventListener('click', () => {
+                if (lineasBody.children.length > 1) {
+                    clone.remove();
+                    recalcularTotales();
+                } else {
+                    mostrarAlerta('El pedido debe tener al menos una línea.', 'warning');
+                }
+            });
+ 
+            // Cargar datos iniciales si existen
+            if (data) {
+                if (data.cantidad !== undefined && data.cantidad !== null) {
+                    cantidadInput.value = Number(data.cantidad);
+                }
+                if (data.precio !== undefined && data.precio !== null) {
+                    precioInput.value = Number(data.precio).toFixed(2);
+                }
+                if (data.iva !== undefined && data.iva !== null) {
+                    ivaInput.value = Number(data.iva);
+                }
+                if (data.descuento !== undefined && data.descuento !== null) {
+                    descuentoInput.value = Number(data.descuento);
+                }
+            }
+
+            lineasBody.appendChild(clone);
+            recalcularTotales();
+        }
+ 
+        // Configurar búsqueda centralizada de artículos
+        const busquedaContainer = busquedaArticuloCabecera.closest('.articulo-search-container');
+        const modalCantidadDescuentoElement = document.getElementById('modalCantidadDescuento');
+        const modalCantidadDescuento = new bootstrap.Modal(modalCantidadDescuentoElement);
+        const modalArticuloNombre = document.getElementById('modalArticuloNombre');
+        const modalCantidad = document.getElementById('modalCantidad');
+        const modalDescuento = document.getElementById('modalDescuento');
+        const btnConfirmarArticulo = document.getElementById('btnConfirmarArticulo');
+        
+        // Manejar eventos del modal para corregir aria-hidden
+        modalCantidadDescuentoElement.addEventListener('shown.bs.modal', () => {
+            // Asegurar que aria-hidden se elimine cuando el modal se muestra
+            modalCantidadDescuentoElement.removeAttribute('aria-hidden');
+            // Enfocar el campo de cantidad en lugar del botón
+            modalCantidad.focus();
+            modalCantidad.select();
+        });
+        
+        modalCantidadDescuentoElement.addEventListener('hidden.bs.modal', () => {
+            // Restaurar aria-hidden cuando el modal se oculta
+            modalCantidadDescuentoElement.setAttribute('aria-hidden', 'true');
+        });
+        
+        let articuloSeleccionadoParaAgregar = null;
+        
+        // Función para agregar artículo desde la búsqueda centralizada
+        const agregarArticuloDesdeBusqueda = (articulo) => {
+            // Guardar el artículo seleccionado
+            articuloSeleccionadoParaAgregar = articulo;
+            
+            // Mostrar información del artículo en el modal
+            const nombreArticulo = `${articulo.Id || articulo.id} - ${articulo.Nombre || articulo.nombre}`;
+            modalArticuloNombre.textContent = nombreArticulo;
+            
+            // Resetear valores del modal
+            modalCantidad.value = '1';
+            modalDescuento.value = '0';
+            modalCantidad.classList.remove('is-invalid');
+            
+            // Limpiar búsqueda
+            busquedaArticuloCabecera.value = '';
+            dropdownArticuloCabecera.classList.remove('show');
+            
+            // Mostrar modal (el foco se manejará en el evento shown.bs.modal)
+            modalCantidadDescuento.show();
+        };
+        
+        // Confirmar y agregar línea desde el modal
+        btnConfirmarArticulo.addEventListener('click', () => {
+            if (!articuloSeleccionadoParaAgregar) return;
+            
+            const cantidad = Number(modalCantidad.value) || 0;
+            
+            // Validar cantidad
+            if (cantidad <= 0) {
+                modalCantidad.classList.add('is-invalid');
+                modalCantidad.focus();
+                return;
+            }
+            
+            const descuento = Number(modalDescuento.value) || 0;
+            
+            // Crear nueva línea con el artículo seleccionado
+            crearLinea({
+                articuloId: articuloSeleccionadoParaAgregar.Id || articuloSeleccionadoParaAgregar.id,
+                cantidad: cantidad,
+                precio: articuloSeleccionadoParaAgregar.PVL || articuloSeleccionadoParaAgregar.Pvl || articuloSeleccionadoParaAgregar.precio || 0,
+                iva: articuloSeleccionadoParaAgregar.IVA || articuloSeleccionadoParaAgregar.iva || articuloSeleccionadoParaAgregar['IVA %'] || 21,
+                descuento: descuento
+            });
+            
+            // Cerrar modal
+            modalCantidadDescuento.hide();
+            articuloSeleccionadoParaAgregar = null;
+            
+            // Enfocar de nuevo el campo de búsqueda para seguir agregando
+            setTimeout(() => {
+                busquedaArticuloCabecera.focus();
+            }, 300);
+        });
+        
+        // Permitir confirmar con Enter en los campos del modal
+        [modalCantidad, modalDescuento].forEach(input => {
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    btnConfirmarArticulo.click();
+                }
+            });
+        });
+
+        // Evento de búsqueda en la cabecera
+        busquedaArticuloCabecera.addEventListener('input', (e) => {
+            const termino = e.target.value;
+            if (termino.length >= 1) {
+                const articulosFiltrados = filtrarArticulos(termino, articulos);
+                renderizarDropdownArticulos(dropdownArticuloCabecera, articulosFiltrados, agregarArticuloDesdeBusqueda);
+                dropdownArticuloCabecera.classList.add('show');
+            } else {
+                dropdownArticuloCabecera.classList.remove('show');
+            }
+        });
+
+        // Evento para mostrar dropdown al hacer focus
+        busquedaArticuloCabecera.addEventListener('focus', () => {
+            if (busquedaArticuloCabecera.value.length >= 1) {
+                const articulosFiltrados = filtrarArticulos(busquedaArticuloCabecera.value, articulos);
+                renderizarDropdownArticulos(dropdownArticuloCabecera, articulosFiltrados, agregarArticuloDesdeBusqueda);
+                dropdownArticuloCabecera.classList.add('show');
+            }
+        });
+
+        // Cerrar dropdown al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!busquedaContainer.contains(e.target)) {
+                dropdownArticuloCabecera.classList.remove('show');
+            }
+        });
+ 
+        // Cargar líneas iniciales si existen
+        if (Array.isArray(lineasIniciales) && lineasIniciales.length) {
+            lineasIniciales.forEach(linea => crearLinea(linea));
+        }
+ 
+        const transferMap = {
+            'transfer hefame': { nombre: 'HEFAME', label: 'Hefame' },
+            'transfer alliance': { nombre: 'ALLIANCE', label: 'Alliance' },
+            'transfer cofares': { nombre: 'COFARES', label: 'Cofares' }
+        };
+ 
+        const cooperativaPorCliente = clientesCooperativa.reduce((acc, registro) => {
+            if (!registro) return acc;
+            
+            // Normalizar clienteId: puede venir como Id_Cliente, clienteId, o id
+            const clienteId = registro.Id_Cliente != null ? String(registro.Id_Cliente) : 
+                             (registro.clienteId != null ? String(registro.clienteId) : null);
+            if (!clienteId) return acc;
+ 
+            // Normalizar nombre de cooperativa: puede venir como CooperativaNombre, cooperativaNombre, o Nombre
+            const coopNombre = (registro.CooperativaNombre || registro.cooperativaNombre || registro.Nombre) 
+                ? String(registro.CooperativaNombre || registro.cooperativaNombre || registro.Nombre).trim().toUpperCase() 
+                : null;
+            if (!coopNombre) return acc;
+ 
+            // Normalizar número de asociado: puede venir como NumAsociado, numeroAsociado, o numero
+            const numeroAsociado = registro.NumAsociado || registro.numeroAsociado || registro.numero || '';
+            
+            // Normalizar cooperativaId
+            const cooperativaId = registro.Id_Cooperativa || registro.cooperativaId || registro.id || null;
+            
+            // Normalizar registroId
+            const registroId = registro.id || registro.Id || registro.registroId || null;
+ 
+            if (!acc[clienteId]) acc[clienteId] = {};
+            acc[clienteId][coopNombre] = {
+                numero: numeroAsociado,
+                cooperativaId: cooperativaId,
+                registroId: registroId
+            };
+            
+            console.log('📋 [COOPERATIVA] Registro procesado:', {
+                clienteId,
+                coopNombre,
+                numeroAsociado,
+                cooperativaId,
+                registroId,
+                registroCompleto: registro
+            });
+            
+            return acc;
+        }, {});
+        
+        console.log('📊 [COOPERATIVA] Objeto cooperativaPorCliente construido:', cooperativaPorCliente);
+ 
+        // Función para obtener el ID del cliente seleccionado
+        function getClienteId() {
+            // Intentar obtener del input oculto primero
+            if (clienteIdInput && clienteIdInput.value) {
+                const value = clienteIdInput.value.trim();
+                if (value) {
+                    return value;
+                }
+            }
+            
+            // Fallback: intentar obtener de selectedCliente
+            if (selectedCliente && (selectedCliente.Id || selectedCliente.id)) {
+                return String(selectedCliente.Id || selectedCliente.id);
+            }
+            
+            return null;
+        }
+
+        function resetCooperativaUI() {
+            cooperativaInfo.style.display = 'none';
+            cooperativaLabel.textContent = 'Número de asociado';
+            cooperativaHelper.textContent = '';
+            cooperativaHelper.classList.remove('text-success', 'text-danger');
+            cooperativaHelper.classList.add('text-muted');
+            numeroCooperativaInput.value = '';
+            numeroCooperativaInput.readOnly = false;
+            numeroCooperativaInput.placeholder = 'Introduce el número de asociado';
+            cooperativaNombreInput.value = '';
+        }
+
+        function actualizarCooperativa() {
+            const clienteId = getClienteId();
+            const tipoRaw = tipoPedidoSelect.value ? tipoPedidoSelect.value.toLowerCase() : '';
+            const config = transferMap[tipoRaw];
+ 
+            console.log('🔍 [COOPERATIVA] actualizarCooperativa llamado:', {
+                clienteId,
+                tipoRaw,
+                config,
+                clienteIdInputValue: clienteIdInput ? clienteIdInput.value : 'N/A',
+                selectedClienteId: selectedCliente ? (selectedCliente.Id || selectedCliente.id) : 'N/A'
+            });
+ 
+            if (!clienteId || !config) {
+                resetCooperativaUI();
+                return;
+            }
+ 
+            cooperativaInfo.style.display = '';
+            cooperativaLabel.textContent = `Número de asociado (${config.label})`;
+            cooperativaNombreInput.value = config.nombre;
+ 
+            // Buscar en cooperativaPorCliente con el clienteId como string
+            const dataCliente = cooperativaPorCliente[clienteId];
+            console.log('🔍 [COOPERATIVA] Búsqueda:', {
+                clienteId,
+                clienteIdType: typeof clienteId,
+                dataCliente,
+                cooperativasDisponibles: dataCliente ? Object.keys(dataCliente) : [],
+                configNombre: config.nombre,
+                configNombreUpper: config.nombre.toUpperCase()
+            });
+ 
+            // Intentar múltiples variantes de búsqueda
+            let info = null;
+            if (dataCliente) {
+                // Intentar con el nombre exacto
+                info = dataCliente[config.nombre] || dataCliente[config.nombre.toUpperCase()];
+                
+                // Si no se encuentra, buscar por cualquier variante que contenga el nombre
+                if (!info) {
+                    const nombreBuscado = config.nombre.toUpperCase();
+                    for (const key in dataCliente) {
+                        if (key.toUpperCase() === nombreBuscado || key.toUpperCase().includes(nombreBuscado) || nombreBuscado.includes(key.toUpperCase())) {
+                            info = dataCliente[key];
+                            console.log('✅ [COOPERATIVA] Encontrado con variante:', key);
+                            break;
+                        }
+                    }
+                }
+            }
+ 
+            console.log('🔍 [COOPERATIVA] Info encontrada:', info);
+ 
+            if (info && info.numero !== undefined && info.numero !== null && info.numero !== '') {
+                numeroCooperativaInput.value = info.numero;
+                numeroCooperativaInput.readOnly = true;
+                cooperativaHelper.textContent = 'Número recuperado automáticamente del CRM. Se mantendrá al guardar el pedido.';
+                cooperativaHelper.classList.remove('text-danger', 'text-muted');
+                cooperativaHelper.classList.add('text-success');
+                console.log('✅ [COOPERATIVA] Número de asociado encontrado:', info.numero);
+            } else {
+                const valorInicial = (initialState && (initialState.cooperativa_nombre || '')).toUpperCase() === config.nombre
+                    ? (initialState.numero_cooperativa || '')
+                    : '';
+                numeroCooperativaInput.value = valorInicial;
+                numeroCooperativaInput.readOnly = false;
+                numeroCooperativaInput.placeholder = `Introduce el número de asociado de ${config.label}`;
+                cooperativaHelper.textContent = 'No existe número de asociado registrado. Puedes introducirlo y lo guardaremos al guardar el pedido.';
+                cooperativaHelper.classList.remove('text-success', 'text-danger');
+                cooperativaHelper.classList.add('text-muted');
+                console.log('⚠️ [COOPERATIVA] No se encontró número de asociado para cliente:', clienteId, 'cooperativa:', config.nombre);
+            }
+        }
+ 
+        tipoPedidoSelect.addEventListener('change', () => {
+            limpiarAlerta();
+            actualizarCooperativa();
+        });
+ 
+        // Listener directo en el botón como respaldo
+        if (submitPedidoBtn) {
+            submitPedidoBtn.addEventListener('click', (e) => {
+                console.log('🔘 [PEDIDO] Click directo en botón Guardar');
+                // El submit del formulario se encargará del resto
+            });
+        }
+        
+        pedidoForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Siempre prevenir el submit por defecto
+            
+            console.log('🔘 [PEDIDO] Evento submit del formulario capturado');
+            
+            limpiarAlerta();
+            
+            // Asegurar que el input de payload existe
+            let lineasPayloadInput = document.querySelector('input[name="lineas_payload"]');
+            if (!lineasPayloadInput) {
+                lineasPayloadInput = document.createElement('input');
+                lineasPayloadInput.type = 'hidden';
+                lineasPayloadInput.name = 'lineas_payload';
+                pedidoForm.appendChild(lineasPayloadInput);
+            }
+            lineasPayloadInput.value = '';
+
+            const filas = Array.from(lineasBody.querySelectorAll('.linea-row'));
+            const errores = [];
+            const lineas = [];
+
+            if (!filas.length) {
+                errores.push('El pedido debe incluir al menos una línea.');
+            }
+
+            // Validar cliente
+            const clienteId = getClienteId();
+            console.log('🔍 [PEDIDO] Validando cliente - ID obtenido:', clienteId);
+            console.log('🔍 [PEDIDO] clienteIdInput existe:', !!clienteIdInput);
+            console.log('🔍 [PEDIDO] clienteIdInput.value:', clienteIdInput ? clienteIdInput.value : 'N/A');
+            console.log('🔍 [PEDIDO] selectedCliente:', selectedCliente);
+            if (!clienteId) {
+                errores.push('Debes seleccionar un cliente.');
+            }
+
+            // Validar fecha
+            const fechaPedido = document.querySelector('input[name="fecha_pedido"]').value;
+            if (!fechaPedido) {
+                errores.push('La fecha del pedido es obligatoria.');
+            }
+
+            filas.forEach((row, index) => {
+                const hiddenInput = row.querySelector('.articulo-hidden-input');
+                const cantidadInput = row.querySelector('.cantidad-input');
+                const precioInput = row.querySelector('.precio-input');
+                const ivaInput = row.querySelector('.iva-input');
+                const descuentoInput = row.querySelector('.descuento-input');
+
+                const articuloId = hiddenInput ? hiddenInput.value : '';
+                const cantidad = Number(cantidadInput.value);
+                const precio = Number(precioInput.value);
+                const iva = Number(ivaInput.value);
+                const descuento = Number(descuentoInput.value) || 0;
+
+                if (!articuloId) {
+                    errores.push(`Selecciona un artículo en la línea ${index + 1}.`);
+                }
+                if (!(cantidad > 0)) {
+                    errores.push(`La cantidad debe ser mayor que cero en la línea ${index + 1}.`);
+                }
+                if (Number.isNaN(precio) || precio < 0) {
+                    errores.push(`El precio debe ser mayor o igual a cero en la línea ${index + 1}.`);
+                }
+                if (descuento < 0 || descuento > 100) {
+                    errores.push(`El descuento debe estar entre 0 y 100 en la línea ${index + 1}.`);
+                }
+
+                lineas.push({
+                    articuloId,
+                    cantidad: Number.isNaN(cantidad) ? 0 : cantidad,
+                    precio: Number.isNaN(precio) ? 0 : precio,
+                    iva: Number.isNaN(iva) ? 0 : iva,
+                    descuento: Number.isNaN(descuento) ? 0 : descuento
+                });
+            });
+            
+            // Añadir descuento general al payload
+            const descuentoGeneral = Number(descuentoGeneralInput.value) || 0;
+            if (descuentoGeneral < 0 || descuentoGeneral > 100) {
+                errores.push('El descuento general debe estar entre 0 y 100.');
+            }
+
+            if (errores.length) {
+                console.log('❌ [PEDIDO] Errores de validación:', errores);
+                mostrarAlerta(errores.join('<br>'), 'danger');
+                return;
+            }
+            
+            console.log('✅ [PEDIDO] Validaciones pasadas, preparando modal de confirmación...');
+
+            // Preparar datos del formulario
+            const formData = new FormData(pedidoForm);
+            const formValues = Object.fromEntries(formData.entries());
+            
+            // Obtener nombres de artículos para el popup
+            const lineasConNombres = lineas.map(linea => {
+                const articulo = articulos.find(a => (a.Id || a.id) == linea.articuloId);
+                return {
+                    ...linea,
+                    articuloNombre: articulo ? (articulo.Nombre || articulo.nombre) : 'Desconocido'
+                };
+            });
+
+            // Calcular totales para mostrar en el popup
+            const subtotal = lineas.reduce((sum, l) => sum + (l.cantidad * l.precio * (1 - l.descuento/100)), 0);
+            const subtotalConDescuentoGeneral = subtotal * (1 - descuentoGeneral/100);
+            const totalIva = lineas.reduce((sum, l) => {
+                const subtotalLinea = l.cantidad * l.precio * (1 - l.descuento/100);
+                return sum + (subtotalLinea * l.iva / 100);
+            }, 0);
+            const total = subtotalConDescuentoGeneral + totalIva;
+
+            // Obtener nombre del cliente
+            const clienteNombre = document.querySelector('#clienteSelectedName')?.textContent || 
+                                 document.querySelector('#clienteSearchInput')?.value || 
+                                 'Cliente no seleccionado';
+
+            // Función para proceder con la grabación (definida ANTES de mostrar el modal)
+            const procederConGrabacion = () => {
+                console.log('🚀 [PEDIDO] Iniciando grabación...');
+                
+                // Obtener referencias a los elementos del formulario
+                const clienteIdInputElement = document.getElementById('clienteIdInput');
+                const fechaPedidoInput = document.querySelector('input[name="fecha_pedido"]');
+                const lineasPayloadInputElement = document.querySelector('input[name="lineas_payload"]') || lineasPayloadInput;
+                
+                // Verificar valores antes de preparar el payload
+                console.log('🔍 [PEDIDO] Valores antes de preparar FormData:');
+                console.log('  - clienteIdInputElement:', clienteIdInputElement);
+                console.log('  - clienteIdInputElement?.value:', clienteIdInputElement?.value);
+                console.log('  - fechaPedidoInput:', fechaPedidoInput);
+                console.log('  - fechaPedidoInput?.value:', fechaPedidoInput?.value);
+                console.log('  - lineas.length:', lineas.length);
+                console.log('  - lineas:', lineas);
+                
+                // Asegurar que cliente_id esté establecido
+                if (clienteIdInputElement && !clienteIdInputElement.value) {
+                    console.error('❌ [PEDIDO] cliente_id no está establecido en el input hidden!');
+                    alert('❌ Error: No se ha seleccionado un cliente. Por favor, selecciona un cliente e intenta nuevamente.');
+                    return;
+                }
+                
+                // Asegurar que fecha_pedido esté establecida
+                if (fechaPedidoInput && !fechaPedidoInput.value) {
+                    console.error('❌ [PEDIDO] fecha_pedido no está establecida!');
+                    alert('❌ Error: La fecha del pedido es obligatoria. Por favor, establece la fecha e intenta nuevamente.');
+                    return;
+                }
+                
+                // Preparar payload
+                const payload = {
+                    lineas: lineas,
+                    descuentoGeneral: descuentoGeneral
+                };
+                
+                if (lineasPayloadInputElement) {
+                    lineasPayloadInputElement.value = JSON.stringify(payload);
+                    console.log('📦 [PEDIDO] Payload establecido en input hidden:', payload);
+                } else {
+                    console.error('❌ [PEDIDO] lineasPayloadInput no encontrado!');
+                }
+
+                if (cooperativaInfo && cooperativaInfo.style.display !== 'none') {
+                    const tipoRaw = tipoPedidoSelect.value ? tipoPedidoSelect.value.toLowerCase() : '';
+                    const config = transferMap[tipoRaw];
+                    if (config && cooperativaNombreInput && !cooperativaNombreInput.value) {
+                        cooperativaNombreInput.value = config.nombre;
+                    }
+                } else if (cooperativaNombreInput) {
+                    cooperativaNombreInput.value = '';
+                    if (numeroCooperativaInput) {
+                        numeroCooperativaInput.value = '';
+                    }
+                }
+
+                // Deshabilitar el botón de envío
+                const submitButton = pedidoForm.querySelector('button[type="submit"]');
+                const originalButtonText = submitButton ? submitButton.innerHTML : '';
+                if (submitButton) {
+                    submitButton.disabled = true;
+                    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+                }
+
+                // Crear URLSearchParams en lugar de FormData para asegurar que body-parser lo parsee correctamente
+                const formDataParams = new URLSearchParams();
+                
+                // Agregar todos los campos del formulario
+                const formElements = pedidoForm.elements;
+                for (let element of formElements) {
+                    if (element.name && element.name !== '') {
+                        if (element.type === 'checkbox' || element.type === 'radio') {
+                            if (element.checked) {
+                                formDataParams.append(element.name, element.value);
+                            }
+                        } else if (element.type !== 'file') {
+                            formDataParams.append(element.name, element.value || '');
+                        }
+                    }
+                }
+                
+                // Asegurar que los campos críticos estén presentes
+                if (clienteIdInputElement?.value) {
+                    formDataParams.set('cliente_id', clienteIdInputElement.value);
+                }
+                if (fechaPedidoInput?.value) {
+                    formDataParams.set('fecha_pedido', fechaPedidoInput.value);
+                }
+                if (lineasPayloadInputElement?.value) {
+                    formDataParams.set('lineas_payload', lineasPayloadInputElement.value);
+                }
+                
+                const actionUrl = pedidoForm.action || '/dashboard/pedidos';
+                
+                // Verificación final
+                console.log('📤 [PEDIDO] Enviando a:', actionUrl);
+                console.log('📤 [PEDIDO] Verificación final antes de enviar:');
+                console.log('  - cliente_id:', formDataParams.get('cliente_id'));
+                console.log('  - fecha_pedido:', formDataParams.get('fecha_pedido'));
+                console.log('  - lineas_payload:', formDataParams.get('lineas_payload') ? 'presente' : 'ausente');
+                console.log('📤 [PEDIDO] Todos los parámetros:', Object.fromEntries(formDataParams.entries()));
+                
+                // Timeout de seguridad: si el servidor no responde en 70 segundos, restaurar botón
+                // (70 segundos para que espere más que el timeout del servidor de 60 segundos)
+                const timeoutId = setTimeout(() => {
+                    console.warn('⚠️ [PEDIDO] Timeout: El servidor no respondió en 70 segundos');
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                    }
+                    alert('❌ Error al grabar el pedido:\n\nEl servidor está tardando demasiado en responder.\n\nPor favor, verifica tu conexión o intenta nuevamente.\nSi el problema persiste, contacta con soporte técnico.');
+                }, 70000); // 70 segundos
+                
+                fetch(actionUrl, {
+                    method: 'POST',
+                    body: formDataParams.toString(),
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    redirect: 'follow' // Seguir redirecciones automáticamente
+                })
+                .then(async response => {
+                    // Cancelar timeout si la respuesta llegó
+                    clearTimeout(timeoutId);
+                    
+                    console.log('📥 [PEDIDO] Respuesta recibida:', response.status, response.statusText);
+                    console.log('📥 [PEDIDO] Redirected:', response.redirected);
+                    console.log('📥 [PEDIDO] URL:', response.url);
+                    console.log('📥 [PEDIDO] Content-Type:', response.headers.get('content-type'));
+                    console.log('📥 [PEDIDO] Location header:', response.headers.get('location'));
+                    
+                    // Verificar si hay header Location (redirección)
+                    const locationHeader = response.headers.get('location');
+                    if (locationHeader) {
+                        console.log('✅ [PEDIDO] Redirección detectada en header Location:', locationHeader);
+                        
+                        // Restaurar botón antes de redirigir
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalButtonText;
+                        }
+                        
+                        // Mostrar mensaje de éxito
+                        const mensajeExito = '✅ Pedido grabado correctamente!\n\n' +
+                              'Cliente: ' + clienteNombre + '\n' +
+                              'Número: ' + (formValues.numero_pedido || '—') + '\n' +
+                              'Total: € ' + total.toFixed(2) + '\n\n' +
+                              'Redirigiendo al detalle del pedido...';
+                        
+                        alert(mensajeExito);
+                        window.location.href = locationHeader;
+                        return;
+                    }
+                    
+                    // Si hay redirección o status 302/303, fue exitoso
+                    if (response.redirected || response.status === 302 || response.status === 303) {
+                        // Si hay redirección, fue exitoso
+                        const redirectUrl = response.url;
+                        
+                        // Restaurar botón antes de redirigir
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalButtonText;
+                        }
+                        
+                        // Mostrar mensaje de éxito
+                        const mensajeExito = '✅ Pedido grabado correctamente!\n\n' +
+                              'Cliente: ' + clienteNombre + '\n' +
+                              'Número: ' + (formValues.numero_pedido || '—') + '\n' +
+                              'Total: € ' + total.toFixed(2) + '\n\n' +
+                              'Redirigiendo al detalle del pedido...';
+                        
+                        alert(mensajeExito);
+                        window.location.href = redirectUrl;
+                        return;
+                    }
+                    
+                    // Si el status es 200, puede ser que Express haya respondido con HTML que contiene una redirección
+                    // o puede ser una respuesta exitosa sin redirección explícita
+                    if (response.status === 200) {
+                        const contentType = response.headers.get('content-type') || '';
+                        console.log('📥 [PEDIDO] Status 200, Content-Type:', contentType);
+                        console.log('📥 [PEDIDO] Response headers:', Object.fromEntries(response.headers.entries()));
+                        
+                        // Si es JSON, procesarlo primero (prioridad)
+                        if (contentType.includes('application/json')) {
+                            try {
+                                // Clonar la respuesta antes de leerla para poder leerla de nuevo si es necesario
+                                const clonedResponse = response.clone();
+                                const data = await response.json();
+                                console.log('📥 [PEDIDO] Respuesta JSON recibida (status 200):', data);
+                                console.log('📥 [PEDIDO] data.success:', data.success);
+                                console.log('📥 [PEDIDO] data.redirect:', data.redirect);
+                                
+                                // Restaurar botón INMEDIATAMENTE
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.innerHTML = originalButtonText;
+                                    console.log('✅ [PEDIDO] Botón restaurado');
+                                }
+                                
+                                if (data.success && data.redirect) {
+                                    console.log('✅ [PEDIDO] Redirigiendo a:', data.redirect);
+                                    alert('✅ Pedido grabado correctamente!\n\nRedirigiendo...');
+                                    window.location.href = data.redirect;
+                                    return;
+                                } else if (data.success) {
+                                    console.log('✅ [PEDIDO] Pedido creado, recargando página');
+                                    alert('✅ Pedido grabado correctamente!\n\nRecargando página...');
+                                    window.location.reload();
+                                    return;
+                                } else {
+                                    console.error('❌ [PEDIDO] data.success es false:', data);
+                                    alert('❌ Error al grabar el pedido:\n\n' + (data.error || 'Error desconocido') + '\n\nPor favor, intenta nuevamente.');
+                                    return;
+                                }
+                            } catch (jsonError) {
+                                console.error('❌ [PEDIDO] Error parseando JSON:', jsonError);
+                                console.error('❌ [PEDIDO] Error stack:', jsonError.stack);
+                                // Continuar con el procesamiento de HTML
+                            }
+                        }
+                        
+                        // Si es HTML, puede contener una redirección o ser una página de éxito
+                        if (contentType.includes('text/html')) {
+                            // Leer el texto para verificar si hay redirección o error
+                            const text = await response.text();
+                            console.log('📥 [PEDIDO] Respuesta HTML recibida (primeros 500 chars):', text.substring(0, 500));
+                            
+                            // Buscar redirección en meta refresh o location
+                            const metaRefreshMatch = text.match(/<meta[^>]*http-equiv=["']refresh["'][^>]*content=["'][^"']*url=([^"']+)["']/i);
+                            const locationMatch = text.match(/window\.location\s*=\s*["']([^"']+)["']/i) || 
+                                                  text.match(/location\.href\s*=\s*["']([^"']+)["']/i);
+                            
+                            if (metaRefreshMatch || locationMatch) {
+                                const redirectUrl = metaRefreshMatch ? metaRefreshMatch[1] : locationMatch[1];
+                                
+                                // Restaurar botón antes de redirigir
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.innerHTML = originalButtonText;
+                                }
+                                
+                                alert('✅ Pedido grabado correctamente!\n\nRedirigiendo...');
+                                window.location.href = redirectUrl;
+                                return;
+                            }
+                            
+                            // Si no hay redirección pero tampoco hay error, asumir éxito
+                            if (!text.includes('error') && !text.includes('Error') && !text.includes('Error interno')) {
+                                // Restaurar botón
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.innerHTML = originalButtonText;
+                                }
+                                
+                                alert('✅ Pedido grabado correctamente!\n\nRecargando página...');
+                                window.location.reload();
+                                return;
+                            }
+                            
+                            // Si hay error en el HTML, mostrarlo
+                            const errorMatch = text.match(/<div[^>]*class="[^"]*alert[^"]*danger[^"]*"[^>]*>([^<]+)/i) ||
+                                               text.match(/<div[^>]*class="[^"]*alert-danger[^"]*"[^>]*>([^<]+)/i) ||
+                                               text.match(/Error[^<]*/i);
+                            const errorMsg = errorMatch ? errorMatch[1] || errorMatch[0] : 'Error desconocido';
+                            
+                            // Restaurar botón
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.innerHTML = originalButtonText;
+                            }
+                            
+                            alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, revisa los datos e intenta nuevamente.');
+                            return;
+                        }
+                    }
+                    
+                    // Intentar leer como JSON primero si es error 400
+                    if (response.status === 400) {
+                        const contentType = response.headers.get('content-type') || '';
+                        console.log('🔍 [PEDIDO] Intentando leer error 400, Content-Type:', contentType);
+                        
+                        // Intentar leer como texto primero para poder intentar parsear como JSON
+                        try {
+                            const text = await response.text();
+                            console.log('📥 [PEDIDO] Error 400 (texto):', text.substring(0, 500));
+                            
+                            // Intentar parsear como JSON si el texto parece JSON
+                            if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+                                try {
+                                    const errorData = JSON.parse(text);
+                                    console.error('❌ [PEDIDO] Error 400 (JSON parseado):', errorData);
+                                    const errorMsg = errorData.error || errorData.errores?.join('\n') || 'Error de validación';
+                                    alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, revisa los datos e intenta nuevamente.');
+                                    if (submitButton) {
+                                        submitButton.disabled = false;
+                                        submitButton.innerHTML = originalButtonText;
+                                    }
+                                    return;
+                                } catch (jsonError) {
+                                    console.warn('⚠️ [PEDIDO] No se pudo parsear como JSON, tratando como HTML');
+                                }
+                            }
+                            
+                            // Si no es JSON, buscar mensajes de error en el HTML
+                            const errorMatch = text.match(/<div[^>]*class="[^"]*alert[^"]*danger[^"]*"[^>]*>([^<]+)/i) ||
+                                               text.match(/<div[^>]*class="[^"]*alert-danger[^"]*"[^>]*>([^<]+)/i) ||
+                                               text.match(/Error[^<]*/i) ||
+                                               text.match(/errores[^<]*>([^<]+)/i);
+                            const errorMsg = errorMatch ? (errorMatch[1] || errorMatch[0]).trim() : 'Error de validación. Por favor, revisa los datos del formulario.';
+                            alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, revisa los datos e intenta nuevamente.');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.innerHTML = originalButtonText;
+                            }
+                            return;
+                        } catch (textError) {
+                            console.error('❌ [PEDIDO] Error leyendo respuesta:', textError);
+                            alert('❌ Error al grabar el pedido:\n\nError desconocido.\n\nPor favor, intenta nuevamente.');
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.innerHTML = originalButtonText;
+                            }
+                            return;
+                        }
+                    }
+                    
+                    // Manejar errores 500
+                    if (response.status === 500) {
+                        const contentType = response.headers.get('content-type') || '';
+                        console.log('🔍 [PEDIDO] Error 500, Content-Type:', contentType);
+                        
+                        if (contentType.includes('application/json')) {
+                            try {
+                                const errorData = await response.json();
+                                console.error('❌ [PEDIDO] Error 500 (JSON):', errorData);
+                                const errorMsg = errorData.error || errorData.errorDetails || errorData.sqlError || 'Error interno del servidor';
+                                
+                                // Restaurar botón
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.innerHTML = originalButtonText;
+                                }
+                                
+                                alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, intenta nuevamente.');
+                                return;
+                            } catch (jsonError) {
+                                console.error('❌ [PEDIDO] Error parseando JSON de error 500:', jsonError);
+                            }
+                        }
+                        
+                        // Si no es JSON, intentar leer como texto
+                        try {
+                            const text = await response.text();
+                            console.error('❌ [PEDIDO] Error 500 (texto):', text.substring(0, 500));
+                            
+                            // Intentar parsear como JSON aunque el Content-Type sea text/html
+                            let errorData = null;
+                            try {
+                                errorData = JSON.parse(text);
+                            } catch (e) {
+                                // No es JSON, usar el texto directamente
+                            }
+                            
+                            // Restaurar botón
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.innerHTML = originalButtonText;
+                            }
+                            
+                            const errorMsg = errorData?.error || errorData?.message || 'Error interno del servidor.';
+                            const isTimeout = errorData?.timeout || errorMsg.includes('tardó demasiado');
+                            
+                            if (isTimeout) {
+                                alert('⏱️ El servidor está tardando demasiado en procesar el pedido.\n\n' +
+                                      'Esto puede deberse a:\n' +
+                                      '• Problemas de conexión con la base de datos\n' +
+                                      '• Operaciones que están tardando mucho tiempo\n\n' +
+                                      'Por favor, verifica los logs del servidor o contacta con soporte técnico.');
+                            } else {
+                                alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, intenta nuevamente.');
+                            }
+                            return;
+                        } catch (textError) {
+                            console.error('❌ [PEDIDO] Error leyendo respuesta 500:', textError);
+                        }
+                        
+                        // Si todo falla, restaurar botón y mostrar error genérico
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalButtonText;
+                        }
+                        alert('❌ Error al grabar el pedido:\n\nError desconocido.\n\nPor favor, intenta nuevamente.');
+                        return;
+                    }
+                    
+                    // Si llegamos aquí y no se ha manejado la respuesta, restaurar botón como medida de seguridad
+                    console.warn('⚠️ [PEDIDO] Respuesta no manejada completamente, restaurando botón');
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                    }
+                    
+                    // Si el status es OK pero no se manejó antes, puede ser una respuesta exitosa
+                    if (response.ok && response.status === 200) {
+                        const contentType = response.headers.get('content-type') || '';
+                        console.log('📥 [PEDIDO] Status 200 OK, Content-Type:', contentType);
+                        
+                        if (contentType.includes('application/json')) {
+                            try {
+                                const data = await response.json();
+                                console.log('📥 [PEDIDO] Respuesta JSON recibida:', data);
+                                
+                                // Restaurar botón
+                                if (submitButton) {
+                                    submitButton.disabled = false;
+                                    submitButton.innerHTML = originalButtonText;
+                                }
+                                
+                                if (data.success && data.redirect) {
+                                    alert('✅ Pedido grabado correctamente!\n\nRedirigiendo...');
+                                    window.location.href = data.redirect;
+                                } else if (data.success) {
+                                    alert('✅ Pedido grabado correctamente!\n\nRecargando página...');
+                                    window.location.reload();
+                                } else {
+                                    alert('❌ Error al grabar el pedido:\n\n' + (data.error || 'Error desconocido') + '\n\nPor favor, intenta nuevamente.');
+                                }
+                                return;
+                            } catch (jsonError) {
+                                console.warn('⚠️ [PEDIDO] No se pudo parsear como JSON:', jsonError);
+                            }
+                        }
+                        
+                        // Si es HTML, leer y verificar
+                        try {
+                            const text = await response.text();
+                            console.log('📥 [PEDIDO] Respuesta HTML recibida (primeros 500 chars):', text.substring(0, 500));
+                            
+                            // Restaurar botón siempre antes de procesar
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.innerHTML = originalButtonText;
+                            }
+                            
+                            // Si la respuesta es HTML con error, mostrarlo
+                            if (text.includes('error') || text.includes('Error') || text.includes('Error interno')) {
+                                const errorMatch = text.match(/<div[^>]*class="[^"]*alert[^"]*danger[^"]*"[^>]*>([^<]+)/i) ||
+                                                   text.match(/<div[^>]*class="[^"]*alert-danger[^"]*"[^>]*>([^<]+)/i) ||
+                                                   text.match(/Error[^<]*/i);
+                                const errorMsg = errorMatch ? errorMatch[1] || errorMatch[0] : 'Error desconocido';
+                                
+                                alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, revisa los datos e intenta nuevamente.');
+                            } else {
+                                // Si no hay error, asumir éxito y recargar
+                                alert('✅ Pedido grabado correctamente!\n\nRecargando página...');
+                                window.location.reload();
+                            }
+                            return;
+                        } catch (textError) {
+                            console.error('❌ [PEDIDO] Error leyendo respuesta HTML:', textError);
+                            
+                            // Restaurar botón en caso de error
+                            if (submitButton) {
+                                submitButton.disabled = false;
+                                submitButton.innerHTML = originalButtonText;
+                            }
+                            
+                            alert('❌ Error al procesar la respuesta del servidor.\n\nPor favor, intenta nuevamente.');
+                            return;
+                        }
+                    }
+                    
+                    // Para cualquier otro status de error que no se haya manejado
+                    if (!response.ok) {
+                        const contentType = response.headers.get('content-type') || '';
+                        
+                        // Restaurar botón siempre
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalButtonText;
+                        }
+                        
+                        if (contentType.includes('application/json')) {
+                            try {
+                                const errorData = await response.json();
+                                const errorMsg = errorData.error || errorData.errorDetails || errorData.errores?.join('\n') || `Error HTTP ${response.status}`;
+                                alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nPor favor, intenta nuevamente.');
+                                return;
+                            } catch (jsonError) {
+                                alert('❌ Error al grabar el pedido:\n\nError HTTP ' + response.status + ': ' + response.statusText + '\n\nPor favor, intenta nuevamente.');
+                                return;
+                            }
+                        } else {
+                            alert('❌ Error al grabar el pedido:\n\nError HTTP ' + response.status + ': ' + response.statusText + '\n\nPor favor, intenta nuevamente.');
+                            return;
+                        }
+                    }
+                    
+                    // Si llegamos aquí sin haber manejado la respuesta, restaurar botón como medida de seguridad
+                    console.warn('⚠️ [PEDIDO] Respuesta no manejada completamente, restaurando botón');
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                    }
+                    alert('⚠️ No se pudo determinar el resultado de la operación.\n\nPor favor, verifica si el pedido se guardó correctamente.');
+                })
+                .catch(error => {
+                    // Cancelar timeout si hay error
+                    clearTimeout(timeoutId);
+                    
+                    console.error('❌ [PEDIDO] Error al grabar pedido (catch final):', error);
+                    console.error('❌ [PEDIDO] Error name:', error.name);
+                    console.error('❌ [PEDIDO] Error message:', error.message);
+                    console.error('❌ [PEDIDO] Error stack:', error.stack);
+                    
+                    // Restaurar botón siempre
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = originalButtonText;
+                    }
+                    
+                    // Manejar diferentes tipos de errores
+                    let errorMsg = 'Error desconocido';
+                    if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+                        errorMsg = 'La petición fue cancelada o tardó demasiado tiempo. Por favor, verifica tu conexión e intenta nuevamente.';
+                    } else if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                        errorMsg = 'Error de conexión. Por favor, verifica tu conexión a internet e intenta nuevamente.';
+                    } else if (error.message) {
+                        errorMsg = error.message;
+                    }
+                    
+                    alert('❌ Error al grabar el pedido:\n\n' + errorMsg + '\n\nSi el problema persiste, contacta con soporte técnico.');
+                });
+            };
+
+            // Preparar contenido del modal de confirmación
+            let modalContent = '<div class="row mb-3">';
+            modalContent += '<div class="col-md-6"><strong>Cliente:</strong><br>' + clienteNombre + '</div>';
+            modalContent += '<div class="col-md-6"><strong>Número de pedido:</strong><br>' + (formValues.numero_pedido || '—') + '</div>';
+            modalContent += '</div>';
+            modalContent += '<div class="row mb-3">';
+            modalContent += '<div class="col-md-6"><strong>Fecha pedido:</strong><br>' + (fechaPedido || '—') + '</div>';
+            modalContent += '<div class="col-md-6"><strong>Fecha entrega:</strong><br>' + (formValues.fecha_entrega || '—') + '</div>';
+            modalContent += '</div>';
+            modalContent += '<div class="row mb-3">';
+            modalContent += '<div class="col-md-6"><strong>Tipo pedido:</strong><br>' + (formValues.tipo_pedido || '—') + '</div>';
+            modalContent += '<div class="col-md-6"><strong>Forma de pago:</strong><br>' + (formValues.forma_pago || '—') + '</div>';
+            modalContent += '</div>';
+            modalContent += '<div class="mb-3"><strong>Descuento general:</strong> ' + descuentoGeneral + '%</div>';
+            modalContent += '<hr>';
+            modalContent += '<div class="mb-2"><strong>Líneas del pedido (' + lineasConNombres.length + '):</strong></div>';
+            modalContent += '<div class="table-responsive" style="max-height: 300px; overflow-y: auto;">';
+            modalContent += '<table class="table table-sm table-bordered">';
+            modalContent += '<thead class="table-light"><tr><th>Artículo</th><th>Cant.</th><th>Precio</th><th>IVA</th><th>Dto%</th><th>Subtotal</th></tr></thead><tbody>';
+            lineasConNombres.forEach((linea) => {
+                const subtotalLinea = linea.cantidad * linea.precio * (1 - linea.descuento/100);
+                modalContent += `<tr>
+                    <td>${linea.articuloNombre}</td>
+                    <td class="text-center">${linea.cantidad}</td>
+                    <td class="text-end">€ ${linea.precio.toFixed(2)}</td>
+                    <td class="text-center">${linea.iva}%</td>
+                    <td class="text-center">${linea.descuento}%</td>
+                    <td class="text-end">€ ${subtotalLinea.toFixed(2)}</td>
+                </tr>`;
+            });
+            modalContent += '</tbody></table></div>';
+            modalContent += '<hr>';
+            modalContent += '<div class="row">';
+            modalContent += '<div class="col-md-6"><strong>Subtotal:</strong> € ' + subtotalConDescuentoGeneral.toFixed(2) + '</div>';
+            modalContent += '<div class="col-md-6"><strong>IVA:</strong> € ' + totalIva.toFixed(2) + '</div>';
+            modalContent += '</div>';
+            modalContent += '<div class="mt-2 p-2 bg-success bg-opacity-10 rounded"><strong class="text-success">Total: € ' + total.toFixed(2) + '</strong></div>';
+            
+            // Asignar contenido al modal
+            const modalConfirmarGrabacionBody = document.getElementById('modalConfirmarGrabacionBody');
+            if (modalConfirmarGrabacionBody) {
+                modalConfirmarGrabacionBody.innerHTML = modalContent;
+            }
+            
+            // Obtener instancia del modal y el botón de confirmación
+            const modalConfirmarGrabacionElement = document.getElementById('modalConfirmarGrabacion');
+            let modalConfirmarGrabacion = bootstrap.Modal.getInstance(modalConfirmarGrabacionElement);
+            if (!modalConfirmarGrabacion) {
+                modalConfirmarGrabacion = new bootstrap.Modal(modalConfirmarGrabacionElement);
+            }
+            
+            // Manejar eventos del modal para corregir aria-hidden (solo una vez)
+            if (!modalConfirmarGrabacionElement.hasAttribute('data-aria-handler-attached')) {
+                modalConfirmarGrabacionElement.setAttribute('data-aria-handler-attached', 'true');
+                modalConfirmarGrabacionElement.addEventListener('show.bs.modal', () => {
+                    // Eliminar aria-hidden antes de que el modal se muestre
+                    modalConfirmarGrabacionElement.removeAttribute('aria-hidden');
+                });
+                
+                modalConfirmarGrabacionElement.addEventListener('shown.bs.modal', () => {
+                    // Asegurar que aria-hidden esté eliminado cuando el modal está visible
+                    modalConfirmarGrabacionElement.removeAttribute('aria-hidden');
+                    // Enfocar el botón de confirmación después de que el modal esté completamente visible
+                    setTimeout(() => {
+                        if (btnConfirmarGrabacion) {
+                            btnConfirmarGrabacion.focus();
+                        }
+                    }, 100);
+                });
+                
+                modalConfirmarGrabacionElement.addEventListener('hide.bs.modal', () => {
+                    // Restaurar aria-hidden cuando el modal se está ocultando
+                    modalConfirmarGrabacionElement.setAttribute('aria-hidden', 'true');
+                });
+                
+                modalConfirmarGrabacionElement.addEventListener('hidden.bs.modal', () => {
+                    // Asegurar que aria-hidden esté presente cuando el modal está oculto
+                    modalConfirmarGrabacionElement.setAttribute('aria-hidden', 'true');
+                });
+            }
+            
+            // Asignar evento al botón de confirmación (usar evento delegado para evitar duplicados)
+            const btnConfirmarGrabacion = document.getElementById('btnConfirmarGrabacion');
+            if (btnConfirmarGrabacion) {
+                // Remover listeners anteriores
+                const newBtn = btnConfirmarGrabacion.cloneNode(true);
+                btnConfirmarGrabacion.parentNode.replaceChild(newBtn, btnConfirmarGrabacion);
+                
+                newBtn.addEventListener('click', () => {
+                    console.log('✅ [PEDIDO] Botón de confirmación clickeado');
+                    modalConfirmarGrabacion.hide();
+                    procederConGrabacion();
+                });
+            }
+            
+            // Mostrar el modal
+            modalConfirmarGrabacion.show();
+        });
+ 
+        actualizarCooperativa();
+        recalcularTotales();
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

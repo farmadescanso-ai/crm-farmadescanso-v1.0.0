@@ -1,0 +1,84 @@
+====================================================================================================
+INFORME DETALLADO DE PRECIOS DE COMPRA (PCP) - ARTÍCULOS
+====================================================================================================
+Fecha de generación: 28/12/2025, 12:16:22
+Total de artículos en catálogo: 20
+
+====================================================================================================
+ESTADÍSTICAS GENERALES
+====================================================================================================
+
+✅ Artículos con PCP configurado: 4 (20.0%)
+⚠️  Artículos sin PCP: 16 (80.0%)
+❌ Artículos con PCP sospechoso (PCP > 2x PVL): 2
+
+💰 Total PVL de todos los artículos: 149.79€
+💰 Total PCP de artículos con precio: 493.35€
+💰 Margen total: -463.35€
+📈 Rentabilidad promedio: 143.78%
+
+====================================================================================================
+ARTÍCULOS CON PRECIO DE COMPRA (PCP)
+====================================================================================================
+
+ID    SKU            Nombre                                       PVL (€)     PCP (€)     Margen (€)  % Rent.     Estado         
+----------------------------------------------------------------------------------------------------
+1     216959         Aceite De Ducha Atopic 500 Ml                8.00        0.95        7.05        742.11%       ✅ ALTO         
+2     216961         Crema Hidratante Atopic 500 Ml               8.00        6.40        1.60        25.00%       ✅ NORMAL       
+7     219397         Gel Refrescante 500 Ml                       8.00        126.00      -118.00     -93.65%       ⚠️ INCORRECTO  
+11    219401         Gel ÍNtimo Calmante 250 Ml                   6.00        360.00      -354.00     -98.33%       ⚠️ INCORRECTO  
+
+====================================================================================================
+ARTÍCULOS SIN PRECIO DE COMPRA (PCP)
+====================================================================================================
+
+Total: 16 artículos
+
+ID    SKU            Nombre                                            PVL (€)     Marca               
+----------------------------------------------------------------------------------------------------
+5     219395         Crema Exfoliante Cuerpo Manos y Pies              7.00        Youbelle            
+9     219399         Crema Hidratante 1L                               10.00       Youbelle            
+8     219398         Gel Aloe Vera Con Extracto De Manzanilla 500 Ml   4.00        Youbelle            
+13    219404         Gel De Baño 3 En 1 1L                             5.00        Youbelle            
+10    219400         Gel ÍNtimo Hidratante 250 Ml                      6.00        Youbelle            
+14    220375         Ialozon Clean Spray 100 Ml                        10.41       Ialozon             
+15    220381         Ialozon Enjuague Bucal Azul 300 Ml                7.46        Ialozon             
+16    220380         Ialozon Enjuague Bucal Rosa 300 Ml                7.46        Ialozon             
+17    220378         Ialozon Enjuague Bucal Superhidradante 300 Ml     9.14        Ialozon             
+18    220379         Ialozon Gel Oral 15 Ml                            10.99       Ialozon             
+19    220382         Ialozon Pasta Dentrifical Azul 100 Ml             3.99        Ialozon             
+20    220377         Ialozon Pasta Dentrifical Rosa 100 Ml             4.34        Ialozon             
+12    219403         Jabón Liquido Perfumado Bac Lavanda 500 Ml        3.00        Youbelle            
+6     219396         Leche Hidratante Corporal 500 Ml.                 8.00        Youbelle            
+3     216962         Pack AtóPico Youbelle (Aceite + Hidratante)       14.00       Youbelle            
+4     216958         Talco Liquido 250 Ml                              9.00        Youbelle            
+
+====================================================================================================
+ANÁLISIS POR MARCA
+====================================================================================================
+
+Marca                         Total     Con PCP     Sin PCP     % Completo     
+----------------------------------------------------------------------------------------------------
+Youbelle                      13        4           9           30.8%         
+Ialozon                       7         0           7           0.0%         
+
+====================================================================================================
+RECOMENDACIONES
+====================================================================================================
+
+⚠️  Hay 16 artículos sin PCP configurado.
+   Se recomienda revisar las facturas de compra para estos artículos.
+
+❌ Hay 2 artículos con PCP sospechoso:
+   - Gel ÍNtimo Calmante 250 Ml (PVL: 6.00€, PCP: 360.00€)
+   - Gel Refrescante 500 Ml (PVL: 8.00€, PCP: 126.00€)
+   Se recomienda revisar las facturas para verificar estos precios.
+
+❌ Hay 2 artículos con pérdida (PCP > PVL):
+   - Gel ÍNtimo Calmante 250 Ml (PVL: 6.00€, PCP: 360.00€, Pérdida: 354.00€)
+   - Gel Refrescante 500 Ml (PVL: 8.00€, PCP: 126.00€, Pérdida: 118.00€)
+   Se recomienda revisar estos precios urgentemente.
+
+====================================================================================================
+FIN DEL INFORME
+====================================================================================================

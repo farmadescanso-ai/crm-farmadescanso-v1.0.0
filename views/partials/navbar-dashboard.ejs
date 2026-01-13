@@ -1,0 +1,343 @@
+<!-- Navigation -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary navbar-fixed">
+    <div class="container-fluid">
+        <button class="btn btn-link text-white d-md-none me-2" type="button" id="sidebarToggle" style="text-decoration: none; padding: 0.25rem 0.5rem;">
+            <i class="fas fa-bars"></i>
+        </button>
+        <a class="navbar-brand fw-bold logo-brand" href="/dashboard" title="Farmadescanso CRM">
+            <img src="/images/logo.png" alt="Farmadescanso" class="navbar-logo" id="logo-img">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'articulos' ? 'active' : '' %>" href="/dashboard/articulos">
+                        <i class="fas fa-boxes me-1"></i>Artículos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes' ? 'active' : '' %>" href="/dashboard/clientes">
+                        <i class="fas fa-users me-1"></i>Clientes
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'pedidos' ? 'active' : '' %>" href="/dashboard/pedidos">
+                        <i class="fas fa-shopping-cart me-1"></i>Pedidos
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'agenda' ? 'active' : '' %>" href="/dashboard/agenda">
+                        <i class="fas fa-calendar-check me-1"></i>Agenda
+                    </a>
+                </li>
+                <li class="nav-item d-none d-lg-block">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'cooperativas' ? 'active' : '' %>" href="/dashboard/cooperativas">
+                        <i class="fas fa-handshake me-1"></i><span class="nav-link-text-mobile">Cooperativas</span>
+                    </a>
+                </li>
+                <li class="nav-item d-none d-xl-block">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-cooperativas' ? 'active' : '' %>" href="/dashboard/clientes-cooperativas">
+                        <i class="fas fa-link me-1"></i><span class="nav-link-text-mobile">Clientes-Cooperativas</span>
+                    </a>
+                </li>
+                <li class="nav-item d-none d-xl-block">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'formas-pago' ? 'active' : '' %>" href="/dashboard/formas-pago">
+                        <i class="fas fa-credit-card me-1"></i><span class="nav-link-text-mobile">Formas de Pago</span>
+                    </a>
+                </li>
+                <li class="nav-item d-none d-xl-block">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'especialidades' ? 'active' : '' %>" href="/dashboard/especialidades">
+                        <i class="fas fa-stethoscope me-1"></i><span class="nav-link-text-mobile">Especialidades</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comerciales' ? 'active' : '' %>" href="/dashboard/comerciales">
+                        <i class="fas fa-user-tie me-1"></i>Comerciales
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="fas fa-user me-1"></i><span class="d-none d-md-inline"><%= user.nombre %></span><span class="d-md-none">Usuario</span>
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end" id="userDropdownMenu" style="max-height: 80vh; overflow-y: auto;">
+                        <li><a class="dropdown-item" href="/dashboard/perfil">
+                            <i class="fas fa-user-circle me-2"></i>Mi Perfil
+                        </a></li>
+                        <li><a class="dropdown-item" href="/dashboard/manual-instrucciones">
+                            <i class="fas fa-book me-2"></i>Manual de Instrucciones
+                        </a></li>
+                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                        <li><hr class="dropdown-divider"></li>
+                        
+                        <!-- Integraciones - Submenu colapsable -->
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item dropdown-toggle-submenu" href="#" data-bs-toggle="collapse" data-bs-target="#submenuIntegraciones" aria-expanded="false">
+                                <i class="fas fa-plug me-2"></i>Integraciones
+                                <i class="fas fa-chevron-right float-end mt-1 submenu-chevron" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
+                            </a>
+                            <ul class="collapse list-unstyled ms-3" id="submenuIntegraciones">
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/webhook-n8n">
+                                    <i class="fas fa-plug me-2"></i>Webhook N8N
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/prestashop">
+                                    <i class="fas fa-shopping-bag me-2"></i>Prestashop
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/google-oauth">
+                                    <i class="fab fa-google me-2"></i>Google OAuth2
+                                </a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- API y Documentación - Submenu colapsable -->
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item dropdown-toggle-submenu" href="#" data-bs-toggle="collapse" data-bs-target="#submenuAPI" aria-expanded="false">
+                                <i class="fas fa-code me-2"></i>API y Documentación
+                                <i class="fas fa-chevron-right float-end mt-1 submenu-chevron" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
+                            </a>
+                            <ul class="collapse list-unstyled ms-3" id="submenuAPI">
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/api-keys">
+                                    <i class="fas fa-key me-2"></i>API Keys
+                                </a></li>
+                                <li><a class="dropdown-item" href="/api-docs" target="_blank">
+                                    <i class="fas fa-book me-2"></i>Documentación API
+                                    <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
+                                </a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Rentabilidad - Submenu colapsable -->
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item dropdown-toggle-submenu" href="#" data-bs-toggle="collapse" data-bs-target="#submenuRentabilidad" aria-expanded="false">
+                                <i class="fas fa-chart-line me-2"></i>Rentabilidad
+                                <i class="fas fa-chevron-right float-end mt-1 submenu-chevron" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
+                            </a>
+                            <ul class="collapse list-unstyled ms-3" id="submenuRentabilidad">
+                                <li><a class="dropdown-item" href="/dashboard/rentabilidad-articulos">
+                                    <i class="fas fa-chart-line me-2"></i>Rentabilidad Artículos
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/rentabilidad-pedidos">
+                                    <i class="fas fa-chart-bar me-2"></i>Rentabilidad por Pedido
+                                </a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Gestión - Submenu colapsable -->
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item dropdown-toggle-submenu" href="#" data-bs-toggle="collapse" data-bs-target="#submenuGestion" aria-expanded="false">
+                                <i class="fas fa-tools me-2"></i>Gestión
+                                <i class="fas fa-chevron-right float-end mt-1 submenu-chevron" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
+                            </a>
+                            <ul class="collapse list-unstyled ms-3" id="submenuGestion">
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/pcp">
+                                    <i class="fas fa-euro-sign me-2"></i>Gestión PCP
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/codigos-postales">
+                                    <i class="fas fa-map-marker-alt me-2"></i>Códigos Postales
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/asignaciones-comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Asignaciones Comerciales
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/ajustes/logs-servidor">
+                                    <i class="fas fa-terminal me-2"></i>Logs del Servidor
+                                </a></li>
+                            </ul>
+                        </li>
+                        
+                        <!-- Configuración Comisiones - Submenu colapsable -->
+                        <li class="dropdown-submenu">
+                            <a class="dropdown-item dropdown-toggle-submenu" href="#" data-bs-toggle="collapse" data-bs-target="#submenuComisiones" aria-expanded="false">
+                                <i class="fas fa-euro-sign me-2"></i>Configuración Comisiones
+                                <i class="fas fa-chevron-right float-end mt-1 submenu-chevron" style="font-size: 0.7rem; transition: transform 0.2s;"></i>
+                            </a>
+                            <ul class="collapse list-unstyled ms-3" id="submenuComisiones">
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/fijos-mensuales">
+                                    <i class="fas fa-money-bill me-2"></i>Fijos Mensuales
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/presupuestos">
+                                    <i class="fas fa-chart-line me-2"></i>Presupuestos
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/rapeles">
+                                    <i class="fas fa-trophy me-2"></i>Rapeles
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/objetivos-marca">
+                                    <i class="fas fa-bullseye me-2"></i>Objetivos por Marca
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/condiciones-especiales">
+                                    <i class="fas fa-star me-2"></i>Condiciones Especiales
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/rapeles-configuracion">
+                                    <i class="fas fa-cog me-2"></i>Config. Rapeles
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/config-comisiones-tipo-pedido">
+                                    <i class="fas fa-percent me-2"></i>Config. % Tipo Pedido
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/config-rappel-presupuesto">
+                                    <i class="fas fa-chart-line me-2"></i>Config. Rappel Presup.
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/config-fijo-mensual">
+                                    <i class="fas fa-calendar me-2"></i>Config. Fijo Mensual
+                                </a></li>
+                                <li><a class="dropdown-item" href="/dashboard/comisiones/config-descuento-transporte">
+                                    <i class="fas fa-truck me-2"></i>Config. Desc. Transp.
+                                </a></li>
+                            </ul>
+                        </li>
+                        <% } %>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <form action="/auth/logout" method="POST" class="d-inline">
+                                <button type="submit" class="dropdown-item">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<style>
+    /* Estilos para submenús colapsables en dropdown */
+    .dropdown-submenu {
+        position: relative;
+    }
+    
+    .dropdown-submenu .dropdown-toggle-submenu {
+        cursor: pointer;
+        user-select: none;
+        font-weight: 500;
+    }
+    
+    .dropdown-submenu .dropdown-toggle-submenu.collapsed .submenu-chevron {
+        transform: rotate(90deg);
+    }
+    
+    .dropdown-submenu ul.collapse {
+        border-left: 2px solid rgba(0,0,0,0.1);
+        margin-left: 0.5rem;
+        padding-left: 0.5rem;
+        margin-top: 0.25rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .dropdown-submenu .dropdown-item {
+        padding-left: 1.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .dropdown-submenu .dropdown-item:hover {
+        background-color: rgba(0,0,0,0.05);
+    }
+    
+    /* Mejorar el espaciado de los submenús */
+    .dropdown-submenu ul li {
+        margin-bottom: 0.125rem;
+    }
+    
+    /* Animación suave para el chevron */
+    .submenu-chevron {
+        transition: transform 0.2s ease;
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Manejar la rotación del chevron al expandir/colapsar submenús
+        const submenuToggles = document.querySelectorAll('.dropdown-toggle-submenu');
+        
+        submenuToggles.forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const targetId = this.getAttribute('data-bs-target');
+                const target = document.querySelector(targetId);
+                const chevron = this.querySelector('.submenu-chevron');
+                
+                if (target) {
+                    // Verificar si está abierto o cerrado
+                    const isCollapsed = target.classList.contains('show');
+                    
+                    // Crear o obtener instancia de Collapse
+                    let bsCollapse = bootstrap.Collapse.getInstance(target);
+                    if (!bsCollapse) {
+                        bsCollapse = new bootstrap.Collapse(target, {
+                            toggle: false
+                        });
+                    }
+                    
+                    if (isCollapsed) {
+                        bsCollapse.hide();
+                        this.classList.remove('collapsed');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(0deg)';
+                        }
+                    } else {
+                        bsCollapse.show();
+                        this.classList.add('collapsed');
+                        if (chevron) {
+                            chevron.style.transform = 'rotate(90deg)';
+                        }
+                    }
+                }
+            });
+            
+            // Sincronizar estado inicial del chevron
+            const targetId = toggle.getAttribute('data-bs-target');
+            const target = document.querySelector(targetId);
+            const chevron = toggle.querySelector('.submenu-chevron');
+            if (target && target.classList.contains('show') && chevron) {
+                toggle.classList.add('collapsed');
+                chevron.style.transform = 'rotate(90deg)';
+            }
+        });
+        
+        // Prevenir que el dropdown se cierre al hacer clic dentro de los submenús
+        const userDropdown = document.getElementById('userDropdownMenu');
+        if (userDropdown) {
+            userDropdown.addEventListener('click', function(e) {
+                if (e.target.closest('.dropdown-submenu')) {
+                    e.stopPropagation();
+                }
+            });
+        }
+        
+        // Cerrar todos los submenús cuando se cierra el dropdown principal
+        const dropdownToggle = document.querySelector('[data-bs-toggle="dropdown"]');
+        if (dropdownToggle) {
+            const dropdown = new bootstrap.Dropdown(dropdownToggle);
+            dropdownToggle.addEventListener('hidden.bs.dropdown', function() {
+                const allSubmenus = document.querySelectorAll('.dropdown-submenu .collapse.show');
+                allSubmenus.forEach(submenu => {
+                    const bsCollapse = bootstrap.Collapse.getInstance(submenu);
+                    if (bsCollapse) {
+                        bsCollapse.hide();
+                    } else {
+                        submenu.classList.remove('show');
+                    }
+                });
+                
+                // Resetear chevrons
+                submenuToggles.forEach(toggle => {
+                    toggle.classList.remove('collapsed');
+                    const chevron = toggle.querySelector('.submenu-chevron');
+                    if (chevron) {
+                        chevron.style.transform = 'rotate(0deg)';
+                    }
+                });
+            });
+        }
+    });
+</script>
+

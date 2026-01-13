@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 10pt;
+      background: #f3f5f2;
+      color: #1f2a36;
+    }
+    table { border-collapse: collapse; width: 100%; }
+    .doc-wrapper { max-width: <%= esPdf ? '750px' : '900px' %>; margin: <%= esPdf ? '0 2px 2rem' : '0 auto 2rem' %>; background: #fff; box-shadow: 0 15px 35px rgba(0,0,0,0.12); border-radius: 20px; overflow: hidden; }
+    .doc-inner { padding: 0 <%= esPdf ? '8px' : '24px' %> 32px; }
+    .print-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 20px 0 10px; flex-wrap: wrap; }
+    .print-actions a, .print-actions button { border-radius: 999px; border: 1px solid #0b5f2d; background: #fff; color: #0b5f2d; padding: 6px 18px; font-weight: 600; cursor: pointer; text-decoration: none; }
+    .print-actions button { background: #0b5f2d; color: #fff; }
+
+    .header-top { background: #0b7a3d; color: #fff; padding: 18px 26px 10px; position: relative; }
+    .header-top::after { content: ""; position: absolute; bottom: -30px; left: 0; width: 160px; height: 30px; background: #0b7a3d; clip-path: polygon(0 0, 100% 0, 75% 100%, 0% 100%); }
+    .header-table td { vertical-align: middle; padding: 15px 0; }
+    .header-logo img { max-width: 200px; max-height: 90px; }
+    .header-title { text-align: center; font-size: 28px; font-weight: 700; letter-spacing: 0.08em; }
+    .header-contact { text-align: right; font-weight: 700; font-size: 11pt; }
+
+    .info-table { margin: 50px 0 32px; }
+    .info-table td { width: 50%; padding: 0 24px 0 24px; }
+    .info-table h4 { color: #0b7a3d; font-size: 12pt; margin-bottom: 6px; text-transform: uppercase; }
+    .info-table p { margin: 2px 0; }
+    .info-table .doc-info p { margin-bottom: 4px; }
+
+    table.items { margin: 0 <%= esPdf ? '2px' : '18px' %>; width: calc(100% - <%= esPdf ? '4px' : '36px' %>); table-layout: fixed; }
+    table.items thead td {
+      text-align: center;
+      border: 0.4mm solid #0b7a3d;
+      padding: <%= esPdf ? '8px 6px' : '10px 8px' %>;
+      font-weight: bold;
+      font-size: <%= esPdf ? '8pt' : '9pt' %>;
+      background: #e7f4ec;
+    }
+    table.items tbody td {
+      border-left: 0.4mm solid #0b7a3d;
+      border-right: 0.4mm solid #0b7a3d;
+      border-bottom: 0.4mm solid #0b7a3d;
+      padding: <%= esPdf ? '5px 6px' : '6px 8px' %>;
+      font-size: <%= esPdf ? '8pt' : '9pt' %>;
+    }
+    table.items tbody tr:nth-child(even) { background: rgba(11,122,61,0.05); }
+    table.items tfoot td { font-weight: bold; }
+
+    .resumen-table { margin: 35px 30px 20px; width: calc(100% - 60px); border: 0.4mm solid #0b7a3d; }
+    .resumen-table td { padding: 10px 18px; border: 0.4mm solid #0b7a3d; font-weight: 600; }
+    .resumen-table td.valor { text-align: right; }
+
+    .observaciones { margin: 30px 30px 10px; }
+    .observaciones h4 { color: #0b7a3d; font-size: 12pt; margin-bottom: 10px; text-transform: uppercase; }
+    .observaciones p { margin: 3px 0; }
+
+    .footer-note { color: #ffffff; background: #0b7a3d; text-align: center; padding: 16px 30px; font-size: 9pt; line-height: 1.5; }
+
+
+    @media print {
+      body { background: #fff; }
+      .doc-wrapper { box-shadow: none; border-radius: 0; margin: 0; }
+      .print-actions { display: none !important; }
+    }
+  </style>
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+  <% const clienteDetalle = (pedidoRaw && typeof pedidoRaw.Cliente_id === 'object') ? pedidoRaw.Cliente_id : null; %>
+  <% const comercialDetalle = (pedidoRaw && typeof pedidoRaw.Comercial_id === 'object') ? pedidoRaw.Comercial_id : null; %>
+
+  <% const direccionCliente = clienteDetalle ? [
+        clienteDetalle.CALLE || clienteDetalle.Direccion,
+        clienteDetalle.Poblacion,
+        clienteDetalle.Provincia,
+        clienteDetalle.Pais
+      ].filter(Boolean).join(', ') : '—';
+  %>
+  <% const lineasSeguras = Array.isArray(lineas) ? lineas : []; %>
+  
+  <% 
+    // Calcular subtotal sin descuentos (suma de cantidad * precio)
+    const subtotalSinDescuentos = lineasSeguras.reduce((sum, ln) => {
+      return sum + Number(ln.subtotalSinDescuento || (ln.cantidad * ln.precio) || 0);
+    }, 0);
+    
+    // Calcular subtotal con descuentos por línea
+    const subtotalConDescuentosLinea = lineasSeguras.reduce((sum, ln) => {
+      return sum + Number(ln.subtotal || 0);
+    }, 0);
+    
+    // Calcular descuento total por líneas
+    const descuentoLineasTotal = subtotalSinDescuentos - subtotalConDescuentosLinea;
+    
+    // El subtotal del pedido ya incluye el descuento general aplicado
+    // Calcular descuento general comparando el subtotal con descuentos de línea vs el subtotal del pedido
+    const baseImponiblePedido = pedido.subtotal || subtotalConDescuentosLinea;
+    const descuentoGeneralValor = subtotalConDescuentosLinea > baseImponiblePedido 
+      ? subtotalConDescuentosLinea - baseImponiblePedido 
+      : 0;
+    
+    // Base imponible final (después de todos los descuentos) - usar la del pedido que ya tiene todo aplicado
+    const baseImponibleFinal = baseImponiblePedido;
+    
+    // Calcular IVA total desde las líneas (ya incluye IVA calculado sobre subtotal con descuentos)
+    const totalIVA = pedido.impuestos || lineasSeguras.reduce((sum, ln) => sum + Number(ln.ivaMonto || (ln.total - ln.subtotal) || 0), 0);
+    
+    // Total del pedido
+    const totalPedido = pedido.total || (baseImponibleFinal + totalIVA);
+    
+    // Calcular IVA promedio o mostrar múltiples IVAs si hay diferentes
+    let ivaTexto = 'IVA 0%';
+    if (totalIVA > 0 && baseImponibleFinal > 0) {
+      const ivaPromedio = (totalIVA / baseImponibleFinal * 100).toFixed(0);
+      ivaTexto = `IVA ${formatearNumeroES(Number(ivaPromedio))}%`;
+    }
+    
+    // Calcular porcentaje de descuento general si existe
+    const descuentoGeneralPorcentaje = subtotalConDescuentosLinea > 0 && descuentoGeneralValor > 0
+      ? (descuentoGeneralValor / subtotalConDescuentosLinea * 100).toFixed(2)
+      : 0;
+  %>
+  <% const direccionEnvio = direccionCliente; %>
+  <% const formatoMoneda = (valor) => `€ ${formatearMonedaES(Number(valor || 0), { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`; %>
+
+  <div class="doc-wrapper">
+    <div class="header-top">
+      <table class="header-table" width="100%">
+        <tr>
+          <td class="header-logo" width="30%">
+            <img src="/images/logo.png" alt="Farmadescaso">
+          </td>
+          <td width="40%" class="header-title">
+            PEDIDO DE VENTA
+          </td>
+          <td width="30%" class="header-contact">
+            <span>610 721 369</span><br>
+            <span>info@farmadescaso.com</span>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="doc-inner">
+      <% const payloadHolded = {
+        pedidoId: pedido.id,
+        pedidoNumero: pedido.numero || null,
+        estado: pedido.estado,
+        fecha: pedido.fecha,
+        fechaEntrega: pedido.fechaEntrega,
+        cliente: clienteDetalle ? (clienteDetalle.Nombre || pedido.cliente) : pedido.cliente,
+        clienteEmail: clienteDetalle && clienteDetalle.Email ? clienteDetalle.Email : null,
+        clienteDireccion: direccionEnvio,
+        total: totalPedido,
+        observaciones: pedido.observaciones || null,
+        lineas: lineasSeguras.map(linea => ({
+          codigo: linea.codigo || '',
+          articulo: linea.articulo,
+          cantidad: linea.cantidad,
+          precio: linea.precio,
+          subtotal: linea.subtotal,
+          total: linea.total
+        }))
+      }; %>
+      <div class="print-actions" style="<%= esPdf ? 'display:none;' : '' %>">
+        <a href="/dashboard/pedidos/<%= pedido.id %>">Volver</a>
+        <button type="button" onclick="window.print()" style="border:1px solid #0b5f2d; background:#fff; color:#0b5f2d;">
+          <i class="fas fa-print"></i> Imprimir
+        </button>
+        <a href="/dashboard/pedidos/<%= pedido.id %>/pdf" style="border:1px solid #0b5f2d; background:#fff; color:#0b5f2d;">
+          <i class="fas fa-file-pdf"></i> Descargar PDF
+        </a>
+        <% if ((pedido.estado || '').toLowerCase() !== 'cerrado') { %>
+        <button type="button" id="holdedButton"
+          data-payload='<%- JSON.stringify(payloadHolded) %>'
+          data-pedido-id="<%= pedido.id %>"
+          style="border:1px solid #0b5f2d; background:#fff; color:#0b5f2d;">
+          Holded
+        </button>
+        <button type="button" id="emailButton"
+          data-pedido-id="<%= pedido.id %>"
+          style="border:1px solid #0b5f2d; background:#fff; color:#0b5f2d;">
+          Email
+        </button>
+        <% } %>
+      </div>
+
+      <table class="info-table">
+        <tr>
+          <td>
+            <h4>Cliente</h4>
+            <p><strong><%= clienteDetalle ? (clienteDetalle.Nombre_Razon_Social || clienteDetalle.Nombre || pedido.cliente) : pedido.cliente %></strong></p>
+            <p><%= clienteDetalle && clienteDetalle.DNI_CIF ? clienteDetalle.DNI_CIF : '' %></p>
+            <p><%= direccionCliente %></p>
+            <% if (clienteDetalle && clienteDetalle.Telefono) { %><p>Tel: <%= clienteDetalle.Telefono %></p><% } %>
+            <% if (clienteDetalle && clienteDetalle.Email) { %><p>Email: <%= clienteDetalle.Email %></p><% } %>
+            <br>
+            <div class="doc-info">
+              <% 
+              // Función helper para formatear fechas en DD/MM/YYYY
+              function formatearFechaDDMMYYYY(fecha) {
+                  if (!fecha) return '—';
+                  try {
+                      const date = fecha instanceof Date ? fecha : new Date(fecha);
+                      if (isNaN(date.getTime())) return '—';
+                      const dia = String(date.getDate()).padStart(2, '0');
+                      const mes = String(date.getMonth() + 1).padStart(2, '0');
+                      const año = date.getFullYear();
+                      return `${dia}/${mes}/${año}`;
+                  } catch (e) {
+                      return '—';
+                  }
+              }
+              %>
+              <p><strong>Pedido de venta:</strong> <%= pedido.numero || pedido.id %></p>
+              <p><strong>Fecha:</strong> <%= formatearFechaDDMMYYYY(pedido.fecha) %></p>
+              <p><strong>Fecha entrega:</strong> <%= formatearFechaDDMMYYYY(pedido.fechaEntrega) %></p>
+              <p><strong>Estado:</strong> <%= pedido.estado || 'Pendiente' %></p>
+              <% if (formaPagoInfo) { %>
+                <p><strong>Forma de pago:</strong> <%= formaPagoInfo.nombre %><% if (formaPagoInfo.dias > 0) { %> (<%= formaPagoInfo.dias %> días)<% } %></p>
+              <% } %>
+              <% if (tipoPedidoInfo) { %>
+                <p><strong>Tipo de pedido:</strong> <%= tipoPedidoInfo.tipo %></p>
+              <% } %>
+              <% if (comercialInfo) { %>
+                <p><strong>Comercial:</strong> <%= comercialInfo.nombre %></p>
+              <% } %>
+              <% if (pedidoRaw && (pedidoRaw.cooperativa_nombre || pedidoRaw.numero_cooperativa)) { %>
+                <p><strong>Cooperativa:</strong> <%= pedidoRaw.cooperativa_nombre || '—' %><% if (pedidoRaw.numero_cooperativa) { %> (Nº: <%= pedidoRaw.numero_cooperativa %>)<% } %></p>
+              <% } %>
+            </div>
+          </td>
+          <td>
+            <h4>Dirección de envío</h4>
+            <p><strong><%= clienteDetalle ? (clienteDetalle.Nombre_Razon_Social || clienteDetalle.Nombre || pedido.cliente) : pedido.cliente %></strong></p>
+            <p><%= direccionEnvio %></p>
+            <% if (clienteDetalle && clienteDetalle.CodigoPostal) { %>
+              <p><%= clienteDetalle.CodigoPostal %></p>
+            <% } %>
+          </td>
+        </tr>
+      </table>
+
+      <div class="tabla-lineas">
+        <table class="items">
+          <thead>
+            <tr>
+              <td style="<%= esPdf ? 'width:60px;' : 'width:72px;' %>">CÓD.</td>
+              <td style="<%= esPdf ? 'width:160px;' : 'width:180px;' %>">CONCEPTO</td>
+              <td style="<%= esPdf ? 'width:65px;' : 'width:70px;' %>">PVL</td>
+              <td style="<%= esPdf ? 'width:55px;' : 'width:60px;' %>">UNDS.</td>
+              <td style="<%= esPdf ? 'width:55px;' : 'width:60px;' %>">DTO.</td>
+              <td style="<%= esPdf ? 'width:75px;' : 'width:80px;' %>">NETO</td>
+              <td style="<%= esPdf ? 'width:55px;' : 'width:60px;' %>">IVA</td>
+              <td style="<%= esPdf ? 'width:85px;' : 'width:90px;' %>">TOTAL</td>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (!lineasSeguras.length) { %>
+              <tr>
+                <td colspan="8" style="text-align:center; padding:18px; color:#7b8794;">No se registraron líneas para este pedido.</td>
+              </tr>
+            <% } else { %>
+              <% lineasSeguras.forEach((linea, index) => { %>
+                <% 
+                  // Obtener IVA de la línea (ya viene calculado en construirLineasDesdeRaw)
+                  const ivaLinea = linea.iva || ((linea.total && linea.subtotal) ? ((linea.total - linea.subtotal) / linea.subtotal * 100) : 0);
+                %>
+                <tr>
+                  <td style="text-align:center;">
+                <%= linea.codigo || `LIN-${index + 1}` %>
+              </td>
+                  <td>
+                    <strong><%= linea.articulo %></strong>
+                    <% if (linea.descripcion) { %><br><small><%= linea.descripcion %></small><% } %>
+                  </td>
+                  <td style="text-align:right;"><%= formatoMoneda(linea.precio || 0) %></td>
+                  <td style="text-align:center;"><%= formatearNumeroES(linea.cantidad || 0) %></td>
+                  <td style="text-align:center;"><%= linea.descuento ? `${formatearNumeroES(linea.descuento)}%` : '—' %></td>
+                  <td style="text-align:right;"><%= formatoMoneda(linea.subtotal || 0) %></td>
+                  <td style="text-align:center;"><%= ivaLinea > 0 ? `${formatearNumeroES(ivaLinea)}%` : '—' %></td>
+                  <td style="text-align:right;"><%= formatoMoneda(linea.total || 0) %></td>
+                </tr>
+              <% }) %>
+            <% } %>
+          </tbody>
+        </table>
+      </div>
+
+      <table class="resumen-table">
+        <tbody>
+          <tr>
+            <td>Subtotal sin descuentos</td>
+            <td class="valor"><%= formatoMoneda(subtotalSinDescuentos) %></td>
+          </tr>
+          <% if (descuentoLineasTotal > 0) { %>
+          <tr>
+            <td>Descuento por líneas</td>
+            <td class="valor" style="color: #dc3545;">-<%= formatoMoneda(descuentoLineasTotal) %></td>
+          </tr>
+          <% } %>
+          <% if (descuentoGeneralValor > 0) { %>
+          <tr>
+            <td>Descuento general (<%= descuentoGeneralPorcentaje %>%)</td>
+            <td class="valor" style="color: #dc3545;">-<%= formatoMoneda(descuentoGeneralValor) %></td>
+          </tr>
+          <% } %>
+          <tr>
+            <td>Base imponible</td>
+            <td class="valor"><%= formatoMoneda(baseImponibleFinal) %></td>
+          </tr>
+          <tr>
+            <td>Impuesto</td>
+            <td class="valor"><%= ivaTexto %></td>
+          </tr>
+          <tr>
+            <td>Total impuesto</td>
+            <td class="valor"><%= formatoMoneda(totalIVA) %></td>
+          </tr>
+          <tr>
+            <td><strong>Total</strong></td>
+            <td class="valor"><strong><%= formatoMoneda(totalPedido) %></strong></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="observaciones">
+        <h4>Observaciones</h4>
+        <% if (pedido.observaciones) { %>
+          <p><%= pedido.observaciones %></p>
+        <% } else { %>
+          <p>Pago Factura Electrónica Aceptada.</p>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      FARMADESCANSO 2021 SL · B75359596 · Calle Huerta, 15 Bajo · 30193 Yéchar · Murcia, España<br>
+      Inscrita en el Registro Mercantil de Murcia Sección: 8, Hoja MU-114356 Inscripción 1ª. IRUS: 1000435295479
+    </div>
+  </div>
+
+  <% if (!esPdf) { %>
+    <script type="application/json" id="actionsPayload"><%- JSON.stringify(payloadHolded) %></script>
+    <script src="/js/pedido-acciones.js"></script>
+  <% } %>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

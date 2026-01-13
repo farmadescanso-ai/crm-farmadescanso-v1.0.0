@@ -1,0 +1,243 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CLIENTES QUE REQUIEREN REVISIÓN MANUAL
+═══════════════════════════════════════════════════════════════════════════════
+
+Fecha: 13/12/2025, 14:50:43
+Total de clientes con errores: 12
+
+═══════════════════════════════════════════════════════════════════════════════
+
+1. FILA 686: RUIZ MARTINEZ, JOSE JAVIER
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: Teléfono demasiado largo
+
+   Datos del cliente:
+   • Nombre: RUIZ MARTINEZ, JOSE JAVIER
+   • DNI/CIF: N/A
+   • Teléfono original: N/A
+   • Email: N/A
+   • Cuenta Contable: N/A
+   • Población: ABARAN
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Limpiar el teléfono quitando espacios, guiones y caracteres especiales
+   • Si hay múltiples teléfonos separados por "/", usar solo el primero
+   • Máximo 13 caracteres numéricos
+
+
+2. FILA 750: Farmacia - Toledo Romero Cesar
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: Teléfono demasiado largo
+
+   Datos del cliente:
+   • Nombre: Farmacia - Toledo Romero Cesar
+   • DNI/CIF: 23242318J
+   • Teléfono original: +34 618 070 990 (15 caracteres - máximo permitido: 13)
+   • Email: farmaciatoledo@gmail.com
+   • Cuenta Contable: 43000012
+   • Población: Murcia
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Limpiar el teléfono quitando espacios, guiones y caracteres especiales
+   • Si hay múltiples teléfonos separados por "/", usar solo el primero
+   • Máximo 13 caracteres numéricos
+   • Teléfono sugerido (limpiado): 34618070990
+
+
+3. FILA 761: Farmacia - Payá Peñalver, Aitana
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: Teléfono demasiado largo
+
+   Datos del cliente:
+   • Nombre: Farmacia - Payá Peñalver, Aitana
+   • DNI/CIF: 48492481V
+   • Teléfono original: 669239375 (9 caracteres - máximo permitido: 13)
+   • Email: aitanicapaya@gmail.com
+   • Cuenta Contable: 43000041
+   • Población: La Aljorra
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Limpiar el teléfono quitando espacios, guiones y caracteres especiales
+   • Si hay múltiples teléfonos separados por "/", usar solo el primero
+   • Máximo 13 caracteres numéricos
+   • Teléfono sugerido (limpiado): 669239375
+
+
+4. FILA 784: Farmacia del Hogar - Sánchez Bolivar, Luis Javier
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: Teléfono demasiado largo
+
+   Datos del cliente:
+   • Nombre: Farmacia del Hogar - Sánchez Bolivar, Luis Javier
+   • DNI/CIF: 44282672J
+   • Teléfono original: 646694007 (9 caracteres - máximo permitido: 13)
+   • Email: farmaciadelhogar20@gmail.com
+   • Cuenta Contable: 43000074
+   • Población: Las Torres de Cotillas
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Limpiar el teléfono quitando espacios, guiones y caracteres especiales
+   • Si hay múltiples teléfonos separados por "/", usar solo el primero
+   • Máximo 13 caracteres numéricos
+   • Teléfono sugerido (limpiado): 646694007
+
+
+5. FILA 789: RECOMED SA
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: RECOMED SA
+   • DNI/CIF: A30402291
+   • Teléfono original: 968277500  (10 caracteres - máximo permitido: 13)
+   • Email: pedidos@farmadescanso.com
+   • Cuenta Contable: 40000041
+   • Población: SANTOMERA
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+6. FILA 790: IMAS RPM OBISPO JAVIER AZAGRA
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: IMAS RPM OBISPO JAVIER AZAGRA
+   • DNI/CIF: Q3000281J
+   • Teléfono original: N/A
+   • Email: N/A
+   • Cuenta Contable: 430030001
+   • Población: El Palmar
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+7. FILA 805: Supermercado Martín - González Fernández, Martín
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: Supermercado Martín - González Fernández, Martín
+   • DNI/CIF: 27435345W
+   • Teléfono original: 646830560 (9 caracteres - máximo permitido: 13)
+   • Email: martin.gonzalez.yechar@gmail.com
+   • Cuenta Contable: 430030004
+   • Población: Yéchar
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+8. FILA 806: Farmacia Mayor - SOTO FERNANDEZ, JUAN ANGEL
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: Farmacia Mayor - SOTO FERNANDEZ, JUAN ANGEL
+   • DNI/CIF: 27433140M
+   • Teléfono original: N/A
+   • Email: farmamayor@gmail.com
+   • Cuenta Contable: 430030005
+   • Población: LA ALBERCA
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+9. FILA 807: Farmacia Aeropuerto - García Pérez, Marco Antonio
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: Farmacia Aeropuerto - García Pérez, Marco Antonio
+   • DNI/CIF: 77240620L
+   • Teléfono original: 648485194 (9 caracteres - máximo permitido: 13)
+   • Email: farmaaeropuertoalmeria@gmail.com
+   • Cuenta Contable: 430030006
+   • Población: El Alquián
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+10. FILA 808: Farmacia Torrealta - Campillo Ruiz, Cayetana
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: Farmacia Torrealta - Campillo Ruiz, Cayetana
+   • DNI/CIF: 48453229A
+   • Teléfono original: 34606269738 (11 caracteres - máximo permitido: 13)
+   • Email: farmaciatorrealta@gmail.com
+   • Cuenta Contable: 430030007
+   • Población: TORREALTA - MOLINA DE SEGURA
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+11. FILA 809: GÓMEZ ABELLÁN, JESÚS JOAQUÍN
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: GÓMEZ ABELLÁN, JESÚS JOAQUÍN
+   • DNI/CIF: 34814493Z
+   • Teléfono original: +34 669 471 717 (15 caracteres - máximo permitido: 13)
+   • Email: labgomezabellan@igestlab.com
+   • Cuenta Contable: 430030008
+   • Población: Abarán
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+12. FILA 810: Farmacia - Carreño Arias, Josefa
+   ───────────────────────────────────────────────────────────────────────────
+   Motivo del error: CuentaContable duplicada
+
+   Datos del cliente:
+   • Nombre: Farmacia - Carreño Arias, Josefa
+   • DNI/CIF: 77719723D
+   • Teléfono original: +34 609 155 385 (15 caracteres - máximo permitido: 13)
+   • Email: farmaciacarreno@gmail.com
+   • Cuenta Contable: 430030009
+   • Población: Moratalla
+   • Dirección: N/A
+
+   Recomendaciones:
+   • Verificar si este cliente es el mismo que el existente con esta cuenta
+   • Si es diferente, asignar una nueva CuentaContable única
+   • Si es el mismo cliente, actualizar el registro existente en lugar de crear uno nuevo
+
+
+═══════════════════════════════════════════════════════════════════════════════
+FIN DEL REPORTE
+═══════════════════════════════════════════════════════════════════════════════

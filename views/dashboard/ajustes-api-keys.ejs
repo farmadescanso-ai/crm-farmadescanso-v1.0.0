@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <!-- Main Content -->
+    <div class="container-fluid main-content-wrapper">
+        <div class="row">
+            <!-- Main Content Area -->
+            <!-- Main Content Area -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="p-4">
+                    <!-- Page Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h2 class="fw-bold mb-1 text-primary">
+                                <i class="fas fa-key me-2"></i>Gestión de API Keys
+                            </h2>
+                            <p class="text-muted mb-0">Genera y gestiona las API keys para acceso a la API REST</p>
+                        </div>
+                        <a href="/dashboard" class="btn btn-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver
+                        </a>
+                    </div>
+
+                    <!-- Formulario para generar nueva API Key -->
+                    <div class="card mb-4 shadow-sm">
+                        <div class="card-header bg-info text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-plus-circle me-2"></i>Generar Nueva API Key
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <form id="generateApiKeyForm">
+                                <div class="mb-3">
+                                    <label for="api_key_nombre" class="form-label fw-bold">Nombre</label>
+                                    <input 
+                                        type="text" 
+                                        class="form-control" 
+                                        id="api_key_nombre" 
+                                        name="nombre" 
+                                        placeholder="Ej: API Key para Prestashop"
+                                        required
+                                    >
+                                    <small class="form-text text-muted">
+                                        Nombre identificativo para esta API key
+                                    </small>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="api_key_descripcion" class="form-label">Descripción</label>
+                                    <textarea 
+                                        class="form-control" 
+                                        id="api_key_descripcion" 
+                                        name="descripcion" 
+                                        rows="2"
+                                        placeholder="Describe para qué se usará esta API key"
+                                    ></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-key me-2"></i>Generar API Key
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Lista de API Keys existentes -->
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-secondary text-white">
+                            <h6 class="mb-0">
+                                <i class="fas fa-list me-2"></i>API Keys Existentes
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div id="apiKeysList">
+                                <p class="text-muted">Cargando API keys...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal para mostrar la API Key generada -->
+                    <div class="modal fade" id="apiKeyModal" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header bg-success text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-check-circle me-2"></i>API Key Generada
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>¡Importante!</strong> Guarda esta API key de forma segura. No se mostrará nuevamente.
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Tu API Key:</label>
+                                        <div class="input-group">
+                                            <input 
+                                                type="text" 
+                                                class="form-control font-monospace" 
+                                                id="generatedApiKey" 
+                                                readonly
+                                            >
+                                            <button class="btn btn-outline-secondary" type="button" onclick="copyApiKey()">
+                                                <i class="fas fa-copy"></i> Copiar
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Nombre:</label>
+                                        <p id="generatedApiKeyName" class="mb-0"></p>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Cargar lista de API keys al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            loadApiKeys();
+            setupApiKeyForm();
+            
+            // Mantener submenú de Ajustes expandido
+            const ajustesSubmenu = document.getElementById('ajustesSubmenu');
+            const ajustesChevron = document.getElementById('ajustesChevron');
+            if (ajustesSubmenu) {
+                ajustesSubmenu.classList.add('show');
+                if (ajustesChevron) {
+                    ajustesChevron.style.transform = 'rotate(180deg)';
+                }
+            }
+        });
+
+        // Configurar formulario para generar API Key
+        function setupApiKeyForm() {
+            const generateForm = document.getElementById('generateApiKeyForm');
+            if (!generateForm) return;
+            
+            generateForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const formData = {
+                    nombre: document.getElementById('api_key_nombre').value,
+                    descripcion: document.getElementById('api_key_descripcion').value
+                };
+
+                try {
+                    const response = await fetch('/api/keys/generate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(formData)
+                    });
+
+                    const data = await response.json();
+
+                    if (data.success) {
+                        // Mostrar la API key en el modal
+                        document.getElementById('generatedApiKey').value = data.data.api_key;
+                        document.getElementById('generatedApiKeyName').textContent = data.data.nombre;
+                        
+                        const modal = new bootstrap.Modal(document.getElementById('apiKeyModal'));
+                        modal.show();
+                        
+                        // Limpiar formulario
+                        document.getElementById('generateApiKeyForm').reset();
+                        
+                        // Recargar lista
+                        loadApiKeys();
+                    } else {
+                        alert('Error: ' + (data.error || 'No se pudo generar la API key'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error al generar la API key: ' + error.message);
+                }
+            });
+        }
+
+        // Función para copiar API key desde el modal
+        function copyApiKey() {
+            const apiKeyInput = document.getElementById('generatedApiKey');
+            if (!apiKeyInput) return;
+            
+            apiKeyInput.select();
+            document.execCommand('copy');
+            
+            const btn = event.target.closest('button');
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i> Copiado';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-outline-secondary');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            }
+        }
+
+        // Función para copiar API key desde la lista
+        function copyApiKeyFromList(id) {
+            const apiKeyInput = document.getElementById(`api-key-${id}`);
+            if (!apiKeyInput) return;
+            
+            apiKeyInput.select();
+            document.execCommand('copy');
+            
+            const btn = event.target.closest('button');
+            if (btn) {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check"></i>';
+                btn.classList.add('btn-success');
+                btn.classList.remove('btn-outline-secondary');
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.classList.remove('btn-success');
+                    btn.classList.add('btn-outline-secondary');
+                }, 2000);
+            }
+        }
+
+        // Cargar lista de API keys
+        async function loadApiKeys() {
+            const listContainer = document.getElementById('apiKeysList');
+            if (!listContainer) return;
+            
+            try {
+                const response = await fetch('/api/keys');
+                const data = await response.json();
+
+                if (data.success && data.data.length > 0) {
+                    let html = '<div class="table-responsive"><table class="table table-striped">';
+                    html += '<thead><tr><th>Nombre</th><th>API Key</th><th>Descripción</th><th>Estado</th><th>Creada</th><th>Último Uso</th><th>Acciones</th></tr></thead><tbody>';
+                    
+                    data.data.forEach(key => {
+                        const fechaCreacion = key.creado_en ? new Date(key.creado_en).toLocaleDateString('es-ES') : '-';
+                        const ultimoUso = key.ultimo_uso ? new Date(key.ultimo_uso).toLocaleDateString('es-ES') : 'Nunca';
+                        const estadoBadge = key.activa 
+                            ? '<span class="badge bg-success">Activa</span>' 
+                            : '<span class="badge bg-secondary">Inactiva</span>';
+                        
+                        // Mostrar API Key con opción de copiar
+                        const apiKeyDisplay = key.api_key 
+                            ? `<div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" value="${key.api_key}" id="api-key-${key.id}" readonly style="font-size: 0.75rem;">
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyApiKeyFromList(${key.id})" title="Copiar">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                               </div>`
+                            : '<span class="text-muted">N/A</span>';
+                        
+                        html += `<tr>
+                            <td><strong>${key.nombre || '-'}</strong></td>
+                            <td style="min-width: 300px;">${apiKeyDisplay}</td>
+                            <td>${key.descripcion || '-'}</td>
+                            <td>${estadoBadge}</td>
+                            <td>${fechaCreacion}</td>
+                            <td>${ultimoUso}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="toggleApiKey(${key.id}, ${!key.activa})" title="${key.activa ? 'Desactivar' : 'Activar'}">
+                                    <i class="fas fa-${key.activa ? 'ban' : 'check'}"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="deleteApiKey(${key.id})" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>`;
+                    });
+                    
+                    html += '</tbody></table></div>';
+                    listContainer.innerHTML = html;
+                } else {
+                    listContainer.innerHTML = '<p class="text-muted">No hay API keys generadas aún.</p>';
+                }
+            } catch (error) {
+                console.error('Error cargando API keys:', error);
+                const listContainer = document.getElementById('apiKeysList');
+                if (listContainer) {
+                    listContainer.innerHTML = '<p class="text-danger">Error al cargar las API keys.</p>';
+                }
+            }
+        }
+
+        // Toggle API key
+        async function toggleApiKey(id, activa) {
+            if (!confirm(`¿Estás seguro de que quieres ${activa ? 'activar' : 'desactivar'} esta API key?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/keys/${id}/toggle`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ activa: activa })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadApiKeys();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo actualizar la API key'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar la API key: ' + error.message);
+            }
+        }
+
+        // Eliminar API key
+        async function deleteApiKey(id) {
+            if (!confirm('¿Estás seguro de que quieres eliminar esta API key? Esta acción no se puede deshacer.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/keys/${id}`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    loadApiKeys();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar la API key'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar la API key: ' + error.message);
+            }
+        }
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../partials/navbar-styles') %>
+    <style>
+        .duplicados-container {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .grupo-duplicado {
+            border: 1px solid #dee2e6;
+            border-radius: 0.375rem;
+            margin-bottom: 1rem;
+            padding: 1rem;
+            background-color: #f8f9fa;
+        }
+        .cliente-item {
+            background-color: white;
+            border: 1px solid #dee2e6;
+            border-radius: 0.25rem;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            transition: box-shadow 0.2s;
+        }
+        .cliente-item:hover {
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .cliente-item.principal {
+            border-color: #198754;
+            border-width: 2px;
+            background-color: #f0fdf4;
+        }
+        .badge-duplicado {
+            font-size: 0.75rem;
+        }
+        .acciones-cliente {
+            margin-top: 0.5rem;
+        }
+        .cliente-item small {
+            display: block;
+            line-height: 1.6;
+        }
+        .cliente-item .row {
+            margin-bottom: 0.5rem;
+        }
+        .stats-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .tab-content {
+            padding-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+    
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2><i class="fas fa-copy me-2"></i>Clientes Duplicados</h2>
+                    <a href="/dashboard/clientes" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Clientes
+                    </a>
+                </div>
+
+                <!-- Estadísticas -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="stats-box">
+                            <h5>Por DNI/CIF</h5>
+                            <h3><%= duplicados.porDNI.length %></h3>
+                            <small>grupos críticos</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                            <h5>Por Nombre + Dirección</h5>
+                            <h3><%= duplicados.porNombreDireccion.length %></h3>
+                            <small>grupos</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                            <h5>Por Nombre + Email</h5>
+                            <h3><%= duplicados.porNombreEmail.length %></h3>
+                            <small>grupos</small>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stats-box" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);">
+                            <h5>Por Nombre</h5>
+                            <h3><%= duplicados.porNombre.length %></h3>
+                            <small>grupos</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs para diferentes tipos de duplicados -->
+                <ul class="nav nav-tabs" id="duplicadosTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="dni-tab" data-bs-toggle="tab" data-bs-target="#dni" type="button" role="tab">
+                            <i class="fas fa-id-card me-2"></i>Por DNI/CIF (<span class="badge bg-danger"><%= duplicados.porDNI.length %></span>)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="nombre-direccion-tab" data-bs-toggle="tab" data-bs-target="#nombre-direccion" type="button" role="tab">
+                            Por Nombre + Dirección (<span class="badge bg-warning"><%= duplicados.porNombreDireccion.length %></span>)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="nombre-email-tab" data-bs-toggle="tab" data-bs-target="#nombre-email" type="button" role="tab">
+                            Por Nombre + Email (<span class="badge bg-info"><%= duplicados.porNombreEmail.length %></span>)
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="nombre-tab" data-bs-toggle="tab" data-bs-target="#nombre" type="button" role="tab">
+                            Solo por Nombre (<span class="badge bg-secondary"><%= duplicados.porNombre.length %></span>)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="duplicadosTabContent">
+                    <!-- Tab DNI/CIF -->
+                    <div class="tab-pane fade show active" id="dni" role="tabpanel">
+                        <div class="duplicados-container mt-3">
+                            <% if (duplicados.porDNI.length === 0) { %>
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>No se encontraron duplicados por DNI/CIF
+                                </div>
+                            <% } else { %>
+                                <% duplicados.porDNI.forEach((grupo, idx) => { %>
+                                    <div class="grupo-duplicado">
+                                        <h5 class="mb-3">
+                                            <span class="badge bg-danger me-2">CRÍTICO</span>
+                                            DNI/CIF: <strong><%= grupo.clientes[0].DNI_CIF || grupo.clientes[0].dni_cif %></strong>
+                                            (<%= grupo.clientes.length %> registros)
+                                        </h5>
+                                        <% grupo.clientes.forEach((cliente, cIdx) => { %>
+                                            <div class="cliente-item <%= cIdx === 0 ? 'principal' : '' %>" data-cliente-id="<%= cliente.Id || cliente.id %>">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex align-items-center mb-2">
+                                                            <% if (cIdx === 0) { %>
+                                                                <span class="badge bg-success badge-duplicado me-2">Principal</span>
+                                                            <% } %>
+                                                            <strong class="me-3"><%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Sin nombre' %></strong>
+                                                            <small class="text-muted">ID: <%= cliente.Id || cliente.id %></small>
+                                                        </div>
+                                                        
+                                                        <div class="row g-2 mb-2">
+                                                            <% if (cliente.DNI_CIF || cliente.dni_cif) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-id-card me-1"></i><strong>DNI/CIF:</strong> <%= cliente.DNI_CIF || cliente.dni_cif %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Nombre_Comercial || cliente.NombreComercial || cliente.nombre_comercial) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-store me-1"></i><strong>Nombre Comercial:</strong> <%= cliente.Nombre_Comercial || cliente.NombreComercial || cliente.nombre_comercial %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                        
+                                                        <% if (cliente.Direccion || cliente.direccion) { %>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i><strong>Dirección:</strong> <%= cliente.Direccion || cliente.direccion %></small>
+                                                            </div>
+                                                        <% } %>
+                                                        
+                                                        <div class="row g-2 mb-2">
+                                                            <% if (cliente.Poblacion || cliente.poblacion) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-city me-1"></i><strong>Población:</strong> <%= cliente.Poblacion || cliente.poblacion %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-map me-1"></i><strong>Provincia:</strong> <%= cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-mail-bulk me-1"></i><strong>CP:</strong> <%= cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                        
+                                                        <div class="row g-2">
+                                                            <% if (cliente.Telefono || cliente.telefono) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-phone me-1"></i><strong>Teléfono:</strong> <%= cliente.Telefono || cliente.telefono %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Email || cliente.email) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-envelope me-1"></i><strong>Email:</strong> <%= cliente.Email || cliente.email %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end">
+                                                        <small class="text-muted">ID: <%= cliente.Id || cliente.id %></small>
+                                                        <% if (cIdx > 0) { %>
+                                                            <div class="acciones-cliente">
+                                                                <button class="btn btn-sm btn-success fusionar-btn" 
+                                                                        data-principal="<%= grupo.clientes[0].Id || grupo.clientes[0].id %>"
+                                                                        data-duplicado="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-compress-alt me-1"></i>Fusionar
+                                                                </button>
+                                                                <button class="btn btn-sm btn-danger eliminar-btn" 
+                                                                        data-cliente="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                                                </button>
+                                                            </div>
+                                                        <% } %>
+                                                        <a href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" class="btn btn-sm btn-primary mt-1">
+                                                            <i class="fas fa-eye me-1"></i>Ver
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                <% }); %>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Tab Nombre + Dirección -->
+                    <div class="tab-pane fade" id="nombre-direccion" role="tabpanel">
+                        <div class="duplicados-container mt-3">
+                            <% if (duplicados.porNombreDireccion.length === 0) { %>
+                                <div class="alert alert-success">No se encontraron duplicados por Nombre + Dirección</div>
+                            <% } else { %>
+                                <% duplicados.porNombreDireccion.slice(0, 20).forEach((grupo) => { %>
+                                    <div class="grupo-duplicado">
+                                        <h5 class="mb-3">
+                                            <strong><%= grupo.clientes[0].Nombre_Razon_Social || grupo.clientes[0].Nombre || 'Sin nombre' %></strong>
+                                            - <small><%= grupo.clientes[0].Direccion || grupo.clientes[0].direccion %></small>
+                                            (<%= grupo.clientes.length %> registros)
+                                        </h5>
+                                        <% grupo.clientes.forEach((cliente, cIdx) => { %>
+                                            <div class="cliente-item <%= cIdx === 0 ? 'principal' : '' %>" data-cliente-id="<%= cliente.Id || cliente.id %>">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex align-items-center mb-2">
+                                                            <% if (cIdx === 0) { %>
+                                                                <span class="badge bg-success badge-duplicado me-2">Principal</span>
+                                                            <% } %>
+                                                            <strong class="me-3"><%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Sin nombre' %></strong>
+                                                            <small class="text-muted">ID: <%= cliente.Id || cliente.id %></small>
+                                                        </div>
+                                                        
+                                                        <% if (cliente.DNI_CIF || cliente.dni_cif) { %>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted"><i class="fas fa-id-card me-1"></i><strong>DNI/CIF:</strong> <%= cliente.DNI_CIF || cliente.dni_cif %></small>
+                                                            </div>
+                                                        <% } %>
+                                                        
+                                                        <% if (cliente.Direccion || cliente.direccion) { %>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i><strong>Dirección:</strong> <%= cliente.Direccion || cliente.direccion %></small>
+                                                            </div>
+                                                        <% } %>
+                                                        
+                                                        <div class="row g-2 mb-2">
+                                                            <% if (cliente.Poblacion || cliente.poblacion) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-city me-1"></i><strong>Población:</strong> <%= cliente.Poblacion || cliente.poblacion %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-map me-1"></i><strong>Provincia:</strong> <%= cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-mail-bulk me-1"></i><strong>CP:</strong> <%= cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                        
+                                                        <div class="row g-2">
+                                                            <% if (cliente.Telefono || cliente.telefono || cliente.Movil || cliente.movil) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-phone me-1"></i><strong>Teléfono:</strong> <%= cliente.Telefono || cliente.telefono || cliente.Movil || cliente.movil %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Email || cliente.email) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-envelope me-1"></i><strong>Email:</strong> <%= cliente.Email || cliente.email %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end ms-3">
+                                                        <% if (cIdx > 0) { %>
+                                                            <div class="acciones-cliente mb-2">
+                                                                <button class="btn btn-sm btn-success fusionar-btn" 
+                                                                        data-principal="<%= grupo.clientes[0].Id || grupo.clientes[0].id %>"
+                                                                        data-duplicado="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-compress-alt me-1"></i>Fusionar
+                                                                </button>
+                                                                <button class="btn btn-sm btn-danger eliminar-btn" 
+                                                                        data-cliente="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                                                </button>
+                                                            </div>
+                                                        <% } %>
+                                                        <a href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-eye me-1"></i>Ver
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                <% }); %>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Tab Nombre + Email -->
+                    <div class="tab-pane fade" id="nombre-email" role="tabpanel">
+                        <div class="duplicados-container mt-3">
+                            <% if (duplicados.porNombreEmail.length === 0) { %>
+                                <div class="alert alert-success">No se encontraron duplicados por Nombre + Email</div>
+                            <% } else { %>
+                                <% duplicados.porNombreEmail.slice(0, 20).forEach((grupo) => { %>
+                                    <div class="grupo-duplicado">
+                                        <h5 class="mb-3">
+                                            <strong><%= grupo.clientes[0].Nombre_Razon_Social || grupo.clientes[0].Nombre %></strong>
+                                            - <small><%= grupo.clientes[0].Email || grupo.clientes[0].email %></small>
+                                            (<%= grupo.clientes.length %> registros)
+                                        </h5>
+                                        <% grupo.clientes.forEach((cliente, cIdx) => { %>
+                                            <div class="cliente-item <%= cIdx === 0 ? 'principal' : '' %>" data-cliente-id="<%= cliente.Id || cliente.id %>">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex align-items-center mb-2">
+                                                            <% if (cIdx === 0) { %>
+                                                                <span class="badge bg-success badge-duplicado me-2">Principal</span>
+                                                            <% } %>
+                                                            <strong class="me-3"><%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Sin nombre' %></strong>
+                                                            <small class="text-muted">ID: <%= cliente.Id || cliente.id %></small>
+                                                        </div>
+                                                        
+                                                        <div class="row g-2 mb-2">
+                                                            <% if (cliente.DNI_CIF || cliente.dni_cif) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-id-card me-1"></i><strong>DNI/CIF:</strong> <%= cliente.DNI_CIF || cliente.dni_cif %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Nombre_Comercial || cliente.NombreComercial || cliente.nombre_comercial) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-store me-1"></i><strong>Nombre Comercial:</strong> <%= cliente.Nombre_Comercial || cliente.NombreComercial || cliente.nombre_comercial %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                        
+                                                        <% if (cliente.Direccion || cliente.direccion) { %>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i><strong>Dirección:</strong> <%= cliente.Direccion || cliente.direccion %></small>
+                                                            </div>
+                                                        <% } %>
+                                                        
+                                                        <div class="row g-2 mb-2">
+                                                            <% if (cliente.Poblacion || cliente.poblacion) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-city me-1"></i><strong>Población:</strong> <%= cliente.Poblacion || cliente.poblacion %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-map me-1"></i><strong>Provincia:</strong> <%= cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-mail-bulk me-1"></i><strong>CP:</strong> <%= cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                        
+                                                        <div class="row g-2">
+                                                            <% if (cliente.Telefono || cliente.telefono || cliente.Movil || cliente.movil) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-phone me-1"></i><strong>Teléfono:</strong> <%= cliente.Telefono || cliente.telefono || cliente.Movil || cliente.movil %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Email || cliente.email) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-envelope me-1"></i><strong>Email:</strong> <%= cliente.Email || cliente.email %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end ms-3">
+                                                        <% if (cIdx > 0) { %>
+                                                            <div class="acciones-cliente mb-2">
+                                                                <button class="btn btn-sm btn-success fusionar-btn" 
+                                                                        data-principal="<%= grupo.clientes[0].Id || grupo.clientes[0].id %>"
+                                                                        data-duplicado="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-compress-alt me-1"></i>Fusionar
+                                                                </button>
+                                                                <button class="btn btn-sm btn-danger eliminar-btn" 
+                                                                        data-cliente="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                                                </button>
+                                                            </div>
+                                                        <% } %>
+                                                        <a href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-eye me-1"></i>Ver
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                <% }); %>
+                            <% } %>
+                        </div>
+                    </div>
+
+                    <!-- Tab Solo Nombre -->
+                    <div class="tab-pane fade" id="nombre" role="tabpanel">
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Los duplicados solo por nombre pueden ser falsos positivos. Revisar manualmente antes de actuar.
+                        </div>
+                        <div class="duplicados-container mt-3">
+                            <% if (duplicados.porNombre.length === 0) { %>
+                                <div class="alert alert-success">No se encontraron duplicados solo por nombre</div>
+                            <% } else { %>
+                                <p>Total: <%= duplicados.porNombre.length %> grupos (mostrando los primeros 10)</p>
+                                <% duplicados.porNombre.slice(0, 10).forEach((grupo) => { %>
+                                    <div class="grupo-duplicado">
+                                        <h5 class="mb-3">
+                                            <strong><%= grupo.clientes[0].Nombre_Razon_Social || grupo.clientes[0].Nombre %></strong>
+                                            (<%= grupo.clientes.length %> registros)
+                                        </h5>
+                                        <% grupo.clientes.forEach((cliente, cIdx) => { %>
+                                            <div class="cliente-item <%= cIdx === 0 ? 'principal' : '' %>" data-cliente-id="<%= cliente.Id || cliente.id %>">
+                                                <div class="d-flex justify-content-between align-items-start">
+                                                    <div class="flex-grow-1">
+                                                        <div class="d-flex align-items-center mb-2">
+                                                            <% if (cIdx === 0) { %>
+                                                                <span class="badge bg-success badge-duplicado me-2">Principal</span>
+                                                            <% } %>
+                                                            <strong class="me-3"><%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Sin nombre' %></strong>
+                                                            <small class="text-muted">ID: <%= cliente.Id || cliente.id %></small>
+                                                        </div>
+                                                        
+                                                        <% if (cliente.DNI_CIF || cliente.dni_cif) { %>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted"><i class="fas fa-id-card me-1"></i><strong>DNI/CIF:</strong> <%= cliente.DNI_CIF || cliente.dni_cif %></small>
+                                                            </div>
+                                                        <% } %>
+                                                        
+                                                        <% if (cliente.Direccion || cliente.direccion) { %>
+                                                            <div class="mb-2">
+                                                                <small class="text-muted"><i class="fas fa-map-marker-alt me-1"></i><strong>Dirección:</strong> <%= cliente.Direccion || cliente.direccion %></small>
+                                                            </div>
+                                                        <% } %>
+                                                        
+                                                        <div class="row g-2 mb-2">
+                                                            <% if (cliente.Poblacion || cliente.poblacion) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-city me-1"></i><strong>Población:</strong> <%= cliente.Poblacion || cliente.poblacion %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-map me-1"></i><strong>Provincia:</strong> <%= cliente.Provincia || cliente.provincia || cliente.Nombre_Provincia || cliente.nombre_provincia %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal) { %>
+                                                                <div class="col-md-4">
+                                                                    <small class="text-muted"><i class="fas fa-mail-bulk me-1"></i><strong>CP:</strong> <%= cliente.CodigoPostal || cliente.Codigo_Postal || cliente.codigo_postal %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                        
+                                                        <div class="row g-2">
+                                                            <% if (cliente.Telefono || cliente.telefono || cliente.Movil || cliente.movil) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-phone me-1"></i><strong>Teléfono:</strong> <%= cliente.Telefono || cliente.telefono || cliente.Movil || cliente.movil %></small>
+                                                                </div>
+                                                            <% } %>
+                                                            <% if (cliente.Email || cliente.email) { %>
+                                                                <div class="col-md-6">
+                                                                    <small class="text-muted"><i class="fas fa-envelope me-1"></i><strong>Email:</strong> <%= cliente.Email || cliente.email %></small>
+                                                                </div>
+                                                            <% } %>
+                                                        </div>
+                                                    </div>
+                                                    <div class="text-end ms-3">
+                                                        <% if (cIdx > 0) { %>
+                                                            <div class="acciones-cliente mb-2">
+                                                                <button class="btn btn-sm btn-success fusionar-btn" 
+                                                                        data-principal="<%= grupo.clientes[0].Id || grupo.clientes[0].id %>"
+                                                                        data-duplicado="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-compress-alt me-1"></i>Fusionar
+                                                                </button>
+                                                                <button class="btn btn-sm btn-danger eliminar-btn" 
+                                                                        data-cliente="<%= cliente.Id || cliente.id %>">
+                                                                    <i class="fas fa-trash me-1"></i>Eliminar
+                                                                </button>
+                                                            </div>
+                                                        <% } %>
+                                                        <a href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" class="btn btn-sm btn-primary">
+                                                            <i class="fas fa-eye me-1"></i>Ver
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }); %>
+                                    </div>
+                                <% }); %>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Manejar fusionar
+        document.querySelectorAll('.fusionar-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const principalId = this.dataset.principal;
+                const duplicadoId = this.dataset.duplicado;
+                
+                if (!confirm('¿Fusionar estos clientes? Los pedidos del duplicado se asignarán al principal.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/dashboard/clientes/duplicados/fusionar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ clientePrincipalId: principalId, clienteDuplicadoId: duplicadoId })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        alert('Clientes fusionados correctamente');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Error desconocido'));
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            });
+        });
+        
+        // Manejar eliminar
+        document.querySelectorAll('.eliminar-btn').forEach(btn => {
+            btn.addEventListener('click', async function() {
+                const clienteId = this.dataset.cliente;
+                
+                if (!confirm('¿Eliminar este cliente? Esta acción no se puede deshacer.')) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch('/dashboard/clientes/duplicados/eliminar', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ clienteId: clienteId })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        alert('Cliente eliminado correctamente');
+                        location.reload();
+                    } else {
+                        alert('Error: ' + (data.error || 'Error desconocido'));
+                    }
+                } catch (error) {
+                    alert('Error: ' + error.message);
+                }
+            });
+        });
+    </script>
+    <%- include('../partials/navbar-scripts') %>
+</body>
+</html>

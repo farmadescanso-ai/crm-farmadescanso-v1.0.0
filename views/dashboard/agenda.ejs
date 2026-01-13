@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        /* Eliminar subrayado de enlaces en la vista */
+        .nav-link,
+        .nav-link:hover,
+        .nav-link:visited,
+        .nav-link:active,
+        .nav-link:focus,
+        .dropdown-item,
+        .dropdown-item:hover,
+        .dropdown-item:visited,
+        .dropdown-item:active,
+        .dropdown-item:focus {
+            text-decoration: none !important;
+        }
+        
+        a.nav-link,
+        a.dropdown-item {
+            text-decoration: none !important;
+        }
+        
+        .table-container {
+            max-height: calc(100vh - 450px);
+            min-height: 400px;
+            overflow-y: auto;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+            position: relative;
+        }
+        .table-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .table-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        .table-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+        .table {
+            width: 100%;
+            margin-bottom: 0;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+        .visita-row:hover {
+            background-color: rgba(11, 137, 27, 0.05);
+        }
+        .search-box {
+            background: #ffffff;
+            padding: 1rem 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.05);
+        }
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            vertical-align: middle;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .card-body.p-0 {
+            padding: 0 !important;
+        }
+        body {
+            overflow-x: hidden;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div>
+                <h1 class="mb-1 fw-bold text-primary"><i class="fas fa-calendar-check me-2 text-primary"></i>Agenda</h1>
+                <p class="text-muted mb-0">Gestiona y visualiza todas tus citas comerciales</p>
+            </div>
+            <div class="d-flex gap-2">
+                <a href="/dashboard/agenda?vista=calendario" class="btn btn-outline-primary">
+                    <i class="fas fa-calendar-alt me-1"></i>Vista Calendario
+                </a>
+                <a href="/dashboard/agenda/nuevo" class="btn btn-success">
+                    <i class="fas fa-plus me-1"></i>Nueva Cita
+                </a>
+            </div>
+        </div>
+
+        <!-- Estadísticas rápidas -->
+        <% 
+            const totalVisitas = visitas ? visitas.length : 0;
+            const visitasPendientes = visitas ? visitas.filter(v => (v.estado || '').toLowerCase().includes('pendiente')).length : 0;
+            const visitasCompletadas = visitas ? visitas.filter(v => (v.estado || '').toLowerCase().includes('completada') || (v.estado || '').toLowerCase().includes('realizada')).length : 0;
+            const visitasCanceladas = visitas ? visitas.filter(v => (v.estado || '').toLowerCase().includes('cancelada')).length : 0;
+        %>
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-primary">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Total Citas</h6>
+                                <h3 class="mb-0 text-primary"><%= totalVisitas %></h3>
+                            </div>
+                            <div class="text-primary" style="font-size: 2.5rem;">
+                                <i class="fas fa-calendar-check"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-warning">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Pendientes</h6>
+                                <h3 class="mb-0 text-warning"><%= visitasPendientes %></h3>
+                            </div>
+                            <div class="text-warning" style="font-size: 2.5rem;">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Completadas</h6>
+                                <h3 class="mb-0 text-success"><%= visitasCompletadas %></h3>
+                            </div>
+                            <div class="text-success" style="font-size: 2.5rem;">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="card border-danger">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="text-muted mb-1">Canceladas</h6>
+                                <h3 class="mb-0 text-danger"><%= visitasCanceladas %></h3>
+                            </div>
+                            <div class="text-danger" style="font-size: 2.5rem;">
+                                <i class="fas fa-times-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <% if (query && query.success === 'visita_creada') { %>
+        <% 
+        var datosVisita = {};
+        if (typeof visitaCreadaDatos !== 'undefined' && visitaCreadaDatos) {
+            datosVisita = visitaCreadaDatos;
+        } else if (typeof session !== 'undefined' && session && session.visitaCreadaDatos) {
+            datosVisita = session.visitaCreadaDatos;
+        }
+        %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <h5 class="alert-heading"><i class="fas fa-check-circle me-2"></i>¡Visita guardada correctamente!</h5>
+            <hr>
+            <div class="mb-2">
+                <strong>Datos de la visita guardada:</strong>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-6"><strong>Tipo de visita:</strong> <%= typeof datosVisita.tipo_visita !== 'undefined' ? datosVisita.tipo_visita : 'N/A' %></div>
+                <div class="col-md-6"><strong>Fecha:</strong> <%= typeof datosVisita.fecha !== 'undefined' ? datosVisita.fecha : 'N/A' %></div>
+                <div class="col-md-6"><strong>Hora:</strong> <%= typeof datosVisita.hora !== 'undefined' ? datosVisita.hora : 'N/A' %></div>
+                <div class="col-md-6"><strong>Estado:</strong> <%= typeof datosVisita.estado !== 'undefined' ? datosVisita.estado : 'N/A' %></div>
+                <div class="col-md-6"><strong>Dirección:</strong> <%= typeof datosVisita.direccion !== 'undefined' ? datosVisita.direccion : 'N/A' %></div>
+                <div class="col-md-6"><strong>Teléfono:</strong> <%= typeof datosVisita.telefono !== 'undefined' ? datosVisita.telefono : 'N/A' %></div>
+            </div>
+            <hr>
+            <div class="mb-2">
+                <strong>Relaciones guardadas:</strong>
+            </div>
+            <div class="row g-2 mb-2">
+                <% if (typeof datosVisita.procesado_por_n8n !== 'undefined' && datosVisita.procesado_por_n8n) { %>
+                    <div class="col-md-12 mb-2">
+                        <div class="alert alert-info mb-0">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Procesado por N8N:</strong> La visita fue procesada y guardada en NocoDB mediante N8N.
+                            <% if (typeof datosVisita.visita_id_n8n !== 'undefined' && datosVisita.visita_id_n8n) { %>
+                                <br><span class="text-muted">ID de visita en NocoDB:</span> <code><%= datosVisita.visita_id_n8n %></code>
+                            <% } %>
+                        </div>
+                    </div>
+                <% } %>
+                <% if (typeof datosVisita.centro_salud_id_recibido !== 'undefined' && datosVisita.centro_salud_id_recibido) { %>
+                    <div class="col-md-12">
+                        <strong>Centro de Salud:</strong><br>
+                        <span class="text-muted">ID enviado a N8N:</span> <code><%= datosVisita.centro_salud_id_recibido %></code>
+                        <% if (typeof datosVisita.centro_salud_id_guardado !== 'undefined' && datosVisita.centro_salud_id_guardado) { %>
+                            <br><span class="text-muted">ID guardado en NocoDB:</span> <code><%= datosVisita.centro_salud_id_guardado %></code>
+                        <% } %>
+                   </div>
+               <% } %>
+                <% if (typeof datosVisita.cliente_id_recibido !== 'undefined' && datosVisita.cliente_id_recibido) { %>
+                    <div class="col-md-12">
+                        <strong>Farmacia Cliente:</strong><br>
+                        <span class="text-muted">ID enviado a N8N:</span> <code><%= datosVisita.cliente_id_recibido %></code>
+                        <% if (typeof datosVisita.cliente_id_guardado !== 'undefined' && datosVisita.cliente_id_guardado) { %>
+                            <br><span class="text-muted">ID guardado en NocoDB:</span> <code><%= datosVisita.cliente_id_guardado %></code>
+                        <% } %>
+                    </div>
+                <% } %>
+                <div class="col-md-12">
+                    <strong>Comercial:</strong><br>
+                    <span class="text-muted">ID enviado a N8N:</span> <code><%= typeof datosVisita.comercial_id_guardado !== 'undefined' ? datosVisita.comercial_id_guardado : 'N/A' %></code>
+                </div>
+            </div>
+            <hr>
+            <div class="mb-2">
+                <strong>Impactos:</strong>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-md-6"><strong>Impactos Farmacia:</strong> <%= typeof datosVisita.impactos_farmacia !== 'undefined' ? datosVisita.impactos_farmacia : 0 %></div>
+                <div class="col-md-6"><strong>Impactos Centro Salud:</strong> <%= typeof datosVisita.impactos_centro_salud !== 'undefined' ? datosVisita.impactos_centro_salud : 0 %></div>
+            </div>
+           <% if (typeof datosVisita.payload_final_enviado !== 'undefined' && datosVisita.payload_final_enviado !== 'N/A') { %>
+               <hr>
+               <details class="mt-2">
+                   <summary class="cursor-pointer"><strong>Ver payload final enviado a NocoDB (con columnId)</strong></summary>
+                   <pre class="mt-2 p-2 bg-light border rounded" style="font-size: 0.8em; max-height: 300px; overflow-y: auto;"><%= datosVisita.payload_final_enviado %></pre>
+               </details>
+           <% } %>
+           <% if (typeof datosVisita.relaciones_extraidas !== 'undefined' && datosVisita.relaciones_extraidas !== 'N/A') { %>
+               <hr>
+               <details class="mt-2">
+                   <summary class="cursor-pointer"><strong>Ver relaciones extraídas del payload</strong></summary>
+                   <pre class="mt-2 p-2 bg-light border rounded" style="font-size: 0.8em; max-height: 300px; overflow-y: auto;"><%= datosVisita.relaciones_extraidas %></pre>
+               </details>
+           <% } %>
+           <% if (typeof datosVisita.relaciones_intentos !== 'undefined' && datosVisita.relaciones_intentos !== 'N/A') { %>
+               <hr>
+               <details class="mt-2">
+                   <summary class="cursor-pointer"><strong>Ver intentos de establecer relaciones</strong></summary>
+                   <pre class="mt-2 p-2 bg-light border rounded" style="font-size: 0.8em; max-height: 400px; overflow-y: auto;"><%= datosVisita.relaciones_intentos %></pre>
+               </details>
+           <% } %>
+           <% if (typeof datosVisita.columnas_relacion_meta !== 'undefined' && datosVisita.columnas_relacion_meta !== 'N/A') { %>
+               <hr>
+               <details class="mt-2">
+                   <summary class="cursor-pointer"><strong>Ver metadatos de columnas de relación</strong></summary>
+                   <pre class="mt-2 p-2 bg-light border rounded" style="font-size: 0.8em; max-height: 400px; overflow-y: auto;"><%= datosVisita.columnas_relacion_meta %></pre>
+               </details>
+           <% } %>
+           <% if (typeof datosVisita.visita_completa !== 'undefined' && datosVisita.visita_completa) { %>
+               <hr>
+               <details class="mt-2">
+                   <summary class="cursor-pointer"><strong>Ver respuesta completa de NocoDB</strong></summary>
+                   <pre class="mt-2 p-2 bg-light border rounded" style="font-size: 0.8em; max-height: 300px; overflow-y: auto;"><%= datosVisita.visita_completa %></pre>
+               </details>
+           <% } %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+        <% if (query && query.success === 'visita_actualizada') { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>Visita actualizada correctamente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+        <% if (query && query.success === 'visita_eliminada') { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>Visita eliminada correctamente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+        <% if (error) { %>
+        <div class="alert <%= mostrarTodasPorDebug ? 'alert-warning' : 'alert-danger' %> alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i><%= error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-light">
+                <div class="row align-items-center g-3">
+                    <div class="col-md-4">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Citas</h5>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" class="form-control" id="searchInput" placeholder="Buscar...">
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <select class="form-select" id="filterEstado">
+                            <option value="">Todos los estados</option>
+                            <option value="pendiente">Pendiente</option>
+                            <option value="completada">Completada</option>
+                            <option value="realizada">Realizada</option>
+                            <option value="cancelada">Cancelada</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="filterTipo">
+                            <option value="">Todos los tipos</option>
+                            <option value="farmacia">Farmacia</option>
+                            <option value="sanitarios">Sanitarios</option>
+                            <option value="reunión">Reunión</option>
+                            <option value="notas">Notas</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-container">
+                    <table class="table table-hover mb-0" id="visitasTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 50px;">Color</th>
+                                <th style="width: 50px;">Tipo</th>
+                                <th>Fecha</th>
+                                <th>Hora</th>
+                                <th>Cliente/Centro</th>
+                                <th>Comercial</th>
+                                <th>Detalle</th>
+                                <th>Estado</th>
+                                <th>Observaciones</th>
+                                <th style="width: 120px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% if (visitas && visitas.length > 0) { %>
+                                <% visitas.forEach(visita => { %>
+                                <tr class="visita-row" data-cliente="<%= String(visita.cliente || visita.centroSalud || '').toLowerCase() %>" data-comercial="<%= String(visita.comercial || '').toLowerCase() %>" data-tipo="<%= String(visita.tipoVisita || visita.tipo || '').toLowerCase() %>">
+                                    <td>
+                                        <span class="color-indicator" style="background-color: <%= visita.color %>;"></span>
+                                    </td>
+                                    <td class="text-center" style="font-size: 1.2rem;"><%= visita.emoji || '📅' %></td>
+                                    <td>
+                                        <% if (visita.fecha) { %>
+                                            <% 
+                                                const fechaObj = new Date(visita.fecha);
+                                                const hoy = new Date();
+                                                const esHoy = fechaObj.toDateString() === hoy.toDateString();
+                                                const esPasada = fechaObj < hoy && !esHoy;
+                                                const esFutura = fechaObj > hoy;
+                                            %>
+                                            <div>
+                                                <strong><%= fechaObj.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) %></strong>
+                                                <% if (esHoy) { %>
+                                                    <span class="badge bg-info ms-1">Hoy</span>
+                                                <% } else if (esPasada) { %>
+                                                    <span class="badge bg-secondary ms-1">Pasada</span>
+                                                <% } else if (esFutura) { %>
+                                                    <span class="badge bg-primary ms-1">Próxima</span>
+                                                <% } %>
+                                            </div>
+                                        <% } else { %>
+                                            —
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% if (visita.horaFormateada) { %>
+                                            <strong><%= visita.horaFormateada %></strong>
+                                        <% } else if (visita.hora) { %>
+                                            <strong><%= visita.hora %></strong>
+                                        <% } else { %>
+                                            —
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <strong><%= visita.cliente || visita.centroSalud || 'No especificado' %></strong>
+                                        <% if (visita.centroSalud) { %>
+                                            <br><small class="text-muted">🏥 Sanitarios</small>
+                                        <% } else if (visita.cliente) { %>
+                                            <br><small class="text-muted">💊 Farmacia</small>
+                                        <% } %>
+                                    </td>
+                                    <td><%= visita.comercial %></td>
+                                    <td>
+                                        <span class="badge bg-info"><%= visita.tipoVisita || visita.tipo || 'General' %></span>
+                                        <% if (visita.tipo && visita.tipo !== visita.tipoVisita) { %>
+                                            <br><small class="text-muted"><%= visita.tipo %></small>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <% const estadoLower = (visita.estado || '').toLowerCase(); %>
+                                        <% if (estadoLower.includes('pendiente')) { %>
+                                            <span class="badge bg-warning text-dark"><%= visita.estado %></span>
+                                        <% } else if (estadoLower.includes('completada') || estadoLower.includes('realizada')) { %>
+                                            <span class="badge bg-success"><%= visita.estado %></span>
+                                        <% } else if (estadoLower.includes('cancelada')) { %>
+                                            <span class="badge bg-danger"><%= visita.estado %></span>
+                                        <% } else { %>
+                                            <span class="badge bg-secondary"><%= visita.estado %></span>
+                                        <% } %>
+                                    </td>
+                                    <td><%= visita.observaciones ? (visita.observaciones.length > 50 ? visita.observaciones.substring(0, 50) + '...' : visita.observaciones) : '—' %></td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="/dashboard/agenda/<%= visita.id %>" class="btn btn-sm btn-outline-primary" title="Ver">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a href="/dashboard/agenda/<%= visita.id %>/editar" class="btn btn-sm btn-outline-warning" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form method="post" action="/dashboard/agenda/<%= visita.id %>/eliminar" onsubmit="return confirm('¿Seguro que deseas eliminar esta cita?');" class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                            <% } else { %>
+                                <tr>
+                                    <td colspan="10" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox me-2"></i>No hay citas registradas
+                                    </td>
+                                </tr>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function filtrarVisitas() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filterEstado = document.getElementById('filterEstado').value.toLowerCase();
+            const filterTipo = document.getElementById('filterTipo').value.toLowerCase();
+            const rows = document.querySelectorAll('#visitasTable tbody tr.visita-row');
+            
+            let visibleCount = 0;
+            
+            rows.forEach(row => {
+                const cliente = row.getAttribute('data-cliente') || '';
+                const comercial = row.getAttribute('data-comercial') || '';
+                const tipo = row.getAttribute('data-tipo') || '';
+                const textoFila = row.textContent.toLowerCase();
+                
+                // Obtener estado de la fila
+                const estadoBadge = row.querySelector('.badge');
+                const estadoTexto = estadoBadge ? estadoBadge.textContent.toLowerCase() : '';
+                
+                // Filtro de búsqueda
+                const coincideBusqueda = !searchTerm || 
+                    cliente.includes(searchTerm) || 
+                    comercial.includes(searchTerm) || 
+                    tipo.includes(searchTerm) || 
+                    textoFila.includes(searchTerm);
+                
+                // Filtro de estado
+                const coincideEstado = !filterEstado || 
+                    estadoTexto.includes(filterEstado);
+                
+                // Filtro de tipo
+                const coincideTipo = !filterTipo || 
+                    tipo.includes(filterTipo);
+                
+                if (coincideBusqueda && coincideEstado && coincideTipo) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+            
+            // Mostrar mensaje si no hay resultados
+            const emptyRow = document.querySelector('#visitasTable tbody tr:not(.visita-row)');
+            if (emptyRow) {
+                if (visibleCount === 0 && rows.length > 0) {
+                    emptyRow.style.display = '';
+                    emptyRow.querySelector('td').textContent = 'No se encontraron citas con los filtros aplicados';
+                } else {
+                    emptyRow.style.display = 'none';
+                }
+            }
+        }
+        
+        document.getElementById('searchInput').addEventListener('input', filtrarVisitas);
+        document.getElementById('filterEstado').addEventListener('change', filtrarVisitas);
+        document.getElementById('filterTipo').addEventListener('change', filtrarVisitas);
+        
+        // Inicializar filtros
+        filtrarVisitas();
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

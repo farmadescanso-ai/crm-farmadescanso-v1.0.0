@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../partials/navbar-styles') %>
+    <style>
+        :root {
+            --primary-color: #0b891b;
+            --secondary-color: #28a745;
+            --accent-color: #20c997;
+            --dark-color: #1a1a1a;
+            --light-bg: #f8f9fa;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .manual-container {
+            min-height: 100vh;
+            padding: 2rem 0;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 4rem 2rem;
+            border-radius: 20px;
+            margin-bottom: 3rem;
+            box-shadow: 0 10px 40px rgba(11, 137, 27, 0.3);
+            position: relative;
+            overflow: hidden;
+            animation: fadeInDown 1s ease-out;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-logo {
+            max-width: 250px;
+            height: auto;
+            margin-bottom: 1.5rem;
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+            object-fit: contain;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            animation: fadeInUp 0.6s ease-out;
+            animation-fill-mode: both;
+        }
+
+        .section-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 35px rgba(11, 137, 27, 0.15);
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .section-card:nth-child(1) { animation-delay: 0.1s; }
+        .section-card:nth-child(2) { animation-delay: 0.2s; }
+        .section-card:nth-child(3) { animation-delay: 0.3s; }
+        .section-card:nth-child(4) { animation-delay: 0.4s; }
+        .section-card:nth-child(5) { animation-delay: 0.5s; }
+        .section-card:nth-child(6) { animation-delay: 0.6s; }
+
+        .section-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            color: white;
+            font-size: 2rem;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .section-card:hover .section-icon {
+            transform: rotate(5deg) scale(1.1);
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            transition: all 0.2s ease;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list li:hover {
+            padding-left: 10px;
+            color: var(--primary-color);
+        }
+
+        .feature-list li i {
+            color: var(--secondary-color);
+            margin-right: 1rem;
+            font-size: 1.2rem;
+        }
+
+        .step-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-left: 4px solid var(--primary-color);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .step-card:hover {
+            border-left-width: 6px;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.1);
+        }
+
+        .step-number {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            font-weight: bold;
+            margin-right: 1rem;
+        }
+
+        .badge-modern {
+            display: inline-block;
+            padding: 0.5rem 1rem;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 25px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin: 0.25rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .table-modern {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+        }
+
+        .table-modern thead {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .table-modern tbody tr {
+            transition: all 0.2s ease;
+        }
+
+        .table-modern tbody tr:hover {
+            background-color: rgba(11, 137, 27, 0.05);
+            transform: scale(1.01);
+        }
+
+        .btn-manual {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            color: white;
+            padding: 0.75rem 2rem;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.3);
+        }
+
+        .btn-manual:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(11, 137, 27, 0.4);
+            color: white;
+        }
+
+        .scroll-indicator {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: rgba(11, 137, 27, 0.2);
+            z-index: 9999;
+        }
+
+        .scroll-progress {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            width: 0%;
+            transition: width 0.1s ease;
+        }
+
+        @media (max-width: 768px) {
+            .hero-section {
+                padding: 2rem 1rem;
+            }
+            
+            .section-card {
+                padding: 1.5rem;
+            }
+        }
+
+        .highlight-box {
+            background: linear-gradient(135deg, rgba(11, 137, 27, 0.1), rgba(40, 167, 69, 0.1));
+            border-left: 4px solid var(--primary-color);
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .grid-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-top: 2rem;
+        }
+
+        .feature-box {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+
+        .feature-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(11, 137, 27, 0.2);
+        }
+
+        .feature-box i {
+            font-size: 3rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+        }
+
+        /* Botón Subir Arriba */
+        .scroll-to-top {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: 0 5px 20px rgba(11, 137, 27, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .scroll-to-top.show {
+            display: flex;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .scroll-to-top:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(11, 137, 27, 0.6);
+            background: linear-gradient(135deg, var(--secondary-color), var(--accent-color));
+        }
+
+        .scroll-to-top:active {
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .scroll-to-top {
+                bottom: 20px;
+                right: 20px;
+                width: 45px;
+                height: 45px;
+                font-size: 1.2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+    
+    <div class="scroll-indicator">
+        <div class="scroll-progress" id="scrollProgress"></div>
+    </div>
+
+    <div class="container manual-container">
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <div class="hero-content text-center">
+                <img src="/images/logo.png" alt="Farmadescanso" class="hero-logo">
+                <h1 class="display-4 fw-bold mb-3">Manual de Instrucciones</h1>
+                <p class="lead mb-4">Guía completa para el uso del CRM Farmadescanso</p>
+                <p class="mb-0">Aprende a utilizar todas las funcionalidades de la aplicación de forma eficiente</p>
+            </div>
+        </div>
+
+        <!-- Índice de Contenidos -->
+        <div class="section-card">
+            <h2 class="fw-bold mb-4">
+                <i class="fas fa-list-ul text-primary me-2"></i>Índice de Contenidos
+            </h2>
+            <div class="row">
+                <div class="col-md-6">
+                    <ul class="feature-list">
+                        <li><i class="fas fa-chevron-right"></i><a href="#dashboard" class="text-decoration-none text-dark">Dashboard Principal</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#pedidos" class="text-decoration-none text-dark">Gestión de Pedidos</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#clientes" class="text-decoration-none text-dark">Gestión de Clientes</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#visitas" class="text-decoration-none text-dark">Programación de Visitas</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#articulos" class="text-decoration-none text-dark">Catálogo de Artículos</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#comisiones" class="text-decoration-none text-dark">Comisiones</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#manual" class="text-decoration-none text-dark">Manual de Instrucciones</a></li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="feature-list">
+                        <li><i class="fas fa-chevron-right"></i><a href="#cooperativas" class="text-decoration-none text-dark">Cooperativas</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#comerciales" class="text-decoration-none text-dark">Comerciales</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#reportes" class="text-decoration-none text-dark">Reportes y Estadísticas</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#configuracion" class="text-decoration-none text-dark">Configuración</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#consejos" class="text-decoration-none text-dark">Consejos y Mejores Prácticas</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard Principal -->
+        <div id="dashboard" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-tachometer-alt"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Dashboard Principal</h2>
+            <p class="lead mb-4">El Dashboard es tu punto de partida. Aquí puedes ver un resumen general de todas tus actividades y estadísticas importantes.</p>
+            
+            <div class="highlight-box">
+                <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>¿Qué encontrarás en el Dashboard?</h5>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check-circle"></i><strong>Total de Ventas:</strong> Visualiza el importe total de todas tus ventas</li>
+                    <li><i class="fas fa-check-circle"></i><strong>Ventas del Mes:</strong> Importe y cantidad de pedidos del mes actual</li>
+                    <li><i class="fas fa-check-circle"></i><strong>Estadísticas en Tiempo Real:</strong> Métricas actualizadas automáticamente</li>
+                    <li><i class="fas fa-check-circle"></i><strong>Accesos Rápidos:</strong> Enlaces directos a las secciones más utilizadas</li>
+                </ul>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Funcionalidades del Dashboard:</h5>
+            <div class="step-card">
+                <span class="step-number">1</span>
+                <strong>Visualización de Estadísticas</strong>
+                <p class="mt-2 mb-0">Las tarjetas superiores muestran métricas clave: Total de Ventas, Importe del Mes, Pedidos del Mes, y más según tu rol. Estas estadísticas se actualizan automáticamente en tiempo real.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">2</span>
+                <strong>Filtros por Año</strong>
+                <p class="mt-2 mb-0">Utiliza el dropdown superior derecho para filtrar las estadísticas por año específico (últimos 10 años disponibles) o ver "Todos" los años. Esto te permite analizar tendencias históricas y comparar períodos.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">3</span>
+                <strong>Actualización Manual</strong>
+                <p class="mt-2 mb-0">Utiliza el botón "Actualizar" para refrescar manualmente los datos del dashboard sin recargar toda la página.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">4</span>
+                <strong>Navegación Rápida</strong>
+                <p class="mt-2 mb-0">Desde el Dashboard puedes acceder rápidamente a crear nuevos pedidos, ver clientes, gestionar visitas, y todas las secciones principales del CRM.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">5</span>
+                <strong>Acceso al Manual</strong>
+                <p class="mt-2 mb-0">Desde tu perfil (menú usuario) puedes acceder al "Manual de Instrucciones" para consultar esta guía completa en cualquier momento.</p>
+            </div>
+        </div>
+
+        <!-- Gestión de Pedidos -->
+        <div id="pedidos" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-shopping-cart"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Gestión de Pedidos</h2>
+            <p class="lead mb-4">Los pedidos son el corazón de tu actividad comercial. Aprende a crear, gestionar y hacer seguimiento de todos tus pedidos.</p>
+
+            <h5 class="fw-bold mt-4 mb-3">Crear un Nuevo Pedido:</h5>
+            <div class="step-card">
+                <span class="step-number">1</span>
+                <strong>Acceder al Formulario</strong>
+                <p class="mt-2 mb-0">Haz clic en el botón "Nuevo Pedido" desde el Dashboard o desde la sección de Pedidos.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">2</span>
+                <strong>Seleccionar Cliente</strong>
+                <p class="mt-2 mb-0">Busca y selecciona el cliente. Puedes buscar por nombre, DNI/CIF, email o teléfono. El sistema te mostrará sugerencias mientras escribes.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">3</span>
+                <strong>Agregar Artículos</strong>
+                <p class="mt-2 mb-0">Busca artículos por nombre o SKU. Agrega la cantidad, precio unitario, IVA y descuento (si aplica). Puedes agregar múltiples líneas.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">4</span>
+                <strong>Configurar Detalles</strong>
+                <p class="mt-2 mb-0">Completa la información: Fecha del pedido, Fecha de entrega, Tipo de pedido, Forma de pago, y estado (Pendiente, Confirmado, Enviado, Entregado, Cancelado).</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">5</span>
+                <strong>Información de Cooperativa (opcional)</strong>
+                <p class="mt-2 mb-0">Si el cliente pertenece a una cooperativa, puedes agregar el número de pedido de la cooperativa y su nombre.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">6</span>
+                <strong>Guardar el Pedido</strong>
+                <p class="mt-2 mb-0">Revisa toda la información y haz clic en "Crear Pedido". El sistema calculará automáticamente los totales, IVA y el importe final.</p>
+            </div>
+
+            <div class="highlight-box mt-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-lightbulb me-2"></i>Consejos para Pedidos:</h5>
+                <ul class="feature-list">
+                    <li><i class="fas fa-star"></i>Utiliza el buscador de artículos para encontrar productos rápidamente</li>
+                    <li><i class="fas fa-star"></i>Verifica siempre los precios y cantidades antes de guardar</li>
+                    <li><i class="fas fa-star"></i>Los descuentos se aplican por línea de pedido</li>
+                    <li><i class="fas fa-star"></i>Puedes agregar observaciones para información adicional</li>
+                </ul>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Gestionar Pedidos Existentes:</h5>
+            <p>Desde la sección de Pedidos puedes:</p>
+            <ul class="feature-list">
+                <li><i class="fas fa-eye"></i><strong>Ver Detalles:</strong> Haz clic en cualquier pedido para ver toda su información</li>
+                <li><i class="fas fa-edit"></i><strong>Editar Pedidos:</strong> Modifica pedidos pendientes o confirmados</li>
+                <li><i class="fas fa-filter"></i><strong>Filtrar y Buscar:</strong> Utiliza los filtros para encontrar pedidos por cliente, fecha, estado, etc.</li>
+                <li><i class="fas fa-file-export"></i><strong>Exportar Informes:</strong> Genera informes de pedidos para análisis</li>
+            </ul>
+        </div>
+
+        <!-- Gestión de Clientes -->
+        <div id="clientes" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Gestión de Clientes</h2>
+            <p class="lead mb-4">Gestiona tu base de datos de clientes de forma eficiente. Mantén toda la información actualizada para un mejor seguimiento comercial.</p>
+            
+            <div class="highlight-box">
+                <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Filtros Avanzados:</h5>
+                <p>La sección de clientes incluye filtros avanzados para:</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-filter"></i>Buscar por nombre, DNI/CIF, email, teléfono o dirección</li>
+                    <li><i class="fas fa-user-tie"></i>Filtrar por comercial asignado</li>
+                    <li><i class="fas fa-map-marker-alt"></i>Filtrar por código postal o población</li>
+                    <li><i class="fas fa-shopping-cart"></i>Filtrar clientes con o sin pedidos</li>
+                </ul>
+            </div>
+
+            <div class="grid-features">
+                <div class="feature-box">
+                    <i class="fas fa-user-plus"></i>
+                    <h5>Agregar Clientes</h5>
+                    <p>Registra nuevos clientes con toda su información de contacto</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-search"></i>
+                    <h5>Buscar Clientes</h5>
+                    <p>Búsqueda rápida por nombre, DNI/CIF, email o teléfono</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-edit"></i>
+                    <h5>Editar Información</h5>
+                    <p>Actualiza datos de clientes existentes en cualquier momento</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-link"></i>
+                    <h5>Vinculación</h5>
+                    <p>Asocia clientes con cooperativas y comerciales</p>
+                </div>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Información del Cliente:</h5>
+            <div class="table-modern table-responsive mt-3">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Campo</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Nombre/Razón Social</strong></td>
+                            <td>Nombre completo del cliente o razón social si es empresa</td>
+                        </tr>
+                        <tr>
+                            <td><strong>DNI/CIF</strong></td>
+                            <td>Documento de identificación fiscal</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Contacto</strong></td>
+                            <td>Email, teléfono fijo y móvil</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Dirección</strong></td>
+                            <td>Dirección completa, código postal y población</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Comercial Asignado</strong></td>
+                            <td>Comercial responsable del cliente. Los administradores pueden gestionar asignaciones desde "Ajustes → Asignaciones Comerciales"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cooperativa</strong></td>
+                            <td>Cooperativa a la que pertenece (si aplica). Puede vincularse desde la sección "Clientes-Cooperativas"</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Código Postal</strong></td>
+                            <td>El sistema puede asignar automáticamente la provincia basándose en el código postal (configurado por administradores)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Especialidad</strong></td>
+                            <td>Especialidad médica del cliente (si aplica)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="step-card mt-4">
+                <span class="step-number">📋</span>
+                <strong>Gestión de Asignaciones (Solo Administradores)</strong>
+                <p class="mt-2 mb-0">Los administradores pueden asignar comerciales a clientes de forma individual o masiva desde "Ajustes → Asignaciones Comerciales". Esta herramienta permite asignar múltiples clientes a un comercial basándose en criterios como código postal, población o selección manual.</p>
+            </div>
+        </div>
+
+        <!-- Programación de Visitas -->
+        <div id="visitas" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-calendar-check"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Programación de Visitas</h2>
+            <p class="lead mb-4">Organiza y gestiona tus visitas a clientes. Mantén un calendario actualizado y nunca pierdas una cita.</p>
+
+            <div class="step-card">
+                <span class="step-number">1</span>
+                <strong>Crear una Nueva Visita</strong>
+                <p class="mt-2 mb-0">Accede a la sección de Visitas y haz clic en "Nueva Visita". Selecciona el cliente, fecha, hora y duración estimada.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">2</span>
+                <strong>Programar con Google Meet</strong>
+                <p class="mt-2 mb-0">Si tienes configurada tu cuenta de Google OAuth, puedes crear automáticamente reuniones de Google Meet al programar la visita.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">3</span>
+                <strong>Gestión del Calendario</strong>
+                <p class="mt-2 mb-0">Visualiza todas tus visitas en el calendario mensual. Puedes filtrar por comercial, cliente o rango de fechas.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">4</span>
+                <strong>Actualizar Estado</strong>
+                <p class="mt-2 mb-0">Marca las visitas como completadas, canceladas o reagendadas. Agrega notas y resultados de la visita.</p>
+            </div>
+
+            <div class="highlight-box mt-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-calendar-alt me-2"></i>Integración con Google Calendar:</h5>
+                <p>Para habilitar la creación automática de reuniones de Google Meet:</p>
+                <ol>
+                    <li>Ve a tu perfil de comercial</li>
+                    <li>Configura tu cuenta de Google OAuth</li>
+                    <li>Agrega tu email de Google Meet</li>
+                    <li>Al crear una visita, se generará automáticamente el enlace de Meet</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Catálogo de Artículos -->
+        <div id="articulos" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-boxes"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Catálogo de Artículos</h2>
+            <p class="lead mb-4">Explora el catálogo completo de productos disponibles. Conoce precios, SKUs y disponibilidad.</p>
+
+            <h5 class="fw-bold mb-3">Información de los Artículos:</h5>
+            <ul class="feature-list">
+                <li><i class="fas fa-barcode"></i><strong>SKU:</strong> Código único de identificación del producto</li>
+                <li><i class="fas fa-tag"></i><strong>Nombre:</strong> Descripción completa del artículo</li>
+                <li><i class="fas fa-euro-sign"></i><strong>PVL (Precio de Venta al Laboratorio):</strong> Precio de venta estándar recomendado</li>
+                <li><i class="fas fa-percent"></i><strong>PCP (Precio de Coste al Proveedor):</strong> Precio de compra al proveedor. Gestionado por administradores en "Ajustes → Gestión PCP"</li>
+                <li><i class="fas fa-chart-line"></i><strong>Margen y Rentabilidad:</strong> Diferencia entre PVL y PCP, expresada en euros y porcentaje. Se calcula automáticamente cuando ambos valores están disponibles</li>
+                <li><i class="fas fa-tags"></i><strong>Marca:</strong> Marca del producto para filtrado y análisis</li>
+            </ul>
+
+            <div class="highlight-box mt-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Uso del Catálogo:</h5>
+                <p>Al crear un pedido, utiliza el buscador de artículos para encontrar productos. El sistema mostrará automáticamente el precio recomendado (PVL), pero puedes ajustarlo según las condiciones comerciales específicas.</p>
+                <p class="mb-0 mt-2"><strong>Nota para Administradores:</strong> Los Precios de Coste al Proveedor (PCP) se gestionan desde "Ajustes → Gestión PCP". Estos valores son necesarios para calcular la rentabilidad real de los pedidos y artículos.</p>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Artículos Principales:</h5>
+            <p class="mb-3">El catálogo incluye productos de diferentes categorías:</p>
+            <div class="row">
+                <div class="col-md-6">
+                    <span class="badge-modern">Cuidado Personal</span>
+                    <span class="badge-modern">Higiene Íntima</span>
+                    <span class="badge-modern">Cuidado Bucal</span>
+                    <span class="badge-modern">Hidratación</span>
+                </div>
+                <div class="col-md-6">
+                    <span class="badge-modern">Packs Especiales</span>
+                    <span class="badge-modern">Línea Atopic</span>
+                    <span class="badge-modern">Productos Ialozon</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Comisiones -->
+        <div id="comisiones" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-money-bill-wave"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Sistema de Comisiones</h2>
+            <p class="lead mb-4">Consulta tus comisiones calculadas automáticamente según las ventas y objetivos establecidos.</p>
+
+            <div class="step-card">
+                <span class="step-number">1</span>
+                <strong>Acceder a Mis Comisiones</strong>
+                <p class="mt-2 mb-0">Desde el menú lateral del Dashboard, selecciona "Mis Comisiones" para ver el resumen completo de tus ganancias del período seleccionado.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">2</span>
+                <strong>Filtros de Búsqueda</strong>
+                <p class="mt-2 mb-0">Utiliza los filtros para seleccionar el mes y año específico que deseas consultar. Puedes revisar comisiones históricas y comparar períodos.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">3</span>
+                <strong>Desglose Detallado</strong>
+                <p class="mt-2 mb-0">Visualiza el desglose completo: fijo mensual, comisiones por ventas, rappels por objetivos, rappel por presupuesto, y cualquier condición especial aplicable.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">4</span>
+                <strong>Cálculo Automático</strong>
+                <p class="mt-2 mb-0">Las comisiones se calculan automáticamente basándose en los pedidos registrados. El sistema tiene en cuenta el tipo de pedido, los objetivos alcanzados y las condiciones especiales configuradas.</p>
+            </div>
+
+            <div class="highlight-box mt-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-calculator me-2"></i>Tipos de Comisiones:</h5>
+                <ul class="feature-list">
+                    <li><i class="fas fa-coins"></i><strong>Fijo Mensual:</strong> Salario base mensual configurado para el período</li>
+                    <li><i class="fas fa-percent"></i><strong>Comisión por Ventas:</strong> Porcentaje aplicable sobre el total de ventas según el tipo de pedido</li>
+                    <li><i class="fas fa-trophy"></i><strong>Rappels por Objetivos:</strong> Bonificaciones adicionales por alcanzar objetivos de marca o volumen</li>
+                    <li><i class="fas fa-chart-line"></i><strong>Rappel por Presupuesto:</strong> Bonificaciones por cumplir o superar los presupuestos establecidos</li>
+                    <li><i class="fas fa-star"></i><strong>Condiciones Especiales:</strong> Comisiones adicionales configuradas para situaciones específicas</li>
+                </ul>
+                <p class="mb-0 mt-3"><strong>Nota:</strong> La configuración de comisiones y objetivos es gestionada por los administradores del sistema.</p>
+            </div>
+        </div>
+
+        <!-- Cooperativas -->
+        <div id="cooperativas" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-handshake"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Gestión de Cooperativas</h2>
+            <p class="lead mb-4">Administra las cooperativas farmacéuticas y sus relaciones con clientes.</p>
+
+            <ul class="feature-list">
+                <li><i class="fas fa-building"></i><strong>Registrar Cooperativas:</strong> Agrega nuevas cooperativas al sistema con toda su información</li>
+                <li><i class="fas fa-link"></i><strong>Vincular Clientes:</strong> Asocia clientes a cooperativas específicas</li>
+                <li><i class="fas fa-id-card"></i><strong>Número de Asociado:</strong> Gestiona el número de asociado de cada cliente en su cooperativa</li>
+                <li><i class="fas fa-list"></i><strong>Listar Relaciones:</strong> Visualiza todos los clientes vinculados a cada cooperativa</li>
+            </ul>
+
+            <div class="highlight-box mt-4">
+                <p><strong>Nota:</strong> Al crear un pedido para un cliente asociado a una cooperativa, puedes indicar el número de pedido de la cooperativa para mejor seguimiento.</p>
+            </div>
+        </div>
+
+        <!-- Comerciales -->
+        <div id="comerciales" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-user-tie"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Gestión de Comerciales</h2>
+            <p class="lead mb-4">Visualiza y gestiona la información de todos los comerciales del equipo.</p>
+
+            <ul class="feature-list">
+                <li><i class="fas fa-user-circle"></i><strong>Ver Perfil:</strong> Consulta la información de contacto y datos de cada comercial</li>
+                <li><i class="fas fa-edit"></i><strong>Editar Perfil:</strong> Actualiza tu información personal y de contacto</li>
+                <li><i class="fas fa-cog"></i><strong>Configuración:</strong> Configura integraciones como Google OAuth para Meet y Teams</li>
+                <li><i class="fas fa-users"></i><strong>Asignaciones:</strong> (Solo administradores) Asigna comerciales a clientes y zonas</li>
+            </ul>
+        </div>
+
+        <!-- Reportes y Estadísticas -->
+        <div id="reportes" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Reportes y Estadísticas</h2>
+            <p class="lead mb-4">Analiza tu rendimiento con reportes detallados y estadísticas visuales.</p>
+
+            <div class="grid-features">
+                <div class="feature-box">
+                    <i class="fas fa-file-alt"></i>
+                    <h5>Informes de Pedidos</h5>
+                    <p>Genera informes detallados de todos tus pedidos</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-chart-pie"></i>
+                    <h5>Estadísticas de Ventas</h5>
+                    <p>Visualiza gráficos de ventas por mes y período</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-chart-line"></i>
+                    <h5>Presupuestos vs Ventas</h5>
+                    <p>Compara tus ventas con los presupuestos establecidos</p>
+                </div>
+                <div class="feature-box">
+                    <i class="fas fa-percent"></i>
+                    <h5>Rentabilidad</h5>
+                    <p>Analiza la rentabilidad por artículo y por pedido (solo administradores)</p>
+                </div>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Presupuestos vs Ventas:</h5>
+            <div class="highlight-box mt-3">
+                <p>La sección <strong>Presupuestos vs Ventas</strong> te permite:</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-check"></i>Comparar tus ventas reales con los presupuestos asignados</li>
+                    <li><i class="fas fa-check"></i>Visualizar el porcentaje de cumplimiento de objetivos</li>
+                    <li><i class="fas fa-check"></i>Analizar tendencias y desviaciones mes a mes</li>
+                    <li><i class="fas fa-check"></i>Identificar oportunidades de mejora</li>
+                </ul>
+                <p class="mb-0 mt-3"><strong>Acceso:</strong> Desde el menú lateral del Dashboard, selecciona "Presupuestos vs Ventas".</p>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Análisis de Rentabilidad (Solo Administradores):</h5>
+            <div class="step-card">
+                <span class="step-number">📊</span>
+                <strong>Rentabilidad por Pedido</strong>
+                <p class="mt-2 mb-0">Analiza la rentabilidad de cada pedido individual, incluyendo margen, porcentaje de rentabilidad, y comparación con PCP (Precio de Coste al Proveedor). Puedes filtrar por comercial, marca, tipo de pedido y rango de fechas. Esta herramienta es esencial para identificar qué pedidos generan mayor rentabilidad.</p>
+            </div>
+            <div class="step-card">
+                <span class="step-number">📈</span>
+                <strong>Rentabilidad por Artículo</strong>
+                <p class="mt-2 mb-0">Visualiza la rentabilidad de cada artículo del catálogo, incluyendo margen promedio, rentabilidad porcentual, y estadísticas de ventas por producto. Útil para identificar los productos más rentables y optimizar el catálogo.</p>
+            </div>
+            <div class="highlight-box mt-3">
+                <p><strong>Acceso:</strong> Menú Usuario → Rentabilidad → "Rentabilidad por Pedido" o "Rentabilidad Artículos" (solo administradores).</p>
+                <p class="mb-0"><strong>Requisito:</strong> Para que los análisis de rentabilidad sean precisos, es necesario que los artículos tengan configurado su PCP (Precio de Coste al Proveedor) desde "Ajustes → Gestión PCP".</p>
+            </div>
+        </div>
+
+        <!-- Configuración -->
+        <div id="configuracion" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-cog"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Configuración y Ajustes</h2>
+            <p class="lead mb-4">Personaliza la aplicación según tus necesidades y configura integraciones.</p>
+
+            <h5 class="fw-bold mb-3">Configuraciones Disponibles para Todos:</h5>
+            <div class="table-modern table-responsive mt-3">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Sección</th>
+                            <th>Descripción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Formas de Pago</strong></td>
+                            <td>Gestiona los métodos de pago disponibles para los pedidos (transferencia, efectivo, tarjeta, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Especialidades</strong></td>
+                            <td>Administra las especialidades médicas asociadas a clientes (cardiología, dermatología, etc.)</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Mi Perfil</strong></td>
+                            <td>Actualiza tu información personal, contacto y configura integraciones como Google OAuth para Meet</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <h5 class="fw-bold mt-4 mb-3">Configuraciones Administrativas (Solo Administradores):</h5>
+            <div class="highlight-box">
+                <p class="mb-3">Los administradores tienen acceso a configuraciones avanzadas organizadas en submenús:</p>
+                
+                <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-plug me-2"></i>Integraciones:</h6>
+                <ul class="feature-list">
+                    <li><i class="fas fa-link"></i><strong>Webhook N8N:</strong> Configura webhooks para automatización de procesos</li>
+                    <li><i class="fas fa-shopping-bag"></i><strong>Prestashop:</strong> Integración con la tienda online Prestashop</li>
+                    <li><i class="fab fa-google"></i><strong>Google OAuth2:</strong> Configuración de autenticación OAuth para Google Meet y Calendar</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-code me-2"></i>API y Documentación:</h6>
+                <ul class="feature-list">
+                    <li><i class="fas fa-key"></i><strong>API Keys:</strong> Gestiona las claves de API para integraciones externas</li>
+                    <li><i class="fas fa-book"></i><strong>Documentación API:</strong> Acceso a la documentación completa de la API REST</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-chart-line me-2"></i>Rentabilidad:</h6>
+                <ul class="feature-list">
+                    <li><i class="fas fa-chart-line"></i><strong>Rentabilidad Artículos:</strong> Análisis de rentabilidad por producto</li>
+                    <li><i class="fas fa-chart-bar"></i><strong>Rentabilidad por Pedido:</strong> Análisis detallado de rentabilidad por pedido con filtros avanzados</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-tools me-2"></i>Gestión:</h6>
+                <ul class="feature-list">
+                    <li><i class="fas fa-euro-sign"></i><strong>Gestión PCP:</strong> Administra los Precios de Coste al Proveedor (PCP) de los artículos</li>
+                    <li><i class="fas fa-map-marker-alt"></i><strong>Códigos Postales:</strong> Gestiona la asignación automática de códigos postales a provincias</li>
+                    <li><i class="fas fa-user-tie"></i><strong>Asignaciones Comerciales:</strong> Asigna comerciales a clientes y zonas de forma masiva o individual</li>
+                    <li><i class="fas fa-terminal"></i><strong>Logs del Servidor:</strong> Visualiza los logs del sistema para diagnóstico y monitoreo</li>
+                </ul>
+
+                <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-euro-sign me-2"></i>Configuración Comisiones:</h6>
+                <ul class="feature-list">
+                    <li><i class="fas fa-money-bill"></i><strong>Fijos Mensuales:</strong> Configura los salarios base mensuales por comercial</li>
+                    <li><i class="fas fa-chart-line"></i><strong>Presupuestos:</strong> Establece presupuestos mensuales y anuales por comercial</li>
+                    <li><i class="fas fa-trophy"></i><strong>Rapeles:</strong> Configura bonificaciones por objetivos alcanzados</li>
+                    <li><i class="fas fa-bullseye"></i><strong>Objetivos por Marca:</strong> Define objetivos de venta por marca y comercial</li>
+                    <li><i class="fas fa-star"></i><strong>Condiciones Especiales:</strong> Establece comisiones especiales para casos específicos</li>
+                    <li><i class="fas fa-percent"></i><strong>Config. % Tipo Pedido:</strong> Define porcentajes de comisión según el tipo de pedido</li>
+                    <li><i class="fas fa-chart-line"></i><strong>Config. Rappel Presupuesto:</strong> Configura bonificaciones por cumplimiento de presupuesto</li>
+                    <li><i class="fas fa-calendar"></i><strong>Config. Fijo Mensual:</strong> Gestiona la configuración de salarios fijos</li>
+                    <li><i class="fas fa-truck"></i><strong>Config. Desc. Transp.:</strong> Configura descuentos de transporte en comisiones</li>
+                </ul>
+            </div>
+
+            <div class="highlight-box mt-4">
+                <h5 class="fw-bold mb-3"><i class="fas fa-shield-alt me-2"></i>Nota de Seguridad:</h5>
+                <p>Las configuraciones administrativas están disponibles solo para usuarios con rol de Administrador. Si necesitas acceso a funciones administrativas, contacta con tu supervisor.</p>
+                <p class="mb-0 mt-2"><strong>Acceso:</strong> Todas las configuraciones administrativas están disponibles desde el menú de usuario (tu nombre en la barra superior) cuando tienes permisos de administrador.</p>
+            </div>
+        </div>
+
+        <!-- Consejos y Mejores Prácticas -->
+        <div id="consejos" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-lightbulb"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Consejos y Mejores Prácticas</h2>
+            <p class="lead mb-4">Optimiza tu uso del CRM con estos consejos prácticos.</p>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-check-circle text-success me-2"></i>
+                        <strong>Mantén los Datos Actualizados</strong>
+                        <p class="mt-2 mb-0">Actualiza regularmente la información de clientes para mantener registros precisos.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-calendar-check text-primary me-2"></i>
+                        <strong>Programa Visitas con Anticipación</strong>
+                        <p class="mt-2 mb-0">Utiliza el calendario para planificar tus visitas y nunca olvides una cita importante.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-file-invoice text-info me-2"></i>
+                        <strong>Revisa los Pedidos Antes de Guardar</strong>
+                        <p class="mt-2 mb-0">Verifica siempre los totales, precios y cantidades antes de confirmar un pedido.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-chart-line text-warning me-2"></i>
+                        <strong>Consulta Regularmente las Estadísticas</strong>
+                        <p class="mt-2 mb-0">Revisa tus métricas periódicamente para identificar tendencias y oportunidades.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-search text-secondary me-2"></i>
+                        <strong>Utiliza los Buscadores Eficientemente</strong>
+                        <p class="mt-2 mb-0">Los buscadores inteligentes te ayudan a encontrar clientes y artículos rápidamente.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-mobile-alt text-success me-2"></i>
+                        <strong>Acceso desde Móvil</strong>
+                        <p class="mt-2 mb-0">La aplicación es responsive, puedes acceder desde tu smartphone o tablet con la misma funcionalidad.</p>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="step-card">
+                        <i class="fas fa-book text-primary me-2"></i>
+                        <strong>Consulta el Manual</strong>
+                        <p class="mt-2 mb-0">Accede al Manual de Instrucciones desde tu perfil cuando necesites ayuda o refrescar conocimientos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual de Instrucciones -->
+        <div id="manual" class="section-card">
+            <div class="section-icon">
+                <i class="fas fa-book"></i>
+            </div>
+            <h2 class="fw-bold mb-4">Manual de Instrucciones</h2>
+            <p class="lead mb-4">Esta guía completa está disponible en todo momento desde tu perfil de usuario.</p>
+
+            <div class="highlight-box">
+                <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Acceso Rápido:</h5>
+                <p>Puedes acceder a este manual de instrucciones en cualquier momento desde:</p>
+                <ul class="feature-list">
+                    <li><i class="fas fa-user-circle"></i><strong>Menú de Usuario:</strong> Haz clic en tu nombre en la barra superior → "Manual de Instrucciones"</li>
+                    <li><i class="fas fa-user"></i><strong>Tu Perfil:</strong> Accede a "Mi Perfil" → Botón "Manual de Instrucciones"</li>
+                    <li><i class="fas fa-link"></i><strong>URL Directa:</strong> <code>/dashboard/manual-instrucciones</code></li>
+                </ul>
+                <p class="mb-0 mt-3">Este manual se actualiza regularmente con las nuevas funcionalidades y mejoras del sistema.</p>
+            </div>
+
+            <div class="step-card mt-4">
+                <span class="step-number">💡</span>
+                <strong>Características del Manual</strong>
+                <p class="mt-2 mb-0">El manual incluye navegación por secciones, búsqueda rápida mediante el índice, botón "Subir arriba" para navegación fácil, y diseño responsive para acceso desde cualquier dispositivo.</p>
+            </div>
+        </div>
+
+        <!-- Footer de la Guía -->
+        <div class="section-card text-center">
+            <h3 class="fw-bold mb-3">¿Necesitas Ayuda?</h3>
+            <p class="lead mb-4">Si tienes preguntas o necesitas soporte adicional, contacta con tu administrador del sistema.</p>
+            <a href="/dashboard" class="btn btn-manual btn-lg me-2">
+                <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+            </a>
+            <a href="/dashboard/perfil" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-user-circle me-2"></i>Mi Perfil
+            </a>
+        </div>
+    </div>
+
+    <!-- Botón Subir Arriba -->
+    <button id="scrollToTop" class="scroll-to-top" aria-label="Subir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <%- include('../partials/navbar-scripts') %>
+    <script>
+        // Indicador de progreso de scroll y botón subir arriba
+        const scrollToTopBtn = document.getElementById('scrollToTop');
+        
+        window.addEventListener('scroll', function() {
+            const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
+            const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
+            const scrolled = (winScroll / height) * 100;
+            document.getElementById('scrollProgress').style.width = scrolled + '%';
+            
+            // Mostrar/ocultar botón subir arriba
+            if (winScroll > 300) {
+                scrollToTopBtn.classList.add('show');
+            } else {
+                scrollToTopBtn.classList.remove('show');
+            }
+        });
+
+        // Funcionalidad del botón subir arriba
+        scrollToTopBtn.addEventListener('click', function() {
+            window.scrollTo({
+                top: 0,
+                behavior: 'smooth'
+            });
+        });
+
+        // Smooth scroll para los enlaces del índice
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+
+        // Animación de aparición al hacer scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver(function(entries) {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        document.querySelectorAll('.section-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            card.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

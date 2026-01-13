@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .table-container {
+            max-height: 75vh;
+            overflow: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .table td {
+            padding: 0.75rem;
+            vertical-align: middle;
+        }
+        .comercial-row:hover {
+            background-color: rgba(11, 137, 27, 0.05);
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container-fluid mt-4">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <h1 class="mb-0 text-primary"><i class="fas fa-user-tie me-1 text-primary"></i>Comerciales</h1>
+                        <p class="text-muted mb-0">Gestiona los comerciales del sistema</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary text-white fs-6">Total: <%= Array.isArray(comerciales) ? comerciales.length : 0 %></span>
+                        <a href="/dashboard/comerciales/nuevo" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Nuevo Comercial
+                        </a>
+                    </div>
+                </div>
+
+                <% if (query && query.success === 'comercial_creado') { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>Comercial creado correctamente.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+                <% if (query && query.success === 'comercial_actualizado') { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>Comercial actualizado correctamente.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+                <% if (query && query.success === 'comercial_eliminado') { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>Comercial eliminado correctamente.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+                <% if (error || (query && query.error)) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <%= error || 'No se pudo completar la acción solicitada.' %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <div class="table-container">
+                    <table class="table table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Email</th>
+                                <th>DNI</th>
+                                <th>Rol</th>
+                                <th>Móvil</th>
+                                <th>Provincia</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <% 
+                            // Asegurar que comerciales sea un array
+                            const comercialesList = Array.isArray(comerciales) ? comerciales : [];
+                            %>
+                            <% if (!comercialesList || comercialesList.length === 0) { %>
+                            <tr>
+                                <td colspan="8" class="text-center text-muted py-4">
+                                    <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                    No hay comerciales registrados
+                                </td>
+                            </tr>
+                            <% } else { %>
+                            <% comercialesList.forEach(function(comercial) { %>
+                            <% 
+                            let rollDisplay = 'Comercial';
+                            if (comercial && comercial.Roll) {
+                                try {
+                                    let rollValue = comercial.Roll;
+                                    if (typeof rollValue === 'string' && rollValue.trim().startsWith('[')) {
+                                        const rollArray = JSON.parse(rollValue);
+                                        if (Array.isArray(rollArray) && rollArray.length > 0) {
+                                            rollDisplay = rollArray.join(', ');
+                                        } else {
+                                            rollDisplay = String(rollValue);
+                                        }
+                                    } else if (Array.isArray(rollValue) && rollValue.length > 0) {
+                                        rollDisplay = rollValue.join(', ');
+                                    } else {
+                                        rollDisplay = String(rollValue);
+                                    }
+                                } catch (e) {
+                                    rollDisplay = String(comercial.Roll || 'Comercial');
+                                }
+                            }
+                            %>
+                            <tr class="comercial-row">
+                                <td><%= comercial.id || comercial.Id %></td>
+                                <td><strong><%= comercial.Nombre || comercial.nombre %></strong></td>
+                                <td><%= comercial.Email || comercial.email %></td>
+                                <td><%= comercial.DNI || comercial.dni || '-' %></td>
+                                <td><span class="badge bg-info"><%= rollDisplay %></span></td>
+                                <td><%= comercial.Movil || comercial.movil || '-' %></td>
+                                <td><%= comercial.nombreProvincia || '-' %></td>
+                                <td class="text-center">
+                                    <div class="btn-group" role="group">
+                                        <a class="btn btn-sm btn-outline-primary" title="Ver" href="/dashboard/comerciales/<%= comercial.id || comercial.Id %>">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <a class="btn btn-sm btn-outline-warning" title="Editar" href="/dashboard/comerciales/<%= comercial.id || comercial.Id %>/editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        <form action="/dashboard/comerciales/<%= comercial.id || comercial.Id %>/eliminar" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar este comercial? Esta acción no se puede deshacer.');">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <% }); %>
+                            <% } %>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

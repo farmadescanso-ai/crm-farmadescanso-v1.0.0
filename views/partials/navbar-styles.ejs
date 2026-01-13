@@ -1,0 +1,151 @@
+    <style>
+        /* Logo del navbar */
+        .navbar-logo {
+            height: 40px;
+            width: auto;
+            display: block;
+            transition: opacity 0.3s ease;
+        }
+        
+        .logo-brand {
+            padding: 0.25rem 0.5rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo-brand:hover .navbar-logo {
+            animation: blink 0.6s ease-in-out infinite;
+        }
+        
+        @keyframes blink {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        
+        /* Navbar fija */
+        .navbar-fixed {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            box-shadow: 0 2px 4px rgba(0,0,0,.1);
+        }
+    
+    /* Ajustar contenido principal para navbar fija */
+    body {
+        padding-top: 56px; /* Altura estándar de navbar */
+    }
+    
+    /* En pantallas grandes, ajustar más si la navbar es más alta */
+    @media (min-width: 992px) {
+        body {
+            padding-top: 56px;
+        }
+    }
+    
+    /* Ocultar elementos menos importantes en móviles */
+    @media (max-width: 991px) {
+        .navbar-nav .nav-item .nav-link .d-none-mobile {
+            display: none !important;
+        }
+        
+        /* Hacer el menú más compacto en móviles */
+        .navbar-brand {
+            font-size: 1rem;
+        }
+        
+        .navbar-nav .nav-link {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.9rem;
+        }
+        
+        /* Ocultar texto de algunos elementos en móviles, solo mostrar iconos */
+        .nav-link-text-mobile {
+            display: none;
+        }
+        
+        /* Mejorar el menú colapsado en móviles */
+        .navbar-collapse {
+            background-color: rgba(13, 110, 253, 0.95);
+            margin-top: 0.5rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+            max-height: calc(100vh - 60px);
+            overflow-y: auto;
+        }
+        
+        /* Mejorar el dropdown del usuario en móviles */
+        .dropdown-menu {
+            max-height: 70vh;
+            overflow-y: auto;
+            position: fixed !important;
+            top: auto !important;
+            left: auto !important;
+            right: 1rem !important;
+            transform: none !important;
+        }
+    }
+    
+    /* En tabletas, mostrar algunos elementos pero más compactos */
+    @media (min-width: 768px) and (max-width: 991px) {
+        .navbar-nav .nav-link {
+            padding: 0.5rem 0.5rem;
+            font-size: 0.85rem;
+        }
+    }
+    
+    /* Ajustar sidebar cuando navbar está fija */
+    @media (min-width: 768px) {
+        .sidebar {
+            position: sticky;
+            top: 56px;
+            height: calc(100vh - 56px);
+            overflow-y: auto;
+        }
+    }
+    
+    /* En móviles, el sidebar debe estar oculto por defecto o ser un overlay */
+    @media (max-width: 767px) {
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: -100%;
+            width: 250px;
+            height: calc(100vh - 56px);
+            z-index: 1020;
+            transition: left 0.3s ease;
+        }
+        
+        .sidebar.show {
+            left: 0;
+        }
+        
+        /* Añadir overlay cuando sidebar está abierto */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 56px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1019;
+        }
+        
+        .sidebar-overlay.show {
+            display: block;
+        }
+    }
+    
+    /* Ajustar contenido principal */
+    .main-content-wrapper {
+        margin-top: 0;
+    }
+</style>
+<link href="/css/notifications.css" rel="stylesheet">
+

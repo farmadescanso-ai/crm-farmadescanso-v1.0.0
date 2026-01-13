@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión Asignaciones Comerciales - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .table-container {
+            max-height: 75vh;
+            overflow: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .search-box {
+            background: #ffffff;
+            padding: 1rem 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.05);
+        }
+    </style>
+    <%- include('../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || 'Usuario' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#ajustesSubmenu" aria-expanded="true" aria-controls="ajustesSubmenu">
+                                    <i class="fas fa-cog me-2"></i>Ajustes
+                                    <i class="fas fa-chevron-down ms-auto float-end" style="font-size: 0.75rem; transition: transform 0.3s; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="ajustesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/ajustes/pcp">
+                                            <i class="fas fa-euro-sign me-2"></i>Gestión PCP
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/ajustes/codigos-postales">
+                                            <i class="fas fa-map-marker-alt me-2"></i>Códigos Postales
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link active" href="/dashboard/ajustes/asignaciones-comerciales">
+                                            <i class="fas fa-user-tie me-2"></i>Asignaciones Comerciales
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <div>
+                        <h1 class="h2 fw-bold text-primary">
+                            <i class="fas fa-user-tie me-2"></i>Gestión de Asignaciones Comerciales
+                        </h1>
+                        <p class="text-muted mb-0">Asigna comerciales a códigos postales por marca</p>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaAsignacion">
+                            <i class="fas fa-plus me-2"></i>Nueva Asignación
+                        </button>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#modalAsignacionMasiva">
+                            <i class="fas fa-layer-group me-2"></i>Asignación Masiva
+                        </button>
+                    </div>
+                </div>
+
+                <% if (success) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i><%= success %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+                <% if (error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i><%= error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <!-- Filtros -->
+                <div class="search-box">
+                    <form method="GET" action="/dashboard/ajustes/asignaciones-comerciales" class="row g-3">
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Comercial</label>
+                            <select class="form-select" name="idComercial">
+                                <option value="">Todos</option>
+                                <% comerciales.forEach(com => { %>
+                                <option value="<%= com.id || com.Id %>" <%= filtros.idComercial == (com.id || com.Id) ? 'selected' : '' %>><%= com.Nombre %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Provincia</label>
+                            <select class="form-select" name="idProvincia" id="filtroProvincia">
+                                <option value="">Todas</option>
+                                <% if (typeof provincias !== 'undefined' && provincias && Array.isArray(provincias) && provincias.length > 0) { %>
+                                <% provincias.forEach(function(p) { %>
+                                <% const provinciaId = (p && (p.id || p.Id)) ? String(p.id || p.Id) : ''; %>
+                                <% const provinciaNombre = (p && (p.Nombre || p.nombre)) ? String(p.Nombre || p.nombre) : 'Sin nombre'; %>
+                                <% if (provinciaId && provinciaNombre) { %>
+                                <option value="<%= provinciaId %>" <%= (typeof filtros !== 'undefined' && filtros && filtros.idProvincia == provinciaId) ? 'selected' : '' %>><%= provinciaNombre %></option>
+                                <% } %>
+                                <% }); %>
+                                <% } else { %>
+                                <option value="" disabled>No hay provincias disponibles (tipo: <%= typeof provincias %>, esArray: <%= Array.isArray(provincias) %>, length: <%= typeof provincias !== 'undefined' && provincias ? provincias.length : 'N/A' %>)</option>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Código Postal</label>
+                            <select class="form-select" name="idCodigoPostal" id="filtroCodigoPostal">
+                                <option value="">Todos</option>
+                                <% codigosPostales.forEach(cp => { %>
+                                <option value="<%= cp.id %>" <%= filtros.idCodigoPostal == cp.id ? 'selected' : '' %>><%= cp.CodigoPostal %> - <%= cp.Localidad %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label fw-semibold">Marca</label>
+                            <select class="form-select" name="idMarca">
+                                <option value="">Todas</option>
+                                <% marcas.forEach(m => { %>
+                                <option value="<%= m.id || m.Id %>" <%= filtros.idMarca == (m.id || m.Id) ? 'selected' : '' %>><%= m.Nombre %></option>
+                                <% }); %>
+                            </select>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100 me-2">
+                                <i class="fas fa-search me-2"></i>Buscar
+                            </button>
+                            <a href="/dashboard/ajustes/asignaciones-comerciales" class="btn btn-outline-secondary">
+                                <i class="fas fa-redo"></i>
+                            </a>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Tabla -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Asignaciones (<%= asignaciones.length %>)
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Comercial</th>
+                                        <th>Código Postal</th>
+                                        <th>Población</th>
+                                        <th>Provincia</th>
+                                        <th>Marca</th>
+                                        <th>Fecha Inicio</th>
+                                        <th>Nº Clientes</th>
+                                        <th>Activo</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (asignaciones.length === 0) { %>
+                                    <tr>
+                                        <td colspan="10" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2"></i><br>
+                                            No se encontraron asignaciones
+                                        </td>
+                                    </tr>
+                                    <% } else { %>
+                                    <% asignaciones.forEach(asig => { %>
+                                    <tr>
+                                        <td><%= asig.id %></td>
+                                        <td><strong><%= asig.NombreComercial %></strong></td>
+                                        <td><%= asig.CodigoPostal %></td>
+                                        <td><%= asig.Poblacion || asig.Localidad || '-' %></td>
+                                        <td><%= asig.Provincia %></td>
+                                        <td><span class="badge bg-info"><%= asig.NombreMarca %></span></td>
+                                        <td><%= asig.FechaInicio ? new Date(asig.FechaInicio).toLocaleDateString('es-ES') : '-' %></td>
+                                        <td>
+                                            <span class="badge bg-primary">
+                                                <i class="fas fa-users me-1"></i><%= asig.NumClientes || 0 %>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <% if (asig.Activo) { %>
+                                            <span class="badge bg-success">Activo</span>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <button type="button" class="btn btn-sm btn-info" onclick="verClientesCodigoPostal(<%= asig.Id_CodigoPostal %>, '<%= asig.CodigoPostal %>', '<%= asig.Localidad %>')" title="Ver clientes de este código postal">
+                                                <i class="fas fa-users"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="editarAsignacion(<%= JSON.stringify(asig).replace(/"/g, '&quot;') %>)" title="Editar asignación">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <form method="POST" action="/dashboard/ajustes/asignaciones-comerciales/<%= asig.id %>/eliminar" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar esta asignación?');">
+                                                <button type="submit" class="btn btn-sm btn-danger" title="Eliminar asignación">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo/Editar Asignación -->
+    <div class="modal fade" id="modalNuevaAsignacion" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitulo">Nueva Asignación</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/dashboard/ajustes/asignaciones-comerciales" id="formAsignacion">
+                    <div class="modal-body">
+                        <input type="hidden" name="id" id="asignacionId">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Id_Comercial" id="Id_Comercial" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% comerciales.forEach(com => { %>
+                                    <option value="<%= com.id || com.Id %>"><%= com.Nombre %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Código Postal <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Id_CodigoPostal" id="Id_CodigoPostal" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% codigosPostales.forEach(cp => { %>
+                                    <option value="<%= cp.id %>"><%= cp.CodigoPostal %> - <%= cp.Localidad %> (<%= cp.Provincia %>)</option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marca <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Id_Marca" id="Id_Marca" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% marcas.forEach(m => { %>
+                                    <option value="<%= m.id || m.Id %>"><%= m.Nombre %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prioridad</label>
+                                <input type="number" class="form-control" name="Prioridad" id="Prioridad" value="0" min="0">
+                                <small class="text-muted">Mayor número = mayor prioridad</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Inicio</label>
+                                <input type="date" class="form-control" name="FechaInicio" id="FechaInicio">
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea class="form-control" name="Observaciones" id="Observaciones" rows="3"></textarea>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="Activo" id="Activo" value="1" checked>
+                                    <label class="form-check-label" for="Activo">Activo</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Asignación Masiva -->
+    <div class="modal fade" id="modalAsignacionMasiva" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Asignación Masiva</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/dashboard/ajustes/asignaciones-comerciales/masiva" id="formAsignacionMasiva">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Comercial <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Id_Comercial" id="Id_Comercial_Masiva" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% comerciales.forEach(com => { %>
+                                    <option value="<%= com.id || com.Id %>"><%= com.Nombre %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Tipo de Asignación <span class="text-danger">*</span></label>
+                                <select class="form-select" name="tipoAsignacion" id="tipoAsignacion" required>
+                                    <option value="codigos">Código a Código (Seleccionar múltiples)</option>
+                                    <option value="provincia">Por Provincia (Todos los códigos de una provincia)</option>
+                                </select>
+                            </div>
+                            
+                            <!-- Opción: Código a Código -->
+                            <div class="col-md-12" id="divCodigosPostales">
+                                <label class="form-label">Códigos Postales <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Ids_CodigosPostales" id="Ids_CodigosPostales" multiple size="10" style="height: 200px;">
+                                    <% codigosPostales.forEach(cp => { %>
+                                    <option value="<%= cp.id %>"><%= cp.CodigoPostal %> - <%= cp.Localidad %> (<%= cp.Provincia %>)</option>
+                                    <% }); %>
+                                </select>
+                                <small class="text-muted">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar múltiples códigos postales</small>
+                            </div>
+                            
+                            <!-- Opción: Por Provincia -->
+                            <div class="col-md-12" id="divProvincia" style="display: none;">
+                                <label class="form-label">Provincia <span class="text-danger">*</span></label>
+                                <select class="form-select" name="Id_Provincia" id="Id_Provincia">
+                                    <option value="">Seleccionar provincia...</option>
+                                    <% if (typeof provincias !== 'undefined' && provincias && Array.isArray(provincias) && provincias.length > 0) { %>
+                                    <% provincias.forEach(function(p) { %>
+                                    <% if (p) { %>
+                                    <% const provinciaId = (p.id || p.Id) ? String(p.id || p.Id) : ''; %>
+                                    <% const provinciaNombre = (p.Nombre || p.nombre) ? String(p.Nombre || p.nombre) : 'Sin nombre'; %>
+                                    <% const provinciaCodigo = (p.Codigo || p.codigo) ? String(p.Codigo || p.codigo) : ''; %>
+                                    <% if (provinciaId && provinciaNombre) { %>
+                                    <option value="<%= provinciaId %>"><%= provinciaNombre %><%= provinciaCodigo ? ' (' + provinciaCodigo + ')' : '' %></option>
+                                    <% } %>
+                                    <% } %>
+                                    <% }); %>
+                                    <% } else { %>
+                                    <option value="" disabled>No hay provincias disponibles (tipo: <%= typeof provincias %>, esArray: <%= Array.isArray(provincias) %>, length: <%= typeof provincias !== 'undefined' && provincias ? provincias.length : 'N/A' %>)</option>
+                                    <% } %>
+                                </select>
+                                <div class="alert alert-info mt-2 mb-0">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Asignación por provincia:</strong>
+                                    <ul class="mb-0 mt-2">
+                                        <li>Se asignarán <strong>todos los códigos postales activos</strong> de esta provincia</li>
+                                        <li>Ejemplo: Si seleccionas <strong>Jaén</strong>, se asignarán todos los códigos que comienzan por <strong>23xxx</strong></li>
+                                        <li>La asignación se realizará según la <strong>marca seleccionada</strong> (o todas si no se especifica)</li>
+                                        <li>Los <strong>clientes con estos códigos postales</strong> se actualizarán automáticamente si está marcada la opción</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-12">
+                                <label class="form-label">Marca</label>
+                                <select class="form-select" name="Id_Marca" id="Id_Marca_Masiva">
+                                    <option value="">Todas las marcas</option>
+                                    <% marcas.forEach(m => { %>
+                                    <option value="<%= m.id || m.Id %>"><%= m.Nombre %></option>
+                                    <% }); %>
+                                </select>
+                                <small class="text-muted">Dejar en blanco para asignar a todas las marcas</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Prioridad</label>
+                                <input type="number" class="form-control" name="Prioridad" id="Prioridad_Masiva" value="0" min="0">
+                                <small class="text-muted">Mayor número = mayor prioridad</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Fecha Inicio</label>
+                                <input type="date" class="form-control" name="FechaInicio" id="FechaInicio_Masiva">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="Activo" id="Activo_Masiva" value="1" checked>
+                                    <label class="form-check-label" for="Activo_Masiva">Activo</label>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="ActualizarClientes" id="ActualizarClientes" value="1" checked>
+                                    <label class="form-check-label" for="ActualizarClientes">
+                                        <strong>Actualizar clientes automáticamente</strong>
+                                        <br><small class="text-muted">
+                                            <i class="fas fa-sync-alt me-1"></i>
+                                            Los clientes que tengan códigos postales coincidentes se actualizarán automáticamente con el comercial seleccionado.
+                                            <br>Esto actualizará el campo <code>Id_Cial</code> en la tabla <code>Clientes</code> para todos los clientes con esos códigos postales.
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea class="form-control" name="Observaciones" id="Observaciones_Masiva" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-layer-group me-2"></i>Crear Asignaciones Masivas
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Clientes por Código Postal -->
+    <div class="modal fade" id="modalClientesCodigoPostal" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-users me-2"></i>Clientes del Código Postal
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        <strong id="infoCodigoPostal">Cargando información...</strong>
+                    </div>
+                    <div id="loadingClientes" class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Cargando...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Cargando clientes...</p>
+                    </div>
+                    <div id="tablaClientesContainer" style="display: none;">
+                        <div class="table-responsive" style="max-height: 60vh; overflow-y: auto;">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>ID</th>
+                                        <th>Nombre</th>
+                                        <th>DNI/CIF</th>
+                                        <th>Teléfono</th>
+                                        <th>Email</th>
+                                        <th>Dirección</th>
+                                        <th>Población</th>
+                                        <th>Comercial</th>
+                                        <th>Estado</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaClientesBody">
+                                    <!-- Los clientes se cargarán aquí dinámicamente -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="mt-3">
+                            <p class="text-muted mb-0">
+                                <strong>Total de clientes:</strong> <span id="totalClientes">0</span>
+                            </p>
+                        </div>
+                    </div>
+                    <div id="sinClientes" class="text-center py-4" style="display: none;">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No se encontraron clientes para este código postal</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Función toggleTipoAsignacion - debe estar definida antes de usarse
+        function toggleTipoAsignacion() {
+            const tipo = document.getElementById('tipoAsignacion').value;
+            const divCodigos = document.getElementById('divCodigosPostales');
+            const divProvincia = document.getElementById('divProvincia');
+            const selectCodigos = document.getElementById('Ids_CodigosPostales');
+            const selectProvincia = document.getElementById('Id_Provincia');
+            
+            if (tipo === 'provincia') {
+                divCodigos.style.display = 'none';
+                divProvincia.style.display = 'block';
+                // Quitar required de códigos postales y añadirlo a provincia
+                if (selectCodigos) {
+                    selectCodigos.removeAttribute('required');
+                }
+                if (selectProvincia) {
+                    selectProvincia.setAttribute('required', 'required');
+                }
+            } else {
+                divCodigos.style.display = 'block';
+                divProvincia.style.display = 'none';
+                // Quitar required de provincia y añadirlo a códigos postales
+                if (selectProvincia) {
+                    selectProvincia.removeAttribute('required');
+                    // No limpiar selección para no perder datos
+                }
+                if (selectCodigos) {
+                    selectCodigos.setAttribute('required', 'required');
+                }
+            }
+        }
+        
+        // Debug: Verificar provincias en el servidor (antes de renderizar)
+        <% if (typeof provincias !== 'undefined' && provincias && Array.isArray(provincias) && provincias.length > 0) { %>
+        try {
+            const provinciasData = <%- JSON.stringify(provincias) %>;
+            console.log('🔍 [DEBUG SERVIDOR] Provincias recibidas del servidor:');
+            console.log('   - Tipo:', typeof provinciasData);
+            console.log('   - Es Array:', Array.isArray(provinciasData));
+            console.log('   - Length:', provinciasData ? provinciasData.length : 'N/A');
+            if (provinciasData && provinciasData.length > 0) {
+                console.log('   - Primera provincia:', provinciasData[0]);
+            }
+        } catch(e) {
+            console.warn('⚠️ [DEBUG SERVIDOR] Error mostrando provincias:', e.message);
+        }
+        <% } else { %>
+        console.warn('⚠️ [DEBUG SERVIDOR] provincias NO está definido o no es un array válido');
+        <% } %>
+        
+        // Debug: Verificar provincias cargadas en el DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 [DEBUG] Verificando provincias en el DOM...');
+            const selectProvincia = document.getElementById('Id_Provincia');
+            const filtroProvincia = document.getElementById('filtroProvincia');
+            
+            if (selectProvincia) {
+                console.log('✅ Select Id_Provincia encontrado, opciones:', selectProvincia.options.length);
+                for (let i = 0; i < selectProvincia.options.length; i++) {
+                    console.log(`   - Opción ${i}: ${selectProvincia.options[i].text} (value: ${selectProvincia.options[i].value})`);
+                }
+            } else {
+                console.warn('⚠️ Select Id_Provincia NO encontrado');
+            }
+            
+            if (filtroProvincia) {
+                console.log('✅ Select filtroProvincia encontrado, opciones:', filtroProvincia.options.length);
+                for (let i = 0; i < filtroProvincia.options.length; i++) {
+                    console.log(`   - Opción ${i}: ${filtroProvincia.options[i].text} (value: ${filtroProvincia.options[i].value})`);
+                }
+            } else {
+                console.warn('⚠️ Select filtroProvincia NO encontrado');
+            }
+            
+            // Configurar evento para tipo de asignación
+            const selectTipoAsignacion = document.getElementById('tipoAsignacion');
+            if (selectTipoAsignacion) {
+                selectTipoAsignacion.addEventListener('change', toggleTipoAsignacion);
+                // Inicializar el estado del formulario masivo
+                toggleTipoAsignacion();
+            }
+            
+            // Manejar envío del formulario masivo
+            const formMasiva = document.getElementById('formAsignacionMasiva');
+            if (formMasiva) {
+                console.log('✅ [FORM] Formulario de asignación masiva encontrado');
+                formMasiva.addEventListener('submit', function(e) {
+                    console.log('✅ [FORM] ========== INICIO ENVÍO FORMULARIO ==========');
+                    const tipo = document.getElementById('tipoAsignacion').value;
+                    const selectProvincia = document.getElementById('Id_Provincia');
+                    const selectCodigos = document.getElementById('Ids_CodigosPostales');
+                    const selectComercial = document.getElementById('Id_Comercial_Masiva');
+                    const selectMarca = document.getElementById('Id_Marca_Masiva');
+                    
+                    console.log('✅ [FORM] Validando formulario de asignación masiva');
+                    console.log('   - Tipo:', tipo);
+                    console.log('   - Comercial:', selectComercial ? selectComercial.value : 'N/A');
+                    console.log('   - Provincia:', selectProvincia ? selectProvincia.value : 'N/A');
+                    console.log('   - Marca:', selectMarca ? selectMarca.value : 'N/A');
+                    console.log('   - Códigos seleccionados:', selectCodigos ? selectCodigos.selectedOptions.length : 'N/A');
+                    
+                    // Validar comercial
+                    if (!selectComercial || !selectComercial.value) {
+                        e.preventDefault();
+                        alert('Por favor, selecciona un comercial');
+                        console.error('❌ [FORM] Error: No se seleccionó comercial');
+                        return false;
+                    }
+                    
+                    // Validar según el tipo de asignación
+                    if (tipo === 'provincia') {
+                        if (!selectProvincia || !selectProvincia.value) {
+                            e.preventDefault();
+                            alert('Por favor, selecciona una provincia');
+                            console.error('❌ [FORM] Error: No se seleccionó provincia');
+                            return false;
+                        }
+                        // Asegurar que el campo de códigos no sea requerido
+                        if (selectCodigos) {
+                            selectCodigos.removeAttribute('required');
+                        }
+                        console.log('✅ [FORM] Validación por provincia: OK');
+                    } else {
+                        if (!selectCodigos || !selectCodigos.selectedOptions || selectCodigos.selectedOptions.length === 0) {
+                            e.preventDefault();
+                            alert('Por favor, selecciona al menos un código postal');
+                            console.error('❌ [FORM] Error: No se seleccionaron códigos postales');
+                            return false;
+                        }
+                        // Asegurar que el campo de provincia no sea requerido
+                        if (selectProvincia) {
+                            selectProvincia.removeAttribute('required');
+                        }
+                        console.log('✅ [FORM] Validación por códigos: OK');
+                    }
+                    
+                    // Log de todos los datos que se van a enviar
+                    const formData = new FormData(formMasiva);
+                    console.log('✅ [FORM] Datos del formulario:');
+                    for (let [key, value] of formData.entries()) {
+                        console.log(`   - ${key}: ${value}`);
+                    }
+                    
+                    console.log('✅ [FORM] Formulario válido, enviando...');
+                    console.log('✅ [FORM] ========== FIN VALIDACIÓN ==========');
+                    // No prevenir el envío, dejar que se envíe normalmente
+                });
+            } else {
+                console.error('❌ [FORM] Formulario de asignación masiva NO encontrado');
+            }
+        });
+
+        // Filtrar códigos postales por provincia seleccionada
+        document.getElementById('filtroProvincia')?.addEventListener('change', function() {
+            const provinciaId = this.value;
+            const selectCodigos = document.getElementById('filtroCodigoPostal');
+            const codigosOriginales = Array.from(selectCodigos.options).slice(1); // Excluir "Todos"
+            
+            // Limpiar opciones actuales (excepto "Todos")
+            selectCodigos.innerHTML = '<option value="">Todos</option>';
+            
+            if (!provinciaId) {
+                // Si no hay provincia seleccionada, mostrar todos
+                codigosOriginales.forEach(opt => selectCodigos.appendChild(opt.cloneNode(true)));
+            } else {
+                // Filtrar códigos postales por provincia (necesitaríamos cargar los datos desde el servidor)
+                // Por ahora, simplemente mostramos todos
+                codigosOriginales.forEach(opt => selectCodigos.appendChild(opt.cloneNode(true)));
+            }
+        });
+
+        function editarAsignacion(asig) {
+            document.getElementById('modalTitulo').textContent = 'Editar Asignación';
+            document.getElementById('asignacionId').value = asig.id;
+            document.getElementById('Id_Comercial').value = asig.Id_Comercial || '';
+            document.getElementById('Id_CodigoPostal').value = asig.Id_CodigoPostal || '';
+            document.getElementById('Id_Marca').value = asig.Id_Marca || '';
+            document.getElementById('Prioridad').value = asig.Prioridad || 0;
+            document.getElementById('FechaInicio').value = asig.FechaInicio ? asig.FechaInicio.split('T')[0] : '';
+            document.getElementById('Observaciones').value = asig.Observaciones || '';
+            document.getElementById('Activo').checked = asig.Activo == 1;
+            
+            // Cambiar action del form
+            document.getElementById('formAsignacion').action = '/dashboard/ajustes/asignaciones-comerciales/' + asig.id;
+            
+            new bootstrap.Modal(document.getElementById('modalNuevaAsignacion')).show();
+        }
+
+        // Función para ver clientes de un código postal
+        async function verClientesCodigoPostal(idCodigoPostal, codigoPostal, localidad) {
+            const modal = new bootstrap.Modal(document.getElementById('modalClientesCodigoPostal'));
+            const infoCodigoPostal = document.getElementById('infoCodigoPostal');
+            const loadingClientes = document.getElementById('loadingClientes');
+            const tablaClientesContainer = document.getElementById('tablaClientesContainer');
+            const tablaClientesBody = document.getElementById('tablaClientesBody');
+            const sinClientes = document.getElementById('sinClientes');
+            const totalClientes = document.getElementById('totalClientes');
+            
+            // Mostrar información del código postal
+            infoCodigoPostal.textContent = `${codigoPostal} - ${localidad}`;
+            
+            // Mostrar loading y ocultar otros elementos
+            loadingClientes.style.display = 'block';
+            tablaClientesContainer.style.display = 'none';
+            sinClientes.style.display = 'none';
+            
+            // Abrir modal
+            modal.show();
+            
+            try {
+                // Obtener clientes del código postal
+                const response = await fetch(`/api/clientes/codigo-postal/${idCodigoPostal}`);
+                
+                // Intentar parsear como JSON directamente
+                let data;
+                try {
+                    const text = await response.text();
+                    // Intentar parsear como JSON
+                    data = JSON.parse(text);
+                } catch (parseError) {
+                    console.error('❌ Error parseando JSON:', parseError);
+                    console.error('❌ Respuesta recibida:', text.substring(0, 500));
+                    throw new Error(`Error al procesar la respuesta del servidor: ${parseError.message}`);
+                }
+                
+                if (!response.ok) {
+                    throw new Error(data.error || `Error ${response.status}`);
+                }
+                
+                // Ocultar loading
+                loadingClientes.style.display = 'none';
+                
+                if (data.success && data.clientes && data.clientes.length > 0) {
+                    // Mostrar tabla
+                    tablaClientesContainer.style.display = 'block';
+                    totalClientes.textContent = data.clientes.length;
+                    
+                    // Limpiar tabla
+                    tablaClientesBody.innerHTML = '';
+                    
+                    // Añadir clientes a la tabla
+                    data.clientes.forEach(cliente => {
+                        const row = document.createElement('tr');
+                        const clienteId = cliente.id || cliente.Id || cliente.ID;
+                        const nombre = cliente.Nombre || cliente.nombre || cliente.Nombre_Razon_Social || cliente.Nombre_Cial || '-';
+                        const poblacion = cliente.Poblacion || cliente.poblacion || cliente.Localidad || cliente.localidad || '-';
+                        const enlaceFicha = clienteId ? `/dashboard/clientes/${clienteId}` : '#';
+                        
+                        row.innerHTML = `
+                            <td>${clienteId || '-'}</td>
+                            <td><strong>${nombre}</strong></td>
+                            <td>${cliente.DNI_CIF || cliente.dni_cif || '-'}</td>
+                            <td>${cliente.Telefono || cliente.telefono || '-'}</td>
+                            <td>${cliente.Email || cliente.email || '-'}</td>
+                            <td>${cliente.Direccion || cliente.direccion || '-'}</td>
+                            <td>${poblacion}</td>
+                            <td>${cliente.NombreComercial || cliente.nombreComercial || '-'}</td>
+                            <td>
+                                ${cliente.OK_KO == 1 || cliente.ok_ko == 1 
+                                    ? '<span class="badge bg-success">Activo</span>' 
+                                    : '<span class="badge bg-secondary">Inactivo</span>'}
+                            </td>
+                            <td>
+                                ${clienteId 
+                                    ? `<a href="${enlaceFicha}" class="btn btn-sm btn-primary" target="_blank" title="Ver ficha del cliente">
+                                        <i class="fas fa-eye"></i> Ver
+                                       </a>`
+                                    : '<span class="text-muted">-</span>'}
+                            </td>
+                        `;
+                        tablaClientesBody.appendChild(row);
+                    });
+                } else {
+                    // No hay clientes
+                    sinClientes.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error cargando clientes:', error);
+                loadingClientes.style.display = 'none';
+                sinClientes.style.display = 'block';
+                sinClientes.innerHTML = `
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <p class="text-danger">Error al cargar los clientes: ${error.message}</p>
+                `;
+            }
+        }
+
+        // Resetear formulario al cerrar modal
+        document.getElementById('modalNuevaAsignacion').addEventListener('hidden.bs.modal', function() {
+            document.getElementById('formAsignacion').reset();
+            document.getElementById('formAsignacion').action = '/dashboard/ajustes/asignaciones-comerciales';
+            document.getElementById('modalTitulo').textContent = 'Nueva Asignación';
+            document.getElementById('asignacionId').value = '';
+            document.getElementById('Prioridad').value = '0';
+            document.getElementById('Activo').checked = true;
+        });
+    </script>
+    <%- include('../partials/navbar-scripts') %>
+</body>
+</html>

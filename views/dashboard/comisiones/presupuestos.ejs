@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Presupuestos - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/articulos">
+                                    <i class="fas fa-boxes me-2"></i>Artículos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes">
+                                    <i class="fas fa-users me-2"></i>Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/pedidos">
+                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/agenda">
+                                    <i class="fas fa-calendar-check me-2"></i>Agenda
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#comisionesSubmenu" aria-expanded="true" aria-controls="comisionesSubmenu" id="comisionesMenuToggle">
+                                    <i class="fas fa-euro-sign me-2"></i>Comisiones
+                                    <i class="fas fa-chevron-down ms-auto float-end" id="comisionesChevron" style="font-size: 0.75rem; transition: transform 0.3s; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="comisionesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'presupuestos' ? 'active' : '' %>" href="/dashboard/comisiones/presupuestos">
+                                            <i class="fas fa-chart-line me-2"></i>Presupuestos
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Comisiones
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles">
+                                            <i class="fas fa-trophy me-2"></i>Rapeles
+                                        </a>
+                                    </li>
+                                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'objetivos-marca' ? 'active' : '' %>" href="/dashboard/comisiones/objetivos-marca">
+                                            <i class="fas fa-bullseye me-2"></i>Objetivos por Marca
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'condiciones-especiales' ? 'active' : '' %>" href="/dashboard/comisiones/condiciones-especiales">
+                                            <i class="fas fa-star me-2"></i>Condiciones Especiales
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles-configuracion' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles-configuracion">
+                                            <i class="fas fa-cog me-2"></i>Config. Rapeles
+                                        </a>
+                                    </li>
+                                    <% } %>
+                                </ul>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Comerciales
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-chart-line me-2 text-primary"></i>Presupuestos
+                    </h1>
+                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoPresupuesto">
+                        <i class="fas fa-plus me-1"></i>Nuevo Presupuesto
+                    </button>
+                    <% } %>
+                </div>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <% if (req.query.success === 'presupuesto_creado') { %>
+                        <strong>Presupuesto creado exitosamente.</strong>
+                    <% } else if (req.query.success === 'presupuesto_actualizado') { %>
+                        <strong>Presupuesto actualizado exitosamente.</strong><br>
+                        <small class="text-muted">Ya existía un presupuesto para este comercial, artículo y año. Se ha actualizado el registro existente en lugar de crear uno nuevo.</small>
+                    <% } else { %>
+                        <%= req.query.success %>
+                    <% } %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i>
+                    <strong>Error al grabar el presupuesto:</strong><br>
+                    <%= req.query.error %>
+                    <% if (req.query.details) { %>
+                        <br><small class="text-muted"><%= req.query.details %></small>
+                    <% } %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/dashboard/comisiones/presupuestos" class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Comercial</label>
+                                <select name="comercial_id" class="form-select">
+                                    <option value="">Todos</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>" <%= filters.comercial_id == (comercial.id || comercial.Id) ? 'selected' : '' %>>
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Año</label>
+                                <input type="number" name="año" class="form-control" value="<%= filters.año || new Date().getFullYear() %>" min="2020" max="2030">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Mes</label>
+                                <select name="mes" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="1" <%= filters.mes == 1 ? 'selected' : '' %>>Enero</option>
+                                    <option value="2" <%= filters.mes == 2 ? 'selected' : '' %>>Febrero</option>
+                                    <option value="3" <%= filters.mes == 3 ? 'selected' : '' %>>Marzo</option>
+                                    <option value="4" <%= filters.mes == 4 ? 'selected' : '' %>>Abril</option>
+                                    <option value="5" <%= filters.mes == 5 ? 'selected' : '' %>>Mayo</option>
+                                    <option value="6" <%= filters.mes == 6 ? 'selected' : '' %>>Junio</option>
+                                    <option value="7" <%= filters.mes == 7 ? 'selected' : '' %>>Julio</option>
+                                    <option value="8" <%= filters.mes == 8 ? 'selected' : '' %>>Agosto</option>
+                                    <option value="9" <%= filters.mes == 9 ? 'selected' : '' %>>Septiembre</option>
+                                    <option value="10" <%= filters.mes == 10 ? 'selected' : '' %>>Octubre</option>
+                                    <option value="11" <%= filters.mes == 11 ? 'selected' : '' %>>Noviembre</option>
+                                    <option value="12" <%= filters.mes == 12 ? 'selected' : '' %>>Diciembre</option>
+                                    <option value="0" <%= filters.mes === null || filters.mes === '' ? 'selected' : '' %>>Anual</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="true" <%= filters.activo === true ? 'selected' : '' %>>Activos</option>
+                                    <option value="false" <%= filters.activo === false ? 'selected' : '' %>>Inactivos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-filter me-1"></i>Filtrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabla de presupuestos -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Comercial</th>
+                                        <th>Artículo</th>
+                                        <th>Año</th>
+                                        <th>Mes</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th class="text-end">Importe</th>
+                                        <th class="text-end">% Comisión</th>
+                                        <th class="text-center">Estado</th>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <th class="text-center">Acciones</th>
+                                        <% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (presupuestos && presupuestos.length > 0) { 
+                                        // Calcular totales
+                                        let totalCantidad = 0;
+                                        let totalImporte = 0;
+                                        presupuestos.forEach(presupuesto => {
+                                            totalCantidad += parseFloat(presupuesto.cantidad_presupuestada || 0);
+                                            totalImporte += parseFloat(presupuesto.importe_presupuestado || 0);
+                                        });
+                                    %>
+                                    <% presupuestos.forEach(presupuesto => { %>
+                                    <tr>
+                                        <td><%= presupuesto.comercial_nombre || '-' %></td>
+                                        <td>
+                                            <%= presupuesto.articulo_nombre || '-' %>
+                                            <% if (presupuesto.articulo_sku) { %>
+                                            <br><small class="text-muted">SKU: <%= presupuesto.articulo_sku %></small>
+                                            <% } %>
+                                        </td>
+                                        <td><%= presupuesto.año %></td>
+                                        <td>
+                                            <% if (presupuesto.mes && presupuesto.mes > 0) { %>
+                                            <%= ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][presupuesto.mes - 1] %>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Anual</span>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-end"><%= Number(presupuesto.cantidad_presupuestada || 0).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true}) %></td>
+                                        <td class="text-end">€ <%= Number(presupuesto.importe_presupuestado || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true}) %></td>
+                                        <td class="text-end"><%= parseFloat(presupuesto.porcentaje_comision || 0).toFixed(2) %>%</td>
+                                        <td class="text-center">
+                                            <% if (presupuesto.activo) { %>
+                                            <span class="badge bg-success">Activo</span>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                            <% } %>
+                                        </td>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarPresupuesto(<%= presupuesto.id %>)" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarPresupuesto(<%= presupuesto.id %>)" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <% }) %>
+                                    <!-- Fila de totales -->
+                                    <tr class="table-info fw-bold" style="background-color: #d1ecf1 !important;">
+                                        <td colspan="4" class="text-end"><strong>TOTALES:</strong></td>
+                                        <td class="text-end"><strong><%= Number(totalCantidad).toLocaleString('es-ES', {minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: true}) %></strong></td>
+                                        <td class="text-end"><strong>€ <%= Number(totalImporte).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2, useGrouping: true}) %></strong></td>
+                                        <td class="text-end">-</td>
+                                        <td class="text-center">-</td>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <td class="text-center">-</td>
+                                        <% } %>
+                                    </tr>
+                                    <% } else { %>
+                                    <tr>
+                                        <td colspan="9" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            No hay presupuestos registrados
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Presupuesto -->
+    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+    <div class="modal fade" id="modalNuevoPresupuesto" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nuevo Presupuesto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/dashboard/comisiones/presupuestos" id="formNuevoPresupuesto">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial <span class="text-danger">*</span></label>
+                                <select name="comercial_id" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>">
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Artículo <span class="text-danger">*</span></label>
+                                <select name="articulo_id" id="selectArticulo" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% articulos.forEach(articulo => { %>
+                                    <option value="<%= articulo.id || articulo.Id %>" data-pvl="<%= articulo.PVL || articulo.Pvl || articulo.pvl || 0 %>">
+                                        <%= articulo.Nombre || articulo.nombre %> 
+                                        <% if (articulo.SKU) { %>- <%= articulo.SKU %><% } %>
+                                        (PVL: € <%= parseFloat(articulo.PVL || articulo.Pvl || articulo.pvl || 0).toFixed(2) %>)
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Año <span class="text-danger">*</span></label>
+                                <input type="number" name="año" class="form-control" value="<%= new Date().getFullYear() %>" min="2020" max="2030" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Mes</label>
+                                <select name="mes" class="form-select">
+                                    <option value="">Anual (todos los meses)</option>
+                                    <option value="1">Enero</option>
+                                    <option value="2">Febrero</option>
+                                    <option value="3">Marzo</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Mayo</option>
+                                    <option value="6">Junio</option>
+                                    <option value="7">Julio</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Septiembre</option>
+                                    <option value="10">Octubre</option>
+                                    <option value="11">Noviembre</option>
+                                    <option value="12">Diciembre</option>
+                                </select>
+                                <small class="text-muted">Dejar vacío para presupuesto anual</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Cantidad Presupuestada</label>
+                                <input type="number" name="cantidad_presupuestada" id="inputCantidad" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Importe Presupuestado (€) <span class="text-danger">*</span></label>
+                                <input type="number" name="importe_presupuestado" id="inputImporte" class="form-control" step="0.01" min="0" required readonly>
+                                <small class="text-muted">Se calcula automáticamente: Cantidad × PVL</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">% Comisión</label>
+                                <input type="number" name="porcentaje_comision" class="form-control" step="0.01" min="0" max="100" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="true" selected>Activo</option>
+                                    <option value="false">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea name="observaciones" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar Presupuesto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <!-- Modal Editar Presupuesto -->
+    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+    <div class="modal fade" id="modalEditarPresupuesto" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Presupuesto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEditarPresupuesto">
+                    <div class="modal-body">
+                        <input type="hidden" id="editPresupuestoId" name="id">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial <span class="text-danger">*</span></label>
+                                <select id="editComercialId" name="comercial_id" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>">
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Artículo <span class="text-danger">*</span></label>
+                                <select id="editArticuloId" name="articulo_id" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% articulos.forEach(articulo => { %>
+                                    <option value="<%= articulo.id || articulo.Id %>" data-pvl="<%= articulo.PVL || articulo.Pvl || articulo.pvl || 0 %>">
+                                        <%= articulo.Nombre || articulo.nombre %> 
+                                        <% if (articulo.SKU) { %>- <%= articulo.SKU %><% } %>
+                                        (PVL: € <%= parseFloat(articulo.PVL || articulo.Pvl || articulo.pvl || 0).toFixed(2) %>)
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Año <span class="text-danger">*</span></label>
+                                <input type="number" id="editAño" name="año" class="form-control" min="2020" max="2030" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Mes</label>
+                                <select id="editMes" name="mes" class="form-select">
+                                    <option value="">Anual (todos los meses)</option>
+                                    <option value="1">Enero</option>
+                                    <option value="2">Febrero</option>
+                                    <option value="3">Marzo</option>
+                                    <option value="4">Abril</option>
+                                    <option value="5">Mayo</option>
+                                    <option value="6">Junio</option>
+                                    <option value="7">Julio</option>
+                                    <option value="8">Agosto</option>
+                                    <option value="9">Septiembre</option>
+                                    <option value="10">Octubre</option>
+                                    <option value="11">Noviembre</option>
+                                    <option value="12">Diciembre</option>
+                                </select>
+                                <small class="text-muted">Dejar vacío para presupuesto anual</small>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Cantidad Presupuestada</label>
+                                <input type="number" id="editCantidad" name="cantidad_presupuestada" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Importe Presupuestado (€) <span class="text-danger">*</span></label>
+                                <input type="number" id="editImporte" name="importe_presupuestado" class="form-control" step="0.01" min="0" required readonly>
+                                <small class="text-muted">Se calcula automáticamente: Cantidad × PVL</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">% Comisión</label>
+                                <input type="number" id="editPorcentaje" name="porcentaje_comision" class="form-control" step="0.01" min="0" max="100" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select id="editActivo" name="activo" class="form-select">
+                                    <option value="true">Activo</option>
+                                    <option value="false">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="editObservaciones" name="observaciones" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Actualizar Presupuesto
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mantener submenú de comisiones abierto
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 [PRESUPUESTO] DOMContentLoaded ejecutado');
+            
+            const comisionesSubmenu = document.getElementById('comisionesSubmenu');
+            if (comisionesSubmenu) {
+                comisionesSubmenu.classList.add('show');
+            }
+
+            // Función para calcular el importe presupuestado automáticamente
+            function calcularImportePresupuestado(selectArticulo, inputCantidad, inputImporte) {
+                const articuloSelect = document.getElementById(selectArticulo);
+                const cantidadInput = document.getElementById(inputCantidad);
+                const importeInput = document.getElementById(inputImporte);
+
+                if (!articuloSelect || !cantidadInput || !importeInput) return;
+
+                function calcular() {
+                    const articuloOption = articuloSelect.options[articuloSelect.selectedIndex];
+                    const pvl = parseFloat(articuloOption.getAttribute('data-pvl') || 0);
+                    const cantidad = parseFloat(cantidadInput.value || 0);
+                    const importe = cantidad * pvl;
+                    importeInput.value = importe.toFixed(2);
+                }
+
+                articuloSelect.addEventListener('change', calcular);
+                cantidadInput.addEventListener('input', calcular);
+                cantidadInput.addEventListener('change', calcular);
+            }
+
+            // Configurar cálculo automático para el modal de nuevo presupuesto
+            calcularImportePresupuestado('selectArticulo', 'inputCantidad', 'inputImporte');
+
+            // Configurar cálculo automático para el modal de editar presupuesto
+            calcularImportePresupuestado('editArticuloId', 'editCantidad', 'editImporte');
+
+            // Manejar el formulario de nuevo presupuesto
+            const formNuevoPresupuesto = document.getElementById('formNuevoPresupuesto');
+            console.log('🔍 [PRESUPUESTO] Buscando formulario formNuevoPresupuesto:', formNuevoPresupuesto);
+            if (formNuevoPresupuesto) {
+                console.log('✅ [PRESUPUESTO] Formulario encontrado, agregando listener...');
+                // Usar capture phase para asegurar que se intercepte antes que otros listeners
+                formNuevoPresupuesto.addEventListener('submit', async function(e) {
+                    console.log('🛑 [PRESUPUESTO] Submit interceptado, previniendo default...');
+                    console.log('🛑 [PRESUPUESTO] Event:', e);
+                    console.log('🛑 [PRESUPUESTO] Target:', e.target);
+                    console.log('🛑 [PRESUPUESTO] CurrentTarget:', e.currentTarget);
+                    
+                    e.preventDefault(); // Prevenir el submit normal
+                    e.stopPropagation(); // También prevenir propagación
+                    e.stopImmediatePropagation(); // Prevenir que otros listeners se ejecuten
+                    
+                    const formData = new FormData(this);
+                    const submitButton = this.querySelector('button[type="submit"]');
+                    const originalButtonText = submitButton ? submitButton.innerHTML : '';
+                    
+                    // Deshabilitar botón y mostrar loading
+                    if (submitButton) {
+                        submitButton.disabled = true;
+                        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Guardando...';
+                    }
+                    
+                    try {
+                        // Validar que los datos del formulario estén presentes
+                        const comercialId = formData.get('comercial_id');
+                        const articuloId = formData.get('articulo_id');
+                        const año = formData.get('año');
+                        
+                        console.log('📤 [PRESUPUESTO] Enviando formulario...');
+                        console.log('📤 [PRESUPUESTO] Datos:', { comercialId, articuloId, año });
+                        
+                        if (!comercialId || !articuloId || !año) {
+                            throw new Error('Faltan datos requeridos: comercial_id, articulo_id o año');
+                        }
+                        
+                        // Convertir FormData a objeto JSON para que Express pueda parsearlo
+                        const data = {};
+                        for (const [key, value] of formData.entries()) {
+                            data[key] = value;
+                        }
+                        
+                        console.log('📤 [PRESUPUESTO] Datos convertidos a objeto:', data);
+                        console.log('📤 [PRESUPUESTO] JSON a enviar:', JSON.stringify(data));
+                        console.log('📤 [PRESUPUESTO] URL:', this.action);
+                        
+                        let response;
+                        try {
+                            console.log('📤 [PRESUPUESTO] Iniciando fetch a:', this.action);
+                            response = await fetch(this.action, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json, text/html, */*'
+                                },
+                                body: JSON.stringify(data),
+                                credentials: 'include',
+                                redirect: 'manual' // No seguir redirecciones automáticamente para poder verificar el resultado
+                            });
+                            
+                            console.log('📥 [PRESUPUESTO] Respuesta recibida:', response.status, response.statusText);
+                            console.log('📥 [PRESUPUESTO] Redirected:', response.redirected);
+                            console.log('📥 [PRESUPUESTO] URL:', response.url);
+                            console.log('📥 [PRESUPUESTO] OK:', response.ok);
+                            console.log('📥 [PRESUPUESTO] Headers:', Object.fromEntries(response.headers.entries()));
+                            
+                            // Si el status es 0, significa que no hubo respuesta del servidor
+                            if (response.status === 0) {
+                                throw new Error('El servidor no respondió. Verifica que el servidor esté corriendo en http://localhost:3000');
+                            }
+                        } catch (fetchError) {
+                            console.error('❌ [PRESUPUESTO] Error en fetch:', fetchError);
+                            console.error('❌ [PRESUPUESTO] Error name:', fetchError.name);
+                            console.error('❌ [PRESUPUESTO] Error message:', fetchError.message);
+                            console.error('❌ [PRESUPUESTO] Error stack:', fetchError.stack);
+                            
+                            // Si es un error de red, dar un mensaje más claro
+                            if (fetchError.name === 'TypeError' && fetchError.message.includes('fetch')) {
+                                throw new Error('Error de conexión: No se pudo conectar con el servidor. Verifica que el servidor esté corriendo.');
+                            }
+                            throw new Error('Error de conexión: ' + fetchError.message);
+                        }
+                        
+                        // Si hay redirección (status 302, 301, etc.)
+                        if (response.status >= 300 && response.status < 400) {
+                            const location = response.headers.get('Location');
+                            if (location) {
+                                console.log('✅ [PRESUPUESTO] Redirigiendo a:', location);
+                                window.location.href = location;
+                                return;
+                            }
+                        }
+                        
+                        // Si hay header Location, redirigir manualmente
+                        const location = response.headers.get('Location');
+                        if (location) {
+                            console.log('✅ [PRESUPUESTO] Redirigiendo a (header Location):', location);
+                            window.location.href = location;
+                            return;
+                        }
+                        
+                        // Si la respuesta es exitosa (200-299) pero no hay redirección
+                        if (response.ok) {
+                            const contentType = response.headers.get('content-type') || '';
+                            console.log('📥 [PRESUPUESTO] Content-Type:', contentType);
+                            
+                            // Si es JSON, puede ser que el servidor devolvió JSON en lugar de redirigir
+                            if (contentType.includes('application/json')) {
+                                const data = await response.json();
+                                console.log('📥 [PRESUPUESTO] Respuesta JSON:', data);
+                                if (data.success && data.data && data.data.id) {
+                                    // Verificar que el presupuesto se guardó correctamente (tiene ID)
+                                    console.log('✅ [PRESUPUESTO] Presupuesto guardado con ID:', data.data.id);
+                                    window.location.href = '/dashboard/comisiones/presupuestos?success=presupuesto_creado';
+                                    return;
+                                } else if (data.success) {
+                                    // Si success es true pero no hay data.id, puede ser un problema
+                                    console.warn('⚠️ [PRESUPUESTO] Success es true pero no hay ID en la respuesta');
+                                    window.location.href = '/dashboard/comisiones/presupuestos?success=presupuesto_creado';
+                                    return;
+                                } else {
+                                    throw new Error(data.error || 'Error al guardar el presupuesto');
+                                }
+                            }
+                            
+                            // Si es HTML o texto, puede ser una página de error o redirección
+                            const text = await response.text();
+                            console.log('📥 [PRESUPUESTO] Respuesta texto (primeros 200 chars):', text.substring(0, 200));
+                            
+                            // Si contiene una redirección o es exitoso, redirigir
+                            if (text.includes('presupuesto_creado') || text.includes('presupuesto_actualizado') || response.status === 200) {
+                                window.location.href = '/dashboard/comisiones/presupuestos?success=presupuesto_creado';
+                                return;
+                            }
+                        }
+                        
+                        // Si hay un error
+                        if (!response.ok) {
+                            let errorMessage = `Error ${response.status}`;
+                            try {
+                                const contentType = response.headers.get('content-type') || '';
+                                if (contentType.includes('application/json')) {
+                                    const errorData = await response.json();
+                                    errorMessage = errorData.error || errorData.message || errorMessage;
+                                } else {
+                                    const errorText = await response.text();
+                                    // Intentar parsear como JSON si es posible
+                                    try {
+                                        const errorJson = JSON.parse(errorText);
+                                        errorMessage = errorJson.error || errorJson.message || errorMessage;
+                                    } catch {
+                                        errorMessage = errorText.substring(0, 200);
+                                    }
+                                }
+                            } catch (parseError) {
+                                console.error('❌ [PRESUPUESTO] Error parseando respuesta de error:', parseError);
+                            }
+                            console.error('❌ [PRESUPUESTO] Error del servidor:', response.status, errorMessage);
+                            throw new Error(errorMessage);
+                        }
+                        
+                        // Como último recurso, redirigir
+                        console.log('⚠️ [PRESUPUESTO] Redirigiendo como último recurso...');
+                        window.location.href = '/dashboard/comisiones/presupuestos?success=presupuesto_creado';
+                    } catch (error) {
+                        console.error('❌ [PRESUPUESTO] Error al guardar presupuesto:', error);
+                        alert('Error al guardar el presupuesto: ' + error.message + '\n\nPor favor, intenta nuevamente.');
+                        if (submitButton) {
+                            submitButton.disabled = false;
+                            submitButton.innerHTML = originalButtonText;
+                        }
+                    }
+                });
+            } else {
+                console.error('❌ [PRESUPUESTO] Formulario formNuevoPresupuesto NO encontrado!');
+                console.error('❌ [PRESUPUESTO] Esto significa que el formulario se enviará de forma tradicional');
+            }
+            
+            // También agregar listener directamente al botón como respaldo
+            const submitButton = document.querySelector('#formNuevoPresupuesto button[type="submit"]');
+            if (submitButton) {
+                console.log('✅ [PRESUPUESTO] Botón de submit encontrado, agregando listener adicional...');
+                submitButton.addEventListener('click', function(e) {
+                    const form = document.getElementById('formNuevoPresupuesto');
+                    if (form && !form.dataset.submitting) {
+                        console.log('🛑 [PRESUPUESTO] Click en botón interceptado, previniendo default...');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        e.stopImmediatePropagation();
+                        form.dataset.submitting = 'true';
+                        
+                        // Disparar el evento submit del formulario manualmente para que nuestro listener lo capture
+                        const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+                        form.dispatchEvent(submitEvent);
+                    }
+                }, true); // Usar capture phase
+            }
+            
+            // También interceptar cuando el modal se muestra para asegurar que el listener esté activo
+            const modalNuevoPresupuesto = document.getElementById('modalNuevoPresupuesto');
+            if (modalNuevoPresupuesto) {
+                modalNuevoPresupuesto.addEventListener('shown.bs.modal', function() {
+                    console.log('✅ [PRESUPUESTO] Modal abierto, verificando listener del formulario...');
+                    const form = document.getElementById('formNuevoPresupuesto');
+                    if (form) {
+                        console.log('✅ [PRESUPUESTO] Formulario encontrado en modal abierto');
+                    }
+                });
+            }
+        });
+
+        async function editarPresupuesto(id) {
+            try {
+                const response = await fetch(`/dashboard/comisiones/presupuestos/${id}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const presupuesto = data.data;
+                    document.getElementById('editPresupuestoId').value = presupuesto.id;
+                    document.getElementById('editComercialId').value = presupuesto.comercial_id;
+                    document.getElementById('editArticuloId').value = presupuesto.articulo_id;
+                    document.getElementById('editAño').value = presupuesto.año;
+                    document.getElementById('editMes').value = presupuesto.mes || '';
+                    document.getElementById('editCantidad').value = presupuesto.cantidad_presupuestada || 0;
+                    document.getElementById('editPorcentaje').value = presupuesto.porcentaje_comision || 0;
+                    document.getElementById('editActivo').value = presupuesto.activo ? 'true' : 'false';
+                    document.getElementById('editObservaciones').value = presupuesto.observaciones || '';
+                    
+                    // Recalcular el importe automáticamente al cargar
+                    const articuloSelect = document.getElementById('editArticuloId');
+                    const cantidadInput = document.getElementById('editCantidad');
+                    const importeInput = document.getElementById('editImporte');
+                    if (articuloSelect && cantidadInput && importeInput) {
+                        const articuloOption = articuloSelect.options[articuloSelect.selectedIndex];
+                        if (articuloOption) {
+                            const pvl = parseFloat(articuloOption.getAttribute('data-pvl') || 0);
+                            const cantidad = parseFloat(cantidadInput.value || 0);
+                            const importe = cantidad * pvl;
+                            importeInput.value = importe.toFixed(2);
+                        }
+                    }
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('modalEditarPresupuesto'));
+                    modal.show();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo cargar el presupuesto'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar el presupuesto');
+            }
+        }
+
+        document.getElementById('formEditarPresupuesto')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const presupuestoData = {
+                id: formData.get('id'),
+                comercial_id: formData.get('comercial_id'),
+                articulo_id: formData.get('articulo_id'),
+                año: formData.get('año'),
+                cantidad_presupuestada: formData.get('cantidad_presupuestada'),
+                importe_presupuestado: formData.get('importe_presupuestado'),
+                porcentaje_comision: formData.get('porcentaje_comision'),
+                activo: formData.get('activo'),
+                observaciones: formData.get('observaciones')
+            };
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/presupuestos/${presupuestoData.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(presupuestoData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.href = '/dashboard/comisiones/presupuestos?success=presupuesto_actualizado';
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo actualizar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar el presupuesto');
+            }
+        });
+
+        async function eliminarPresupuesto(id) {
+            if (!confirm('¿Estás seguro de eliminar este presupuesto?')) return;
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/presupuestos/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar el presupuesto');
+            }
+        }
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Config. Fijo Mensual - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3"><i class="fas fa-user-circle text-primary"></i></div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2"><a class="nav-link" href="/dashboard"><i class="fas fa-tachometer-alt me-2"></i>Dashboard</a></li>
+                            <li class="nav-item mb-2"><a class="nav-link" href="/dashboard/articulos"><i class="fas fa-boxes me-2"></i>Artículos</a></li>
+                            <li class="nav-item mb-2"><a class="nav-link" href="/dashboard/clientes"><i class="fas fa-users me-2"></i>Clientes</a></li>
+                            <li class="nav-item mb-2"><a class="nav-link" href="/dashboard/pedidos"><i class="fas fa-shopping-cart me-2"></i>Pedidos</a></li>
+                            <li class="nav-item mb-2"><a class="nav-link" href="/dashboard/agenda"><i class="fas fa-calendar-check me-2"></i>Agenda</a></li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#comisionesSubmenu" aria-expanded="true" id="comisionesMenuToggle">
+                                    <i class="fas fa-euro-sign me-2"></i>Comisiones
+                                    <i class="fas fa-chevron-down ms-auto float-end" id="comisionesChevron" style="font-size: 0.75rem; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="comisionesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/presupuestos"><i class="fas fa-chart-line me-2"></i>Presupuestos</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/comisiones"><i class="fas fa-money-bill-wave me-2"></i>Comisiones</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/rapeles"><i class="fas fa-trophy me-2"></i>Rapeles</a></li>
+                                    <% if (esAdmin) { %>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/objetivos-marca"><i class="fas fa-bullseye me-2"></i>Objetivos por Marca</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/condiciones-especiales"><i class="fas fa-star me-2"></i>Condiciones Especiales</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/fijos-mensuales"><i class="fas fa-money-bill me-2"></i>Fijos Mensuales</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/rapeles-configuracion"><i class="fas fa-cog me-2"></i>Config. Rapeles</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/config-comisiones-tipo-pedido"><i class="fas fa-percent me-2"></i>Config. % Tipo Pedido</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/config-rappel-presupuesto"><i class="fas fa-chart-line me-2"></i>Config. Rappel Presup.</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link active" href="/dashboard/comisiones/config-fijo-mensual"><i class="fas fa-calendar me-2"></i>Config. Fijo Mensual</a></li>
+                                    <li class="nav-item mb-1"><a class="nav-link" href="/dashboard/comisiones/config-descuento-transporte"><i class="fas fa-truck me-2"></i>Config. Desc. Transp.</a></li>
+                                    <% } %>
+                                </ul>
+                            </li>
+                            <li class="nav-item mb-2"><a class="nav-link" href="/dashboard/comerciales"><i class="fas fa-user-tie me-2"></i>Comerciales</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2"><i class="fas fa-calendar me-2 text-primary"></i>Configuración Fijo Mensual</h1>
+                    <% if (esAdmin) { %>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevaConfiguracion">
+                        <i class="fas fa-plus me-1"></i>Nueva Configuración
+                    </button>
+                    <% } %>
+                </div>
+
+                <% if (req?.query?.success) { %>
+                <div class="alert alert-success alert-dismissible fade show">
+                    <i class="fas fa-check-circle me-2"></i>Configuración guardada exitosamente.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <% if (req?.query?.error) { %>
+                <div class="alert alert-danger alert-dismissible fade show">
+                    <i class="fas fa-exclamation-circle me-2"></i><%= req.query.error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Configuración de Fijo Mensual:</strong> Define las reglas para el pago del fijo mensual. Hasta el año límite se paga siempre; a partir de ese año se requiere un porcentaje mínimo de ventas sobre el presupuesto.
+                </div>
+
+                <!-- Tabla -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Año Límite</th>
+                                        <th class="text-end">% Mínimo Ventas</th>
+                                        <th>Descripción</th>
+                                        <th class="text-center">Estado</th>
+                                        <% if (esAdmin) { %><th class="text-center">Acciones</th><% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (configuraciones?.length > 0) { %>
+                                    <% configuraciones.forEach(config => { %>
+                                    <tr>
+                                        <td><strong><%= config.año_limite %></strong></td>
+                                        <td class="text-end"><strong><%= parseFloat(config.porcentaje_minimo_ventas).toFixed(2) %>%</strong></td>
+                                        <td><small class="text-muted"><%= config.descripcion || '-' %></small></td>
+                                        <td class="text-center">
+                                            <% if (config.activo === 1 || config.activo === true) { %>
+                                            <span class="badge bg-success">Activa</span>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Inactiva</span>
+                                            <% } %>
+                                        </td>
+                                        <% if (esAdmin) { %>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary" onclick='editarConfig(<%= JSON.stringify(config).replace(/"/g, "&quot;") %>)'>
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarConfig(<%= config.id %>)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <% }) %>
+                                    <% } else { %>
+                                    <tr>
+                                        <td colspan="<%= esAdmin ? '5' : '4' %>" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>No hay configuraciones
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Modal -->
+            <% if (esAdmin) { %>
+            <div class="modal fade" id="modalNuevaConfiguracion" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title" id="modalTitle">Nueva Configuración</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form id="formConfiguracion" method="POST" action="/dashboard/comisiones/config-fijo-mensual">
+                            <div class="modal-body">
+                                <input type="hidden" name="id" id="configId">
+                                <div class="mb-3">
+                                    <label class="form-label">Año Límite *</label>
+                                    <input type="number" name="año_limite" id="configAñoLimite" class="form-control" required min="2020" max="2030">
+                                    <small class="text-muted">Hasta este año (incluido) se paga el fijo siempre. A partir del año siguiente se aplica el % mínimo de ventas.</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Porcentaje Mínimo de Ventas *</label>
+                                    <div class="input-group">
+                                        <input type="number" name="porcentaje_minimo_ventas" id="configPorcentajeMin" class="form-control" required step="0.01" min="0" max="100">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                    <small class="text-muted">% mínimo de ventas sobre presupuesto mensual requerido a partir del año límite + 1</small>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Estado</label>
+                                    <select name="activo" id="configActivo" class="form-select">
+                                        <option value="true" selected>Activa</option>
+                                        <option value="false">Inactiva</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Descripción</label>
+                                    <textarea name="descripcion" id="configDescripcion" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                                <button type="submit" class="btn btn-primary">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <% } %>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function editarConfig(config) {
+            document.getElementById('modalTitle').textContent = 'Editar Configuración';
+            document.getElementById('configId').value = config.id;
+            document.getElementById('configAñoLimite').value = config.año_limite;
+            document.getElementById('configPorcentajeMin').value = config.porcentaje_minimo_ventas;
+            document.getElementById('configActivo').value = (config.activo === 1 || config.activo === true) ? 'true' : 'false';
+            document.getElementById('configDescripcion').value = config.descripcion || '';
+            new bootstrap.Modal(document.getElementById('modalNuevaConfiguracion')).show();
+        }
+
+        function eliminarConfig(id) {
+            if (confirm('¿Está seguro de eliminar esta configuración?')) {
+                fetch(`/dashboard/comisiones/config-fijo-mensual/${id}`, { method: 'DELETE' })
+                .then(r => r.json())
+                .then(data => data.success ? location.reload() : alert('Error: ' + (data.error || 'Error desconocido')))
+                .catch(e => { console.error(e); alert('Error al eliminar'); });
+            }
+        }
+
+        document.getElementById('modalNuevaConfiguracion')?.addEventListener('hidden.bs.modal', function() {
+            document.getElementById('modalTitle').textContent = 'Nueva Configuración';
+            document.getElementById('formConfiguracion').reset();
+            document.getElementById('configId').value = '';
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Objetivos por Marca - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/articulos">
+                                    <i class="fas fa-boxes me-2"></i>Artículos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes">
+                                    <i class="fas fa-users me-2"></i>Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/pedidos">
+                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/agenda">
+                                    <i class="fas fa-calendar-check me-2"></i>Agenda
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#comisionesSubmenu" aria-expanded="true" aria-controls="comisionesSubmenu" id="comisionesMenuToggle">
+                                    <i class="fas fa-euro-sign me-2"></i>Comisiones
+                                    <i class="fas fa-chevron-down ms-auto float-end" id="comisionesChevron" style="font-size: 0.75rem; transition: transform 0.3s; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="comisionesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'presupuestos' ? 'active' : '' %>" href="/dashboard/comisiones/presupuestos">
+                                            <i class="fas fa-chart-line me-2"></i>Presupuestos
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Comisiones
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles">
+                                            <i class="fas fa-trophy me-2"></i>Rapeles
+                                        </a>
+                                    </li>
+                                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'objetivos-marca' ? 'active' : '' %>" href="/dashboard/comisiones/objetivos-marca">
+                                            <i class="fas fa-bullseye me-2"></i>Objetivos por Marca
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'condiciones-especiales' ? 'active' : '' %>" href="/dashboard/comisiones/condiciones-especiales">
+                                            <i class="fas fa-star me-2"></i>Condiciones Especiales
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'rapeles-configuracion' ? 'active' : '' %>" href="/dashboard/comisiones/rapeles-configuracion">
+                                            <i class="fas fa-cog me-2"></i>Config. Rapeles
+                                        </a>
+                                    </li>
+                                    <% } %>
+                                </ul>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Comerciales
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-bullseye me-2 text-primary"></i>Objetivos por Marca
+                    </h1>
+                    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalNuevoObjetivo">
+                        <i class="fas fa-plus me-1"></i>Nuevo Objetivo
+                    </button>
+                    <% } %>
+                </div>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.success) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <% if (req.query.success === 'objetivo_creado') { %>
+                        Objetivo creado exitosamente.
+                    <% } else if (req.query.success === 'objetivo_actualizado') { %>
+                        Objetivo actualizado exitosamente.
+                    <% } else { %>
+                        <%= req.query.success %>
+                    <% } %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i><%= req.query.error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <!-- Filtros -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/dashboard/comisiones/objetivos-marca" class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Comercial</label>
+                                <select name="comercial_id" class="form-select">
+                                    <option value="">Todos</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>" <%= filters.comercial_id == (comercial.id || comercial.Id) ? 'selected' : '' %>>
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Marca</label>
+                                <select name="marca" class="form-select">
+                                    <option value="">Todas</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>" <%= filters.marca === marca ? 'selected' : '' %>><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Año</label>
+                                <input type="number" name="año" class="form-control" value="<%= filters.año || new Date().getFullYear() %>" min="2020" max="2030">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="">Todos</option>
+                                    <option value="true" <%= filters.activo === true ? 'selected' : '' %>>Activos</option>
+                                    <option value="false" <%= filters.activo === false ? 'selected' : '' %>>Inactivos</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-filter me-1"></i>Filtrar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Tabla de objetivos -->
+                <div class="card">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Comercial</th>
+                                        <th>Marca</th>
+                                        <th>Año</th>
+                                        <th class="text-end">Objetivo Anual</th>
+                                        <th class="text-end">Q1</th>
+                                        <th class="text-end">Q2</th>
+                                        <th class="text-end">Q3</th>
+                                        <th class="text-end">Q4</th>
+                                        <th class="text-center">Estado</th>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <th class="text-center">Acciones</th>
+                                        <% } %>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% if (objetivos && objetivos.length > 0) { %>
+                                    <% objetivos.forEach(objetivo => { %>
+                                    <tr>
+                                        <td><%= objetivo.comercial_nombre || '-' %></td>
+                                        <td><%= objetivo.marca || '-' %></td>
+                                        <td><%= objetivo.año %></td>
+                                        <td class="text-end fw-bold">€ <%= parseFloat(objetivo.objetivo_anual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end">€ <%= parseFloat(objetivo.objetivo_trimestral_q1 || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end">€ <%= parseFloat(objetivo.objetivo_trimestral_q2 || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end">€ <%= parseFloat(objetivo.objetivo_trimestral_q3 || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end">€ <%= parseFloat(objetivo.objetivo_trimestral_q4 || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-center">
+                                            <% if (objetivo.activo) { %>
+                                            <span class="badge bg-success">Activo</span>
+                                            <% } else { %>
+                                            <span class="badge bg-secondary">Inactivo</span>
+                                            <% } %>
+                                        </td>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <td class="text-center">
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarObjetivo(<%= objetivo.id %>)" title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger" onclick="eliminarObjetivo(<%= objetivo.id %>)" title="Eliminar">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                        <% } %>
+                                    </tr>
+                                    <% }) %>
+                                    <% } else { %>
+                                    <tr>
+                                        <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '10' : '9' %>" class="text-center text-muted py-4">
+                                            <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                            No hay objetivos registrados
+                                        </td>
+                                    </tr>
+                                    <% } %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal Nuevo Objetivo -->
+    <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+    <div class="modal fade" id="modalNuevoObjetivo" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nuevo Objetivo por Marca</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="POST" action="/dashboard/comisiones/objetivos-marca">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial <span class="text-danger">*</span></label>
+                                <select name="comercial_id" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>">
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marca <span class="text-danger">*</span></label>
+                                <select name="marca" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>"><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Año <span class="text-danger">*</span></label>
+                                <input type="number" name="año" class="form-control" value="<%= new Date().getFullYear() %>" min="2020" max="2030" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Objetivo Anual (€) <span class="text-danger">*</span></label>
+                                <input type="number" name="objetivo_anual" class="form-control" step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q1 (€)</label>
+                                <input type="number" name="objetivo_trimestral_q1" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q2 (€)</label>
+                                <input type="number" name="objetivo_trimestral_q2" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q3 (€)</label>
+                                <input type="number" name="objetivo_trimestral_q3" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q4 (€)</label>
+                                <input type="number" name="objetivo_trimestral_q4" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select name="activo" class="form-select">
+                                    <option value="true" selected>Activo</option>
+                                    <option value="false">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea name="observaciones" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Guardar Objetivo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Editar Objetivo -->
+    <div class="modal fade" id="modalEditarObjetivo" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Objetivo por Marca</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formEditarObjetivo">
+                    <div class="modal-body">
+                        <input type="hidden" id="editObjetivoId" name="id">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Comercial <span class="text-danger">*</span></label>
+                                <select id="editComercialId" name="comercial_id" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% comerciales.forEach(comercial => { %>
+                                    <option value="<%= comercial.id || comercial.Id %>">
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Marca <span class="text-danger">*</span></label>
+                                <select id="editMarca" name="marca" class="form-select" required>
+                                    <option value="">Seleccionar...</option>
+                                    <% marcas.forEach(marca => { %>
+                                    <option value="<%= marca %>"><%= marca %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Año <span class="text-danger">*</span></label>
+                                <input type="number" id="editAño" name="año" class="form-control" min="2020" max="2030" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Objetivo Anual (€) <span class="text-danger">*</span></label>
+                                <input type="number" id="editObjetivoAnual" name="objetivo_anual" class="form-control" step="0.01" min="0" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q1 (€)</label>
+                                <input type="number" id="editQ1" name="objetivo_trimestral_q1" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q2 (€)</label>
+                                <input type="number" id="editQ2" name="objetivo_trimestral_q2" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q3 (€)</label>
+                                <input type="number" id="editQ3" name="objetivo_trimestral_q3" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Q4 (€)</label>
+                                <input type="number" id="editQ4" name="objetivo_trimestral_q4" class="form-control" step="0.01" min="0" value="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Estado</label>
+                                <select id="editActivo" name="activo" class="form-select">
+                                    <option value="true">Activo</option>
+                                    <option value="false">Inactivo</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Observaciones</label>
+                                <textarea id="editObservaciones" name="observaciones" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Actualizar Objetivo
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <% } %>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Mantener submenú de comisiones abierto
+        document.addEventListener('DOMContentLoaded', function() {
+            const comisionesSubmenu = document.getElementById('comisionesSubmenu');
+            if (comisionesSubmenu) {
+                comisionesSubmenu.classList.add('show');
+            }
+        });
+
+        async function editarObjetivo(id) {
+            try {
+                const response = await fetch(`/dashboard/comisiones/objetivos-marca/${id}`, {
+                    credentials: 'include'
+                });
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const objetivo = data.data;
+                    document.getElementById('editObjetivoId').value = objetivo.id;
+                    document.getElementById('editComercialId').value = objetivo.comercial_id;
+                    document.getElementById('editMarca').value = objetivo.marca;
+                    document.getElementById('editAño').value = objetivo.año;
+                    document.getElementById('editObjetivoAnual').value = objetivo.objetivo_anual || 0;
+                    document.getElementById('editQ1').value = objetivo.objetivo_trimestral_q1 || 0;
+                    document.getElementById('editQ2').value = objetivo.objetivo_trimestral_q2 || 0;
+                    document.getElementById('editQ3').value = objetivo.objetivo_trimestral_q3 || 0;
+                    document.getElementById('editQ4').value = objetivo.objetivo_trimestral_q4 || 0;
+                    document.getElementById('editActivo').value = objetivo.activo ? 'true' : 'false';
+                    document.getElementById('editObservaciones').value = objetivo.observaciones || '';
+                    
+                    const modal = new bootstrap.Modal(document.getElementById('modalEditarObjetivo'));
+                    modal.show();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo cargar el objetivo'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al cargar el objetivo');
+            }
+        }
+
+        document.getElementById('formEditarObjetivo')?.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const objetivoData = {
+                id: formData.get('id'),
+                comercial_id: formData.get('comercial_id'),
+                marca: formData.get('marca'),
+                año: formData.get('año'),
+                objetivo_anual: formData.get('objetivo_anual'),
+                objetivo_trimestral_q1: formData.get('objetivo_trimestral_q1'),
+                objetivo_trimestral_q2: formData.get('objetivo_trimestral_q2'),
+                objetivo_trimestral_q3: formData.get('objetivo_trimestral_q3'),
+                objetivo_trimestral_q4: formData.get('objetivo_trimestral_q4'),
+                activo: formData.get('activo'),
+                observaciones: formData.get('observaciones')
+            };
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/objetivos-marca/${objetivoData.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(objetivoData)
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.href = '/dashboard/comisiones/objetivos-marca?success=objetivo_actualizado';
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo actualizar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al actualizar el objetivo');
+            }
+        });
+
+        async function eliminarObjetivo(id) {
+            if (!confirm('¿Estás seguro de eliminar este objetivo?')) return;
+
+            try {
+                const response = await fetch(`/dashboard/comisiones/objetivos-marca/${id}`, {
+                    method: 'DELETE',
+                    credentials: 'include'
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar'));
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al eliminar el objetivo');
+            }
+        }
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>

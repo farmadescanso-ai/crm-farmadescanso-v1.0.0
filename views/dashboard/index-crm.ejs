@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <!-- Main Content -->
+    <div class="container-fluid main-content-wrapper">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre || user.Nombre || user.name || 'Usuario' %></h6>
+                                <small class="text-muted"><%= user.zona || user.Zona || user.zone || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link active" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/articulos">
+                                    <i class="fas fa-boxes me-2"></i>Artículos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes">
+                                    <i class="fas fa-users me-2"></i>Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Comerciales
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/pedidos">
+                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'presupuestos-vs-ventas' ? 'active' : '' %>" href="/dashboard/presupuestos-vs-ventas">
+                                    <i class="fas fa-chart-line me-2"></i>Presupuestos vs Ventas
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
+                                    <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/agenda">
+                                    <i class="fas fa-calendar-check me-2"></i>Agenda
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/cooperativas">
+                                    <i class="fas fa-handshake me-2"></i>Cooperativas
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes-cooperativas">
+                                    <i class="fas fa-link me-2"></i>Clientes-Cooperativas
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/formas-pago">
+                                    <i class="fas fa-credit-card me-2"></i>Formas de Pago
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/especialidades">
+                                    <i class="fas fa-stethoscope me-2"></i>Especialidades
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Main Content Area -->
+            <div class="col-md-9 col-lg-10 main-content">
+                <div class="p-4">
+                    <% 
+                    // Solo mostrar el contenido del dashboard si currentPage no está definido o es el dashboard principal
+                    const isDashboardMain = typeof currentPage === 'undefined' || currentPage === null || currentPage === '';
+                    %>
+                    
+                    <% if (isDashboardMain) { %>
+                    <!-- Page Header -->
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h2 class="fw-bold mb-1 text-primary">Dashboard CRM</h2>
+                            <p class="text-muted mb-0">Bienvenido, <%= user.nombre || user.Nombre || user.name || 'Usuario' %></p>
+                        </div>
+                        <div class="d-flex gap-2 align-items-center">
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" type="button" id="yearDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-calendar-alt me-1"></i>
+                                    <span id="selectedYearText">Año: <span id="currentYearValue"><%= typeof selectedYear !== 'undefined' && selectedYear ? selectedYear : 'Todos' %></span></span>
+                                </button>
+                                <ul class="dropdown-menu" aria-labelledby="yearDropdown">
+                                    <li><a class="dropdown-item" href="#" data-year="todos" onclick="selectYear('todos'); return false;">Todos</a></li>
+                                    <% 
+                                    const currentYear = new Date().getFullYear();
+                                    for (let year = currentYear; year >= currentYear - 10; year--) { %>
+                                    <li><a class="dropdown-item" href="#" data-year="<%= year %>" onclick="selectYear('<%= year %>'); return false;"><%= year %></a></li>
+                                    <% } %>
+                                </ul>
+                            </div>
+                            <button class="btn btn-outline-primary" onclick="refreshData()">
+                                <i class="fas fa-sync-alt me-1"></i>Actualizar
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <!-- Error Alert -->
+                    <% if (error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <%= error %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+                    
+                    <!-- Stats Cards -->
+                    <div class="row mb-4">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="stat-card bg-primary text-white">
+                                <div class="stat-icon">
+                                    <i class="fas fa-euro-sign"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 class="stat-value">€ <%= formatearMonedaES(estadisticas.totalVentas || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
+                                    <p class="stat-label">Total Ventas</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="stat-card bg-success text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;">
+                                <div class="stat-icon">
+                                    <i class="fas fa-euro-sign"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 class="stat-value">€ <%= formatearMonedaES(estadisticas.totalVentasEsteMes || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
+                                    <p class="stat-label">Importe Este Mes</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <div class="stat-card bg-info text-white">
+                                <div class="stat-icon">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </div>
+                                <div class="stat-content">
+                                    <h3 class="stat-value"><%= formatearNumeroES(estadisticas.ventasEsteMes || 0) %></h3>
+                                    <p class="stat-label" id="labelPedidosMes"><%= typeof selectedYear !== 'undefined' && selectedYear && selectedYear !== 'todos' ? 'Pedidos ' + selectedYear : 'Pedidos Este Mes' %></p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="/dashboard/clientes" class="stat-card-link">
+                                <div class="stat-card bg-warning text-white">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-users"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 class="stat-value" id="totalClientesValue">
+                                            <% 
+                                            const totalClientesValue = typeof totalClientes !== 'undefined' && totalClientes !== null 
+                                                ? totalClientes 
+                                                : (estadisticas && estadisticas.totalClientes !== undefined && estadisticas.totalClientes !== null 
+                                                    ? estadisticas.totalClientes 
+                                                    : 0);
+                                            %>
+                                            <%= formatearNumeroES(totalClientesValue) %>
+                                        </h3>
+                                        <p class="stat-label">Clientes</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row mb-4">
+                        <div class="col-lg-3 col-md-6 mb-3">
+                            <a href="/dashboard/agenda" class="stat-card-link">
+                                <div class="stat-card bg-info text-white">
+                                    <div class="stat-icon">
+                                        <i class="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div class="stat-content">
+                                        <h3 class="stat-value"><%= formatearNumeroES(estadisticas.totalVisitas || 0) %></h3>
+                                        <p class="stat-label">Citas</p>
+                                    </div>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Data -->
+                    <div class="row">
+                        <div class="col-lg-8 mb-4">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-shopping-cart me-2"></i>Últimos Pedidos
+                                    </h5>
+                                    <div class="btn-group">
+                                        <a href="/dashboard/pedidos" class="btn btn-sm btn-outline-primary">
+                                            Ver Todos
+                                        </a>
+                                        <a href="/dashboard/pedidos/nuevo" class="btn btn-sm btn-success">
+                                            <i class="fas fa-plus me-1"></i>Nuevo Pedido
+                                        </a>
+                                    </div>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-hover mb-0">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Número</th>
+                                                    <th>Cliente</th>
+                                                    <th>Fecha</th>
+                                                    <th>Estado</th>
+                                                    <th>Total</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <% if (ventas && ventas.length > 0) { %>
+                                                    <% ventas.forEach(pedido => { %>
+                                                        <tr>
+                                                            <td><%= pedido.numero || pedido.id || pedido.Id %></td>
+                                                            <td><%= pedido.cliente || pedido.cliente_nombre || pedido.Cliente_Nombre || 'Cliente' %></td>
+                                                            <td>
+                                                                <% if (pedido.fecha) { %>
+                                                                    <%= new Date(pedido.fecha).toLocaleDateString('es-ES') %>
+                                                                <% } else { %>
+                                                                    —
+                                                                <% } %>
+                                                            </td>
+                                                            <td>
+                                                                <% 
+                                                                // Función para obtener la clase CSS según el estado del pedido
+                                                                function getEstadoClass(estado) {
+                                                                    if (!estado) return 'bg-secondary';
+                                                                    const estadoLower = estado.toLowerCase();
+                                                                    
+                                                                    // Estados específicos con colores definidos
+                                                                    if (estadoLower === 'pendiente' || estadoLower.includes('pend')) {
+                                                                        return 'bg-warning text-dark'; // Amarillo
+                                                                    } else if (estadoLower === 'tramitado' || estadoLower.includes('tramit')) {
+                                                                        return 'bg-info text-white'; // Azul claro
+                                                                    } else if (estadoLower === 'enviado' || estadoLower.includes('envi')) {
+                                                                        return 'bg-primary text-white'; // Azul
+                                                                    } else if (estadoLower === 'entregado' || estadoLower.includes('entreg')) {
+                                                                        return 'bg-success text-white'; // Verde
+                                                                    } else if (estadoLower === 'cancelado' || estadoLower === 'anulado' || estadoLower.includes('cancel') || estadoLower.includes('anul')) {
+                                                                        return 'bg-secondary text-white'; // Gris
+                                                                    } else if (estadoLower === 'cerrado' || estadoLower.includes('cerr')) {
+                                                                        return 'bg-dark text-white'; // Gris oscuro
+                                                                    } else {
+                                                                        // Por defecto, usar un color neutro
+                                                                        return 'bg-secondary text-white';
+                                                                    }
+                                                                }
+                                                                const estadoPedido = pedido.estado || pedido.Estado || 'Pendiente';
+                                                                const estadoClass = getEstadoClass(estadoPedido);
+                                                                %>
+                                                                <span class="badge <%= estadoClass %>"><%= estadoPedido %></span>
+                                                            </td>
+                                                            <td class="fw-bold">€ <%= pedido.totalFormateado || formatearMonedaES(pedido.total || pedido.Total || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                                                        </tr>
+                                                    <% }) %>
+                                                <% } else { %>
+                                                    <tr>
+                                                        <td colspan="5" class="text-center text-muted py-4">
+                                                            <i class="fas fa-inbox me-2"></i>No hay pedidos registrados
+                                                        </td>
+                                                    </tr>
+                                                <% } %>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Actions -->
+                        <div class="col-lg-4 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">
+                                        <i class="fas fa-bolt me-2"></i>Acciones Rápidas
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <a href="/dashboard/articulos" class="btn btn-primary">
+                                            <i class="fas fa-boxes me-2"></i>Ver Artículos
+                                        </a>
+                                        <a href="/dashboard/clientes" class="btn btn-outline-success">
+                                            <i class="fas fa-users me-2"></i>Mis Clientes
+                                        </a>
+                                        <a href="/dashboard/pedidos" class="btn btn-outline-warning">
+                                            <i class="fas fa-shopping-cart me-2"></i>Ver Pedidos
+                                        </a>
+                                        <a href="/dashboard/pedidos/nuevo" class="btn btn-success">
+                                            <i class="fas fa-plus me-2"></i>Nuevo Pedido
+                                        </a>
+                                        <a href="/dashboard/agenda" class="btn btn-outline-info">
+                                            <i class="fas fa-calendar-check me-2"></i>Mi Agenda
+                                        </a>
+                                        <a href="/contact" class="btn btn-outline-secondary">
+                                            <i class="fas fa-headset me-2"></i>Soporte
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <% } else { %>
+                    <!-- Error Alert (solo para páginas que no son el dashboard principal) -->
+                    <% if (typeof error !== 'undefined' && error) { %>
+                        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <%= error %>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    <% } %>
+                    <!-- Contenido de la página (se renderiza aquí si se pasa pageContent) -->
+                    <% if (typeof pageContent !== 'undefined' && pageContent) { %>
+                        <%- pageContent %>
+                    <% } %>
+                    <% } %>
+                    <!-- Si currentPage está definido, el contenido de la página se renderiza después del include -->
+                <% if (isDashboardMain) { %>
+                </div>
+            </div>
+        </div>
+    </div>
+                <% } %>
+    
+    <!-- Scripts -->
+    <script>
+        // Manejar errores de módulos no cargados correctamente (probablemente de extensiones del navegador)
+        window.addEventListener('error', function(e) {
+            // Ignorar errores de import de extensiones del navegador
+            if (e.message && (e.message.includes('Cannot use import statement') || 
+                e.message.includes('Unexpected token') && e.filename && e.filename.includes('extension'))) {
+                // Este error probablemente viene de una extensión del navegador
+                // No es un error crítico de nuestra aplicación
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        }, true);
+        
+        // También capturar errores no capturados de promesas
+        window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.message && e.reason.message.includes('Cannot use import statement')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
+    <script src="/js/dashboard.js"></script>
+    <%- include('../partials/navbar-scripts') %>
+    <script>
+        // Manejo del logo
+        document.addEventListener('DOMContentLoaded', function() {
+            const logoImg = document.getElementById('logo-img');
+            const logoIcon = document.getElementById('logo-icon');
+            if (logoImg && logoIcon) {
+                logoImg.addEventListener('load', function() {
+                    this.style.display = 'inline';
+                    logoIcon.style.display = 'none';
+                });
+                logoImg.addEventListener('error', function() {
+                    this.style.display = 'none';
+                    logoIcon.style.display = 'inline';
+                });
+            }
+            
+            // Manejo de dropdowns anidados
+            const dropendItems = document.querySelectorAll('.dropend');
+            dropendItems.forEach(item => {
+                const toggle = item.querySelector('.dropdown-toggle');
+                if (toggle) {
+                    toggle.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        // Cerrar otros submenús abiertos
+                        dropendItems.forEach(otherItem => {
+                            if (otherItem !== item) {
+                                const otherMenu = otherItem.querySelector('.dropdown-menu');
+                                if (otherMenu) {
+                                    otherMenu.classList.remove('show');
+                                }
+                            }
+                        });
+                        // Toggle del submenú actual
+                        const menu = item.querySelector('.dropdown-menu');
+                        if (menu) {
+                            menu.classList.toggle('show');
+                        }
+                    });
+                }
+            });
+            
+            // Cerrar submenús al hacer clic fuera
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropend')) {
+                    document.querySelectorAll('.dropend .dropdown-menu').forEach(menu => {
+                        menu.classList.remove('show');
+                    });
+                }
+            });
+            
+            // Función para actualizar el contador de clientes
+            async function actualizarContadorClientes() {
+                try {
+                    const totalElement = document.getElementById('totalClientesValue');
+                    if (!totalElement) return;
+                    
+                    // Guardar el valor actual para no perderlo si falla la actualización
+                    const valorActual = totalElement.textContent.trim();
+                    
+                    const response = await fetch('/api/clientes/count', {
+                        method: 'GET',
+                        credentials: 'include', // Incluir cookies para autenticación
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    if (!response.ok) {
+                        // Si hay error, NO sobrescribir el valor existente
+                        // Solo actualizar si el elemento está vacío o es 0
+                        if (!valorActual || valorActual === '0' || valorActual === '') {
+                            totalElement.textContent = '0';
+                        }
+                        return;
+                    }
+                    
+                    const data = await response.json();
+                    if (data.count !== undefined && data.count !== null) {
+                        // Formatear número con punto como separador de miles
+                        const formatearNumero = (num) => {
+                            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                        };
+                        totalElement.textContent = formatearNumero(data.count);
+                    }
+                } catch (error) {
+                    // Silenciar errores de red - NO sobrescribir el valor existente
+                    console.debug('Error actualizando contador (no crítico):', error);
+                }
+            }
+            
+            // Actualizar contador al cargar (después de un pequeño delay para asegurar que el DOM está listo)
+            setTimeout(actualizarContadorClientes, 100);
+            
+            
+            // Actualizar contador cada 30 segundos
+            setInterval(actualizarContadorClientes, 30000);
+            
+            // Función para seleccionar el año
+            window.selectYear = function(year) {
+                const currentYearValue = document.getElementById('currentYearValue');
+                if (currentYearValue) {
+                    currentYearValue.textContent = year === 'todos' ? 'Todos' : year;
+                }
+                
+                // Actualizar etiquetas dinámicamente
+                const labelImporteMes = document.getElementById('labelImporteMes');
+                const labelPedidosMes = document.getElementById('labelPedidosMes');
+                if (labelImporteMes) {
+                    labelImporteMes.textContent = year === 'todos' ? 'Importe Este Mes' : 'Importe ' + year;
+                }
+                if (labelPedidosMes) {
+                    labelPedidosMes.textContent = year === 'todos' ? 'Pedidos Este Mes' : 'Pedidos ' + year;
+                }
+                
+                // Guardar el año seleccionado en localStorage
+                localStorage.setItem('dashboardSelectedYear', year);
+                
+                // Actualizar la URL y recargar
+                const url = new URL(window.location.href);
+                if (year === 'todos') {
+                    url.searchParams.delete('year');
+                } else {
+                    url.searchParams.set('year', year);
+                }
+                window.location.href = url.toString();
+            };
+            
+            // Cargar el año seleccionado al cargar la página
+            const savedYear = localStorage.getItem('dashboardSelectedYear');
+            const urlParams = new URLSearchParams(window.location.search);
+            const yearFromUrl = urlParams.get('year');
+            const yearToUse = yearFromUrl || savedYear || 'todos';
+            
+            if (yearToUse && yearToUse !== 'todos') {
+                const currentYearValue = document.getElementById('currentYearValue');
+                if (currentYearValue) {
+                    currentYearValue.textContent = yearToUse;
+                }
+            }
+            
+            // Función refreshData para actualizar todos los datos
+            window.refreshData = function() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const year = urlParams.get('year') || localStorage.getItem('dashboardSelectedYear') || 'todos';
+                
+                const url = new URL(window.location.href);
+                if (year && year !== 'todos') {
+                    url.searchParams.set('year', year);
+                } else {
+                    url.searchParams.delete('year');
+                }
+                window.location.href = url.toString();
+            };
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+<% if (isDashboardMain) { %>
+</body>
+</html>
+<% } %>
+
+

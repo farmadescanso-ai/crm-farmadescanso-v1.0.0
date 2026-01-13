@@ -1,0 +1,104 @@
+/* Variables de colores de Farmadescaso - Basado en color principal #0b891b */
+
+:root {
+    /* Colores primarios - Verde Farmadescaso */
+    --farmadescaso-primary: #0b891b;        /* Verde principal del logo */
+    --farmadescaso-primary-dark: #096516;   /* Verde oscuro */
+    --farmadescaso-primary-light: #0fa529;  /* Verde claro */
+    --farmadescaso-primary-lighter: #11c02f; /* Verde muy claro */
+    
+    /* Colores secundarios basados en el verde */
+    --farmadescaso-secondary: #6b7280;       /* Gris neutro */
+    --farmadescaso-success: #0b891b;         /* Verde (mismo que primary) */
+    --farmadescaso-danger: #dc2626;          /* Rojo */
+    --farmadescaso-warning: #f59e0b;         /* Amarillo ámbar */
+    --farmadescaso-info: #0891b2;            /* Cian */
+    
+    /* Colores de fondo */
+    --farmadescaso-bg-light: #f0fdf4;       /* Verde muy claro para fondos */
+    --farmadescaso-bg-white: #ffffff;
+    --farmadescaso-bg-dark: #064e12;        /* Verde muy oscuro */
+    
+    /* Colores de texto */
+    --farmadescaso-text-primary: #064e12;   /* Verde muy oscuro para texto */
+    --farmadescaso-text-secondary: #6b7280;
+    --farmadescaso-text-light: #ffffff;
+    
+    /* Gradientes */
+    --farmadescaso-gradient: linear-gradient(135deg, var(--farmadescaso-primary) 0%, var(--farmadescaso-primary-dark) 100%);
+    --farmadescaso-gradient-light: linear-gradient(135deg, var(--farmadescaso-primary-light) 0%, var(--farmadescaso-primary) 100%);
+    --farmadescaso-gradient-vertical: linear-gradient(180deg, var(--farmadescaso-primary) 0%, var(--farmadescaso-primary-dark) 100%);
+    
+    /* Sombras con tinte verde */
+    --farmadescaso-shadow: 0 4px 6px rgba(11, 137, 27, 0.15);
+    --farmadescaso-shadow-hover: 0 6px 12px rgba(11, 137, 27, 0.25);
+    --farmadescaso-shadow-lg: 0 10px 25px rgba(11, 137, 27, 0.2);
+}
+
+/* Aplicación de colores a Bootstrap y elementos globales */
+.bg-primary {
+    background-color: var(--farmadescaso-primary) !important;
+}
+
+.bg-primary-dark {
+    background-color: var(--farmadescaso-primary-dark) !important;
+}
+
+.bg-primary-light {
+    background-color: var(--farmadescaso-bg-light) !important;
+}
+
+.btn-primary {
+    background-color: var(--farmadescaso-primary);
+    border-color: var(--farmadescaso-primary);
+}
+
+.btn-primary:hover {
+    background-color: var(--farmadescaso-primary-dark);
+    border-color: var(--farmadescaso-primary-dark);
+}
+
+.btn-primary:focus {
+    background-color: var(--farmadescaso-primary-dark);
+    border-color: var(--farmadescaso-primary-dark);
+    box-shadow: 0 0 0 0.2rem rgba(11, 137, 27, 0.5);
+}
+
+.text-primary {
+    color: var(--farmadescaso-primary) !important;
+}
+
+.text-primary-dark {
+    color: var(--farmadescaso-primary-dark) !important;
+}
+
+/* Navbar personalizado */
+.navbar-brand {
+    color: var(--farmadescaso-primary) !important;
+}
+
+.navbar-brand:hover {
+    color: var(--farmadescaso-primary-dark) !important;
+}
+
+/* Links */
+a {
+    color: var(--farmadescaso-primary);
+}
+
+a:hover {
+    color: var(--farmadescaso-primary-dark);
+}
+
+/* Border colors */
+.border-primary {
+    border-color: var(--farmadescaso-primary) !important;
+}
+
+/* Instrucciones:
+ * Para adaptar los colores a la paleta del logo:
+ * 1. Identifica los colores principales del logo (hex, rgb, o nombre)
+ * 2. Reemplaza los valores de --farmadescaso-primary y variantes arriba
+ * 3. Los colores se aplicarán automáticamente en toda la aplicación
+ */
+

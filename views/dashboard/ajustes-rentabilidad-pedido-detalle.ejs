@@ -1,0 +1,178 @@
+<%- include('index-crm', { title: title, user: user, currentPage: currentPage }) %>
+
+<div class="container-fluid mt-4" style="margin-left: 0; padding-left: 15px; padding-right: 15px;">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-file-invoice me-2"></i>Detalle de Rentabilidad - Pedido <%= pedido.NumPedido || pedido.id %>
+                </h2>
+                <a href="/dashboard/ajustes/rentabilidad-pedidos" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+
+            <!-- Información del pedido -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información del Pedido</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <strong>Nº Pedido:</strong><br>
+                            <%= pedido.NumPedido || '-' %>
+                        </div>
+                        <div class="col-md-3">
+                            <% 
+                            // Función helper para formatear fechas en DD/MM/YYYY
+                            function formatearFechaDDMMYYYY(fecha) {
+                                if (!fecha) return '—';
+                                try {
+                                    const date = fecha instanceof Date ? fecha : new Date(fecha);
+                                    if (isNaN(date.getTime())) return '—';
+                                    const dia = String(date.getDate()).padStart(2, '0');
+                                    const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                    const año = date.getFullYear();
+                                    return `${dia}/${mes}/${año}`;
+                                } catch (e) {
+                                    return '—';
+                                }
+                            }
+                            %>
+                            <strong>Fecha:</strong><br>
+                            <%= formatearFechaDDMMYYYY(pedido.FechaPedido) %>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Cliente:</strong><br>
+                            <%= pedido.cliente_nombre || 'Sin cliente' %>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Comercial:</strong><br>
+                            <%= pedido.comercial_nombre || 'Sin comercial' %>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-3">
+                            <strong>Tipo:</strong><br>
+                            <span class="badge bg-secondary"><%= pedido.tipo_pedido || 'N/A' %></span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Estado:</strong><br>
+                            <span class="badge bg-info"><%= pedido.EstadoPedido || 'N/A' %></span>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Total Pedido:</strong><br>
+                            € <%= parseFloat(pedido.TotalPedido || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                        </div>
+                        <div class="col-md-3">
+                            <strong>Base Imponible:</strong><br>
+                            € <%= parseFloat(pedido.BaseImponible || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resumen de rentabilidad -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Total Ventas</h6>
+                            <h4 class="mb-0">€ <%= parseFloat(pedido.total_ventas || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Total Costo</h6>
+                            <h4 class="mb-0 text-danger">€ <%= parseFloat(pedido.total_costo || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Comisiones</h6>
+                            <h4 class="mb-0 text-info">€ <%= parseFloat(pedido.total_comisiones || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h6 class="text-muted">Margen Neto</h6>
+                            <h4 class="mb-0 <%= parseFloat(pedido.margen_neto || 0) >= 0 ? 'text-success' : 'text-danger' %>">
+                                <%= parseFloat(pedido.margen_neto || 0) >= 0 ? '+' : '' %>€ <%= parseFloat(pedido.margen_neto || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                            </h4>
+                            <small class="text-muted"><%= parseFloat(pedido.porcentaje_rentabilidad || 0).toFixed(2) %>%</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalle de líneas -->
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-list me-2"></i>Detalle por Línea</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Artículo</th>
+                                    <th class="text-center">Cantidad</th>
+                                    <th class="text-end">Precio Venta</th>
+                                    <th class="text-end">Subtotal</th>
+                                    <th class="text-end">Base Imponible</th>
+                                    <th class="text-end">PCP</th>
+                                    <th class="text-end">Costo Total</th>
+                                    <th class="text-end">% Comisión</th>
+                                    <th class="text-end">Comisión</th>
+                                    <th class="text-end">Margen Bruto</th>
+                                    <th class="text-end">Margen Neto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (pedido.lineas && pedido.lineas.length > 0) { %>
+                                <% pedido.lineas.forEach(linea => { %>
+                                <% 
+                                const margenBruto = parseFloat(linea.margen_bruto || 0);
+                                const margenNeto = parseFloat(linea.margen_neto || 0);
+                                %>
+                                <tr>
+                                    <td><%= linea.articulo_nombre || 'Artículo desconocido' %></td>
+                                    <td class="text-center"><%= linea.cantidad || 0 %></td>
+                                    <td class="text-end">€ <%= parseFloat(linea.precio_venta || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end">€ <%= parseFloat(linea.subtotal || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end">€ <%= parseFloat(linea.base_imponible || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end">€ <%= parseFloat(linea.pcp || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end text-danger">€ <%= parseFloat(linea.costo_total || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end text-info"><%= parseFloat(linea.porcentaje_comision || 0).toFixed(2) %>%</td>
+                                    <td class="text-end text-info">€ <%= parseFloat(linea.comision || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end <%= margenBruto >= 0 ? 'text-success' : 'text-danger' %>">
+                                        <%= margenBruto >= 0 ? '+' : '' %>€ <%= margenBruto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                                    </td>
+                                    <td class="text-end <%= margenNeto >= 0 ? 'text-success' : 'text-danger' %> fw-bold">
+                                        <%= margenNeto >= 0 ? '+' : '' %>€ <%= margenNeto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                                    </td>
+                                </tr>
+                                <% }) %>
+                                <% } else { %>
+                                <tr>
+                                    <td colspan="11" class="text-center text-muted py-4">
+                                        No hay líneas para este pedido
+                                    </td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

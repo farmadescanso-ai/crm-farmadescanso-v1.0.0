@@ -1,0 +1,115 @@
+// Script para crear presupuestos para Jesús Francisco Ros Medina
+// 50 unidades solo de artículos de la marca IALOZON para 2025
+
+const crm = require('../config/mysql-crm');
+const comisionesCRM = require('../config/mysql-crm-comisiones');
+
+async function crearPresupuestosJesusIalozon() {
+  try {
+    await crm.connect();
+    await comisionesCRM.connect();
+
+    console.log('🚀 Creando presupuestos para Jesús Francisco Ros Medina (solo IALOZON)...\n');
+
+    // 1. Obtener el comercial Jesús Francisco Ros Medina
+    const comerciales = await crm.query(
+      'SELECT id, Nombre FROM comerciales WHERE Nombre LIKE ? OR Nombre LIKE ?',
+      ['%Jesús%Francisco%Ros%Medina%', '%Jesús%Ros%Medina%']
+    );
+
+    if (comerciales.length === 0) {
+      console.log('❌ No se encontró el comercial Jesús Francisco Ros Medina');
+      return;
+    }
+
+    const comercial = comerciales[0];
+    console.log(`✅ Comercial encontrado: ${comercial.Nombre} (ID: ${comercial.id})\n`);
+
+    // 2. Obtener solo artículos de la marca IALOZON
+    const articulos = await crm.query(
+      'SELECT id, Nombre, PVL, Marca FROM articulos WHERE Marca LIKE ? ORDER BY id',
+      ['%IALOZON%']
+    );
+
+    if (articulos.length === 0) {
+      console.log('❌ No se encontraron artículos de la marca IALOZON');
+      return;
+    }
+
+    console.log(`📦 Artículos IALOZON encontrados: ${articulos.length}\n`);
+
+    // 3. Crear presupuestos
+    const cantidadPresupuestada = 50;
+    const año = 2025;
+    let presupuestosCreados = 0;
+    let presupuestosActualizados = 0;
+    let errores = 0;
+
+    console.log('📝 Creando presupuestos...\n');
+
+    for (const articulo of articulos) {
+      try {
+        const importePresupuestado = parseFloat(articulo.PVL || 0) * cantidadPresupuestada;
+
+        // Verificar si ya existe un presupuesto para este comercial, artículo y año
+        const presupuestosExistentes = await comisionesCRM.query(
+          'SELECT id FROM presupuestos WHERE comercial_id = ? AND articulo_id = ? AND año = ?',
+          [comercial.id, articulo.id, año]
+        );
+
+        if (presupuestosExistentes.length > 0) {
+          // Actualizar presupuesto existente
+          const presupuestoId = presupuestosExistentes[0].id;
+          await comisionesCRM.updatePresupuesto(presupuestoId, {
+            cantidad_presupuestada: cantidadPresupuestada,
+            importe_presupuestado: importePresupuestado,
+            activo: true
+          });
+          presupuestosActualizados++;
+          console.log(`  ✅ Actualizado: ${articulo.Nombre} (ID: ${articulo.id}) - ${cantidadPresupuestada} unidades × €${parseFloat(articulo.PVL || 0).toFixed(2)} = €${importePresupuestado.toFixed(2)}`);
+        } else {
+          // Crear nuevo presupuesto
+          const presupuestoData = {
+            comercial_id: comercial.id,
+            articulo_id: articulo.id,
+            año: año,
+            cantidad_presupuestada: cantidadPresupuestada,
+            importe_presupuestado: importePresupuestado,
+            activo: true,
+            observaciones: `Presupuesto creado para 2025: ${cantidadPresupuestada} unidades de marca IALOZON`
+          };
+
+          await comisionesCRM.createPresupuesto(presupuestoData);
+          presupuestosCreados++;
+          console.log(`  ✅ Creado: ${articulo.Nombre} (ID: ${articulo.id}) - ${cantidadPresupuestada} unidades × €${parseFloat(articulo.PVL || 0).toFixed(2)} = €${importePresupuestado.toFixed(2)}`);
+        }
+      } catch (error) {
+        errores++;
+        console.error(`  ❌ Error con artículo ${articulo.Nombre} (ID: ${articulo.id}):`, error.message);
+      }
+    }
+
+    console.log('\n✅ Proceso completado');
+    console.log('════════════════════════════════════════════════════════════');
+    console.log(`📊 Resumen:`);
+    console.log(`   - Comercial: ${comercial.Nombre}`);
+    console.log(`   - Año: ${año}`);
+    console.log(`   - Marca: IALOZON`);
+    console.log(`   - Cantidad por artículo: ${cantidadPresupuestada} unidades`);
+    console.log(`   - Presupuestos creados: ${presupuestosCreados}`);
+    console.log(`   - Presupuestos actualizados: ${presupuestosActualizados}`);
+    console.log(`   - Errores: ${errores}`);
+    console.log(`   - Total artículos procesados: ${articulos.length}`);
+
+  } catch (error) {
+    console.error('❌ Error general:', error);
+    console.error('Stack:', error.stack);
+  } finally {
+    await crm.disconnect();
+    console.log('🔌 Desconectado de MySQL');
+    process.exit(0);
+  }
+}
+
+crearPresupuestosJesusIalozon();
+

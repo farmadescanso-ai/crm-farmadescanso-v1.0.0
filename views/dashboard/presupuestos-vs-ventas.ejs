@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+            <div class="sidebar-content">
+                <div class="user-info p-3 border-bottom">
+                    <div class="d-flex align-items-center">
+                        <div class="user-avatar me-3">
+                            <i class="fas fa-user-circle text-primary"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                            <small class="text-muted"><%= user.zona || '' %></small>
+                        </div>
+                    </div>
+                </div>
+                <nav class="sidebar-nav p-3">
+                    <ul class="nav flex-column">
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard/articulos">
+                                <i class="fas fa-boxes me-2"></i>Artículos
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard/clientes">
+                                <i class="fas fa-users me-2"></i>Clientes
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard/comerciales">
+                                <i class="fas fa-user-tie me-2"></i>Comerciales
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard/pedidos">
+                                <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link active" href="/dashboard/presupuestos-vs-ventas">
+                                <i class="fas fa-chart-line me-2"></i>Presupuestos vs Ventas
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard/comisiones/comisiones">
+                                <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
+                            </a>
+                        </li>
+                        <li class="nav-item mb-2">
+                            <a class="nav-link" href="/dashboard/agenda">
+                                <i class="fas fa-calendar-check me-2"></i>Agenda
+                            </a>
+                        </li>
+                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                        <li class="nav-item mb-2 mt-2">
+                            <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#ajustesSubmenu" aria-expanded="false" aria-controls="ajustesSubmenu" id="ajustesMenuToggle">
+                                <i class="fas fa-cog me-2"></i>Ajustes
+                                <i class="fas fa-chevron-down ms-auto float-end" id="ajustesChevron" style="font-size: 0.75rem; transition: transform 0.3s;"></i>
+                            </a>
+                            <ul class="nav flex-column collapse" id="ajustesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link" href="/dashboard/ajustes/webhook-n8n">
+                                        <i class="fas fa-plug me-2"></i>Webhook N8N
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link" href="/dashboard/ajustes/prestashop">
+                                        <i class="fas fa-shopping-bag me-2"></i>Prestashop
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link" href="/dashboard/ajustes/api-keys">
+                                        <i class="fas fa-key me-2"></i>API Keys
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link" href="/dashboard/ajustes/google-oauth">
+                                        <i class="fab fa-google me-2"></i>Google OAuth2
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link" href="/api-docs" target="_blank">
+                                        <i class="fas fa-book me-2"></i>Documentación API
+                                        <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
+                                    </a>
+                                </li>
+                                <li class="nav-item mb-1">
+                                    <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#comisionesConfigSubmenu" aria-expanded="false" aria-controls="comisionesConfigSubmenu" id="comisionesConfigMenuToggle">
+                                        <i class="fas fa-euro-sign me-2"></i>Configuración Comisiones
+                                        <i class="fas fa-chevron-down ms-auto float-end" id="comisionesConfigChevron" style="font-size: 0.7rem; transition: transform 0.3s;"></i>
+                                    </a>
+                                    <ul class="nav flex-column collapse" id="comisionesConfigSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                        <li class="nav-item mb-1">
+                                            <a class="nav-link" href="/dashboard/comisiones/fijos-mensuales">
+                                                <i class="fas fa-money-bill me-2"></i>Fijos Mensuales
+                                            </a>
+                                        </li>
+                                        <li class="nav-item mb-1">
+                                            <a class="nav-link" href="/dashboard/comisiones/presupuestos">
+                                                <i class="fas fa-chart-line me-2"></i>Presupuestos
+                                            </a>
+                                        </li>
+                                        <li class="nav-item mb-1">
+                                            <a class="nav-link" href="/dashboard/comisiones/rapeles">
+                                                <i class="fas fa-trophy me-2"></i>Rapeles
+                                            </a>
+                                        </li>
+                                        <li class="nav-item mb-1">
+                                            <a class="nav-link" href="/dashboard/comisiones/objetivos-marca">
+                                                <i class="fas fa-bullseye me-2"></i>Objetivos por Marca
+                                            </a>
+                                        </li>
+                                        <li class="nav-item mb-1">
+                                            <a class="nav-link" href="/dashboard/comisiones/condiciones-especiales">
+                                                <i class="fas fa-star me-2"></i>Condiciones Especiales
+                                            </a>
+                                        </li>
+                                        <li class="nav-item mb-1">
+                                            <a class="nav-link" href="/dashboard/comisiones/rapeles-configuracion">
+                                                <i class="fas fa-cog me-2"></i>Config. Rapeles
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
+                            </ul>
+                        </li>
+                        <% } %>
+                    </ul>
+                </nav>
+            </div>
+        </div>
+
+        <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+            <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <h1 class="h2">
+                    <i class="fas fa-chart-line me-2 text-primary"></i>Presupuestos vs Ventas
+                </h1>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" action="/dashboard/presupuestos-vs-ventas" class="row g-3">
+                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                        <div class="col-md-3">
+                            <label class="form-label">Comercial</label>
+                            <select name="comercial" class="form-select">
+                                <option value="">Todos</option>
+                                <% if (comerciales && comerciales.length > 0) { %>
+                                <% comerciales.forEach(comercial => { %>
+                                <option value="<%= comercial.id || comercial.Id %>" <%= (comercialFiltro && (comercial.id || comercial.Id) == comercialFiltro) ? 'selected' : '' %>>
+                                    <%= comercial.Nombre || comercial.nombre %>
+                                </option>
+                                <% }) %>
+                                <% } %>
+                            </select>
+                        </div>
+                        <% } else { %>
+                        <input type="hidden" name="comercial" value="<%= comercialFiltro || '' %>">
+                        <% } %>
+                        <div class="col-md-2">
+                            <label class="form-label">Mes</label>
+                            <select name="mes" class="form-select">
+                                <option value="">Todos</option>
+                                <% const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']; %>
+                                <% for (let i = 1; i <= 12; i++) { %>
+                                <option value="<%= i %>" <%= (typeof mesFiltro !== 'undefined' && mesFiltro == i) ? 'selected' : '' %>>
+                                    <%= meses[i-1] %>
+                                </option>
+                                <% } %>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">Año</label>
+                            <input type="number" name="año" class="form-control" value="<%= año %>" min="2020" max="2030">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label">Vista</label>
+                            <select name="totales" class="form-select">
+                                <option value="">Detallada (mes a mes)</option>
+                                <option value="true" <%= mostrarTotales ? 'selected' : '' %>>Solo Totales</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-filter me-1"></i>Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <% if (datos && datos.length > 0) { %>
+            <% datos.forEach((item, index) => { %>
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-user-tie me-2"></i><%= item.comercial_nombre %>
+                        </h5>
+                        <% if (typeof mesFiltro !== 'undefined' && mesFiltro) { %>
+                        <span class="badge bg-light text-dark">
+                            <%= ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][mesFiltro - 1] %> <%= año %>
+                        </span>
+                        <% } else if (mostrarTotales) { %>
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-chart-pie me-1"></i>Vista de Totales
+                        </span>
+                        <% } %>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Información del comercial (visible siempre) -->
+                    <div class="alert alert-light mb-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-user-tie me-2 text-primary"></i>Comercial:</strong> 
+                                <span class="ms-2"><%= item.comercial_nombre %></span>
+                            </div>
+                            <div class="col-md-6">
+                                <strong><i class="fas fa-calendar me-2 text-primary"></i>Período:</strong> 
+                                <span class="ms-2">
+                                    <% if (typeof mesFiltro !== 'undefined' && mesFiltro) { %>
+                                    <%= ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][mesFiltro - 1] %> <%= año %>
+                                    <% } else { %>
+                                    Año <%= año %>
+                                    <% } %>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Resumen -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card border-info">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">
+                                        <% if (mostrarTotales || item.meses_filtrados) { %>
+                                        Presupuesto Filtrado
+                                        <% } else { %>
+                                        Presupuesto Anual
+                                        <% } %>
+                                    </h6>
+                                    <h4 class="text-info mb-0">
+                                        <% 
+                                        const presupuestoValor = parseFloat((mostrarTotales || item.meses_filtrados) ? (item.presupuesto_filtrado || 0) : (item.presupuesto_anual || 0));
+                                        const presupuestoStr = presupuestoValor.toFixed(2);
+                                        const partes = presupuestoStr.split('.');
+                                        const parteEntera = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                        const presupuestoFormateado = parteEntera + ',' + partes[1];
+                                        %>
+                                        € <%= presupuestoFormateado %>
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card border-success">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">
+                                        <% if (mostrarTotales || item.meses_filtrados) { %>
+                                        Ventas Filtradas
+                                        <% } else { %>
+                                        Ventas Anuales
+                                        <% } %>
+                                    </h6>
+                                    <h4 class="text-success mb-0">
+                                        <% 
+                                        const ventasValor = parseFloat((mostrarTotales || item.meses_filtrados) ? (item.ventas_filtradas || 0) : (item.ventas_anuales || 0));
+                                        const ventasStr = ventasValor.toFixed(2);
+                                        const partesVentas = ventasStr.split('.');
+                                        const parteEnteraVentas = partesVentas[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                                        const ventasFormateado = parteEnteraVentas + ',' + partesVentas[1];
+                                        %>
+                                        € <%= ventasFormateado %>
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <% 
+                            const presupuestoCalc = (mostrarTotales || item.meses_filtrados) ? (item.presupuesto_filtrado || 0) : (item.presupuesto_anual || 0);
+                            const ventasCalc = (mostrarTotales || item.meses_filtrados) ? (item.ventas_filtradas || 0) : (item.ventas_anuales || 0);
+                            const porcentajeCumplimiento = presupuestoCalc > 0 ? (ventasCalc / presupuestoCalc) * 100 : 0;
+                            %>
+                            <div class="card border-<%= porcentajeCumplimiento >= 100 ? 'success' : 'warning' %>">
+                                <div class="card-body text-center">
+                                    <h6 class="text-muted mb-2">% Cumplimiento</h6>
+                                    <h4 class="text-<%= porcentajeCumplimiento >= 100 ? 'success' : 'warning' %> mb-0">
+                                        <%= porcentajeCumplimiento.toFixed(2) %>%
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <% if (!mostrarTotales) { %>
+                    <!-- Tabla mensual -->
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Mes</th>
+                                    <th class="text-end">Presupuesto</th>
+                                    <th class="text-end">Ventas</th>
+                                    <th class="text-end">Diferencia</th>
+                                    <th class="text-end">% Cumplimiento</th>
+                                    <th class="text-center">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']; %>
+                                <% 
+                                // Si hay filtro de mes, mostrar solo ese mes, sino mostrar todos
+                                const mesesAMostrar = (typeof mesFiltro !== 'undefined' && mesFiltro) 
+                                    ? [mesFiltro] 
+                                    : (item.meses_filtrados && item.meses_filtrados.length > 0 
+                                        ? item.meses_filtrados 
+                                        : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
+                                %>
+                                <% for (const mes of mesesAMostrar) { %>
+                                <% const cumplimiento = item.cumplimiento_por_mes[mes] || { presupuesto: 0, ventas: 0, porcentaje: 0, diferencia: 0 }; %>
+                                <tr>
+                                    <td><strong><%= meses[mes - 1] %></strong></td>
+                                    <td class="text-end">€ <%= parseFloat(cumplimiento.presupuesto || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                    <td class="text-end">€ <%= parseFloat(cumplimiento.ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                    <td class="text-end <%= cumplimiento.diferencia >= 0 ? 'text-success' : 'text-danger' %>">
+                                        <%= cumplimiento.diferencia >= 0 ? '+' : '' %>€ <%= parseFloat(cumplimiento.diferencia || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                    </td>
+                                    <td class="text-end">
+                                        <span class="badge bg-<%= cumplimiento.porcentaje >= 100 ? 'success' : cumplimiento.porcentaje >= 80 ? 'warning' : 'danger' %>">
+                                            <%= parseFloat(cumplimiento.porcentaje || 0).toFixed(2) %>%
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <% if (cumplimiento.porcentaje >= 100) { %>
+                                        <i class="fas fa-check-circle text-success" title="Objetivo alcanzado"></i>
+                                        <% } else if (cumplimiento.porcentaje >= 80) { %>
+                                        <i class="fas fa-exclamation-circle text-warning" title="Cerca del objetivo"></i>
+                                        <% } else { %>
+                                        <i class="fas fa-times-circle text-danger" title="Por debajo del objetivo"></i>
+                                        <% } %>
+                                    </td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                            <tfoot class="table-light">
+                                <% 
+                                const presupuestoTotal = (item.meses_filtrados && item.meses_filtrados.length > 0) 
+                                    ? (item.presupuesto_filtrado || 0) 
+                                    : (item.presupuesto_anual || 0);
+                                const ventasTotal = (item.meses_filtrados && item.meses_filtrados.length > 0) 
+                                    ? (item.ventas_filtradas || 0) 
+                                    : (item.ventas_anuales || 0);
+                                const diferenciaTotal = ventasTotal - presupuestoTotal;
+                                const porcentajeTotal = presupuestoTotal > 0 ? (ventasTotal / presupuestoTotal) * 100 : 0;
+                                %>
+                                <tr>
+                                    <th>Total</th>
+                                    <th class="text-end">€ <%= parseFloat(presupuestoTotal).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></th>
+                                    <th class="text-end">€ <%= parseFloat(ventasTotal).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></th>
+                                    <th class="text-end <%= diferenciaTotal >= 0 ? 'text-success' : 'text-danger' %>">
+                                        <%= diferenciaTotal >= 0 ? '+' : '' %>€ <%= parseFloat(diferenciaTotal).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                                    </th>
+                                    <th class="text-end">
+                                        <span class="badge bg-<%= porcentajeTotal >= 100 ? 'success' : porcentajeTotal >= 80 ? 'warning' : 'danger' %>">
+                                            <%= porcentajeTotal.toFixed(2) %>%
+                                        </span>
+                                    </th>
+                                    <th></th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    <% } else { %>
+                    <!-- Vista de solo totales -->
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Vista de totales activada. Los datos se muestran en las tarjetas de resumen.
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+            <% }) %>
+            <% } else { %>
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No hay datos de presupuestos o ventas para mostrar.
+            </div>
+            <% } %>
+        </main>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

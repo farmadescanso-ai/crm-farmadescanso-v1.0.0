@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <% if (!esPdf) { %>
+  <link href="/css/colors.css" rel="stylesheet">
+  <link href="/css/dashboard.css" rel="stylesheet">
+  <link href="/css/notifications.css" rel="stylesheet">
+  <% } %>
+  <style>
+    /* Variables de colores de Farmadescaso - Incluidas directamente para PDF */
+    :root {
+      --farmadescaso-primary: #0b891b;
+      --farmadescaso-primary-dark: #096516;
+      --farmadescaso-primary-light: #0fa529;
+      --farmadescaso-primary-lighter: #11c02f;
+      --farmadescaso-secondary: #6b7280;
+      --farmadescaso-success: #0b891b;
+      --farmadescaso-danger: #dc2626;
+      --farmadescaso-warning: #f59e0b;
+      --farmadescaso-info: #0891b2;
+      --farmadescaso-bg-light: #f0fdf4;
+      --farmadescaso-bg-white: #ffffff;
+      --farmadescaso-bg-dark: #064e12;
+      --farmadescaso-text-primary: #064e12;
+      --farmadescaso-text-secondary: #6b7280;
+      --farmadescaso-text-light: #ffffff;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 10pt;
+      background: <%= esPdf ? '#fff' : '#f3f5f2' %>;
+      color: #1f2a36;
+      margin: 0;
+      padding: <%= esPdf ? '0' : '20px' %>;
+    }
+    
+    .doc-wrapper {
+      max-width: <%= esPdf ? '100%' : '900px' %>;
+      margin: <%= esPdf ? '0' : '0 auto 2rem' %>;
+      background: #fff;
+      box-shadow: <%= esPdf ? 'none' : '0 15px 35px rgba(0,0,0,0.12)' %>;
+      border-radius: <%= esPdf ? '0' : '20px' %>;
+      overflow: hidden;
+    }
+    
+    .doc-inner {
+      padding: <%= esPdf ? '10px' : '40px' %>;
+    }
+    
+    .print-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 20px 0 10px;
+      flex-wrap: wrap;
+    }
+    
+    .print-actions a,
+    .print-actions button {
+      border-radius: 6px;
+      border: 1px solid var(--farmadescaso-primary);
+      background: #fff;
+      color: var(--farmadescaso-primary);
+      padding: 8px 16px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      font-size: 14px;
+      transition: all 0.3s;
+    }
+    
+    .print-actions button:hover,
+    .print-actions a:hover {
+      background: var(--farmadescaso-primary);
+      color: #fff;
+    }
+    
+    .print-actions .btn-primary {
+      background: var(--farmadescaso-primary);
+      color: #fff;
+      border-color: var(--farmadescaso-primary);
+    }
+    
+    .print-actions .btn-primary:hover {
+      background: var(--farmadescaso-primary-dark);
+      border-color: var(--farmadescaso-primary-dark);
+    }
+
+    .documento-banner {
+      background-color: #0b891b !important;
+      background: #0b891b !important;
+      color: #fff !important;
+      padding: <%= esPdf ? '20px 15mm' : '24px 32px' %>;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: <%= esPdf ? '0 0 20px 0' : '0 0 24px 0' %>;
+      page-break-inside: avoid;
+      width: 100%;
+      box-sizing: border-box;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    
+    .documento-logo {
+      max-height: <%= esPdf ? '60px' : '60px' %>;
+      max-width: <%= esPdf ? '160px' : '150px' %>;
+      height: auto;
+      width: auto;
+      object-fit: contain;
+      display: block;
+      flex-shrink: 0;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+    
+    .documento-titulo {
+      flex: 1;
+      text-align: right;
+      margin-left: 30px;
+    }
+    
+    .documento-titulo h1 {
+      margin: 0;
+      font-size: <%= esPdf ? '20px' : '22px' %>;
+      font-weight: 700;
+      color: #ffffff !important;
+      letter-spacing: 0.05em;
+      line-height: 1.3;
+      text-transform: uppercase;
+    }
+    
+    .documento-titulo p {
+      margin: 6px 0 0;
+      font-size: <%= esPdf ? '13px' : '14px' %>;
+      color: #ffffff !important;
+      opacity: 1;
+      font-weight: 500;
+    }
+
+    .datos-section {
+      margin: 24px 0;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      page-break-inside: avoid;
+    }
+    
+    .datos-box {
+      border: 2px solid #0b891b;
+      border-radius: 6px;
+      padding: <%= esPdf ? '12px' : '16px' %>;
+      background: #f8f9fa;
+    }
+    
+    .datos-box h3 {
+      color: #0b891b;
+      font-size: 13px;
+      font-weight: 700;
+      margin: 0 0 10px;
+      text-transform: uppercase;
+      border-bottom: 2px solid #0b891b;
+      padding-bottom: 6px;
+    }
+    
+    .datos-box p {
+      margin: 5px 0;
+      font-size: 10pt;
+      line-height: 1.5;
+    }
+    
+    .datos-box .label {
+      font-weight: 600;
+      color: #555;
+    }
+
+    .pedido-info {
+      margin: 20px 0;
+      padding: 12px 16px;
+      background: #f0fdf4;
+      border-left: 4px solid #0b891b;
+      border-radius: 4px;
+      page-break-inside: avoid;
+    }
+    
+    .pedido-info p {
+      margin: 3px 0;
+      font-size: 10pt;
+    }
+    
+    .pedido-info .label {
+      font-weight: 600;
+      color: #0b891b;
+    }
+
+    table.items {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+      border: 2px solid #0b891b;
+      font-size: <%= esPdf ? '10pt' : '11pt' %>;
+    }
+    
+    table.items thead {
+      background: #0b891b !important;
+      color: #fff !important;
+      display: table-header-group;
+    }
+    
+    table.items thead th {
+      padding: <%= esPdf ? '12px 10px' : '14px 12px' %>;
+      text-align: left;
+      font-weight: 700;
+      font-size: <%= esPdf ? '11pt' : '12pt' %>;
+      border: 1px solid #0b891b;
+      color: #ffffff !important;
+      background-color: #0b891b !important;
+    }
+    
+    table.items thead th:first-child {
+      width: 15%;
+      min-width: 80px;
+    }
+    
+    table.items thead th:nth-child(2) {
+      width: 70%;
+    }
+    
+    table.items thead th:last-child {
+      width: 15%;
+      text-align: center;
+      min-width: 60px;
+    }
+    
+    table.items tbody td {
+      padding: <%= esPdf ? '10px 8px' : '12px 10px' %>;
+      border: 1px solid #0b891b;
+      font-size: <%= esPdf ? '10pt' : '11pt' %>;
+      vertical-align: top;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+    }
+    
+    table.items tbody td:first-child {
+      font-weight: 500;
+    }
+    
+    table.items tbody td:nth-child(2) {
+      line-height: 1.4;
+    }
+    
+    table.items tbody td:last-child {
+      text-align: center;
+    }
+    
+    table.items tbody tr {
+      page-break-inside: avoid;
+    }
+    
+    table.items tbody tr:nth-child(even) {
+      background: rgba(11, 137, 27, 0.05);
+    }
+
+    .observaciones-linea {
+      font-style: italic;
+      color: #666;
+      font-size: 8pt;
+    }
+
+    .observaciones-box {
+      margin-top: 20px;
+      padding: <%= esPdf ? '12px 16px' : '16px 20px' %>;
+      background: #f0fdf4;
+      border: 2px solid #0b891b;
+      border-left: 4px solid #0b891b;
+      border-radius: 6px;
+      page-break-inside: avoid;
+    }
+    
+    .observaciones-box h4 {
+      margin: 0 0 10px;
+      color: #0b891b;
+      font-size: <%= esPdf ? '12pt' : '13pt' %>;
+      font-weight: 700;
+    }
+    
+    .observaciones-box p {
+      margin: 0;
+      color: #064e12;
+      font-size: <%= esPdf ? '10pt' : '11pt' %>;
+      line-height: 1.5;
+    }
+
+    .footer {
+      margin-top: 30px;
+      padding-top: 15px;
+      border-top: 2px solid #0b891b;
+      text-align: center;
+      color: #666;
+      font-size: 8pt;
+      page-break-inside: avoid;
+    }
+    
+    /* Ocultar acciones de impresión y navbar en PDF */
+    <% if (esPdf) { %>
+    .print-actions,
+    .navbar,
+    nav {
+      display: none !important;
+    }
+    
+    body {
+      padding-top: 0 !important;
+      margin-top: 0 !important;
+    }
+    <% } %>
+    
+    .modal {
+      display: none;
+    }
+    
+    .modal.show {
+      display: block;
+    }
+    
+    .modal-backdrop {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 1040;
+    }
+    
+    .modal-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      z-index: 1050;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        padding: 0;
+      }
+      
+      .doc-wrapper {
+        box-shadow: none;
+        border-radius: 0;
+        margin: 0;
+      }
+      
+      .print-actions {
+        display: none !important;
+      }
+      
+      .datos-section {
+        page-break-inside: avoid;
+      }
+      
+      table.items thead {
+        display: table-header-group;
+      }
+      
+      table.items tbody tr {
+        page-break-inside: avoid;
+      }
+    }
+  </style>
+  <% if (!esPdf) { %>
+  <%- include('../partials/navbar-styles') %>
+  <% } %>
+</head>
+<body>
+  <% if (!esPdf) { %>
+  <%- include('../partials/navbar-dashboard') %>
+  <% } %>
+
+  <div class="doc-wrapper">
+    <div class="doc-inner">
+      <% if (!esPdf) { %>
+      <div class="print-actions">
+        <button type="button" class="btn-primary" onclick="descargarPDF()">
+          <i class="fas fa-file-pdf me-2"></i>Descargar PDF
+        </button>
+        <button type="button" onclick="mostrarModalEnviar()">
+          <i class="fas fa-envelope me-2"></i>Enviar PDF
+        </button>
+        <a href="/dashboard/pedidos/<%= pedido.id %>">
+          <i class="fas fa-arrow-left me-2"></i>Volver al Pedido
+        </a>
+      </div>
+      
+      <!-- Modal para enviar PDF -->
+      <div id="modalEnviar" class="modal">
+        <div class="modal-backdrop" onclick="cerrarModalEnviar()"></div>
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header" style="border-bottom: 1px solid #dee2e6; padding-bottom: 10px; margin-bottom: 15px;">
+              <h5 class="modal-title" style="margin: 0; font-weight: 600;">Enviar PDF por Email</h5>
+              <button type="button" onclick="cerrarModalEnviar()" style="background: none; border: none; font-size: 20px; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label for="emailDestino" class="form-label" style="font-weight: 600;">Direcciones de Email <span class="text-danger">*</span></label>
+                <input type="email" class="form-control" id="emailDestino" placeholder="email1@ejemplo.com, email2@ejemplo.com" multiple required>
+                <small class="form-text text-muted">Separa múltiples emails con comas</small>
+              </div>
+            </div>
+            <div class="modal-footer" style="border-top: 1px solid #dee2e6; padding-top: 15px; margin-top: 15px; display: flex; justify-content: flex-end; gap: 10px;">
+              <button type="button" onclick="cerrarModalEnviar()" style="padding: 6px 16px; border: 1px solid #ccc; background: #fff; border-radius: 4px; cursor: pointer;">Cancelar</button>
+              <button type="button" onclick="enviarPDF()" class="btn-primary" style="padding: 6px 16px; border: none; border-radius: 4px; cursor: pointer;">Enviar</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <% } %>
+
+      <div class="documento-banner">
+        <% if (esPdf) { %>
+          <% if (typeof logoBase64 !== 'undefined' && logoBase64 && logoBase64.length > 0) { %>
+            <!-- Logo en base64 para PDF -->
+            <img src="<%= logoBase64 %>" alt="Farmadescaso" class="documento-logo" style="display: block !important; visibility: visible !important; opacity: 1 !important; max-height: 60px; max-width: 160px; height: auto; width: auto;">
+          <% } else if (typeof baseUrl !== 'undefined' && baseUrl) { %>
+            <!-- Logo por URL como fallback -->
+            <img src="<%= baseUrl %>/images/logo.png" alt="Farmadescaso" class="documento-logo" style="display: block !important; visibility: visible !important; opacity: 1 !important; max-height: 60px; max-width: 160px; height: auto; width: auto;" onerror="console.error('Error cargando logo desde URL:', this.src);">
+          <% } else { %>
+            <!-- Sin logo - mostrar placeholder -->
+            <div class="documento-logo" style="width: 160px; height: 60px; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; border: 1px solid rgba(255,255,255,0.3);">LOGO</div>
+          <% } %>
+        <% } else { %>
+          <img src="/images/logo.png" alt="Farmadescaso" class="documento-logo" onerror="this.style.display='none'">
+        <% } %>
+        <div class="documento-titulo">
+          <h1>DOCUMENTO SIN VALORAR PARA TRANSPORTE</h1>
+          <p>Pedido Nº <%= pedido.numero || pedido.id %></p>
+        </div>
+      </div>
+
+      <!-- Datos de la empresa y del cliente -->
+      <div class="datos-section">
+        <!-- Datos fiscales de Farmadescanso -->
+        <div class="datos-box">
+          <h3>Datos del Remitente</h3>
+          <p><span class="label">Razón Social:</span> <%= datosEmpresa.nombre %></p>
+          <p><span class="label">CIF:</span> <%= datosEmpresa.cif %></p>
+          <p><span class="label">Dirección:</span> <%= datosEmpresa.direccion %></p>
+          <p><span class="label">Código Postal:</span> <%= datosEmpresa.codigoPostal %></p>
+          <p><span class="label">Población:</span> <%= datosEmpresa.poblacion %></p>
+          <p><span class="label">Provincia:</span> <%= datosEmpresa.provincia %></p>
+          <p><span class="label">País:</span> <%= datosEmpresa.pais %></p>
+        </div>
+
+        <!-- Datos fiscales y dirección de envío del cliente -->
+        <div class="datos-box">
+          <h3>Datos del Destinatario</h3>
+          <% if (cliente) { %>
+            <p><span class="label">Razón Social:</span> <%= cliente.Nombre_Razon_Social || cliente.Nombre || cliente.nombre || '—' %></p>
+            <p><span class="label">CIF/DNI:</span> <%= cliente.DNI_CIF || cliente.dni_cif || cliente.DNI || cliente.dni || '—' %></p>
+            <p><span class="label">Dirección:</span> <%= cliente.Direccion || cliente.direccion || '—' %></p>
+            <p><span class="label">Código Postal:</span> <%= cliente.CodigoPostal || cliente.codigoPostal || '—' %></p>
+            <p><span class="label">Población:</span> <%= cliente.Poblacion || cliente.poblacion || '—' %></p>
+            <% if (cliente.Provincia || cliente.provincia) { %>
+              <p><span class="label">Provincia:</span> <%= cliente.Provincia || cliente.provincia %></p>
+            <% } %>
+            <p><span class="label">País:</span> <%= typeof normalizeUTF8 !== 'undefined' ? normalizeUTF8(cliente.Pais || cliente.pais || 'España') : (cliente.Pais || cliente.pais || 'España') %></p>
+            <% if (cliente.Movil || cliente.movil || cliente.Telefono || cliente.telefono) { %>
+              <p><span class="label">Teléfono:</span> <%= cliente.Movil || cliente.movil || cliente.Telefono || cliente.telefono %></p>
+            <% } %>
+          <% } else { %>
+            <p>Cliente no encontrado</p>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- Información del pedido -->
+      <div class="pedido-info">
+        <p><span class="label">Nº Pedido:</span> <%= pedido.numero || pedido.id %></p>
+        <% if (pedido.fecha) { %>
+          <p><span class="label">Fecha:</span> <%= new Date(pedido.fecha).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+        <% } %>
+        <% if (pedido.fechaEntrega) { %>
+          <p><span class="label">Fecha de Entrega:</span> <%= new Date(pedido.fechaEntrega).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) %></p>
+        <% } %>
+      </div>
+
+      <!-- Tabla de detalle sin precios -->
+      <table class="items">
+        <thead>
+          <tr>
+            <th>C.N.</th>
+            <th>Artículo</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          <% if (lineas && lineas.length > 0) { %>
+            <% lineas.forEach((linea) => { %>
+              <tr>
+                <td><%= linea.codigoNacional || '—' %></td>
+                <td><%= linea.nombreArticulo || linea.articulo || 'Artículo desconocido' %></td>
+                <td><%= linea.cantidad || 0 %></td>
+              </tr>
+            <% }) %>
+          <% } else { %>
+            <tr>
+              <td colspan="3" style="text-align: center; padding: 20px; color: #999;">
+                No hay líneas en este pedido
+              </td>
+            </tr>
+          <% } %>
+        </tbody>
+      </table>
+
+      <!-- Observaciones generales del pedido -->
+      <div class="observaciones-box">
+        <h4>Observaciones del Pedido</h4>
+        <% if (pedidoRaw && pedidoRaw.Observaciones) { %>
+          <p><%= pedidoRaw.Observaciones %></p>
+        <% } else { %>
+          <p style="color: #999; font-style: italic;">No hay observaciones para este pedido.</p>
+        <% } %>
+      </div>
+
+      <div class="footer">
+        <p>Documento generado el <%= new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' }) %></p>
+        <p>Este documento no tiene valor comercial. Es únicamente para uso de la agencia de transporte.</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <% if (!esPdf) { %>
+  <script src="/js/notifications.js"></script>
+  <% } %>
+  <script>
+    function descargarPDF() {
+      window.location.href = '/dashboard/pedidos/<%= pedido.id %>/transporte/pdf';
+    }
+    
+    function mostrarModalEnviar() {
+      document.getElementById('modalEnviar').classList.add('show');
+      document.getElementById('emailDestino').focus();
+    }
+    
+    function cerrarModalEnviar() {
+      document.getElementById('modalEnviar').classList.remove('show');
+      document.getElementById('emailDestino').value = '';
+    }
+    
+    async function enviarPDF() {
+      const emailInput = document.getElementById('emailDestino');
+      const emails = emailInput.value.trim();
+      
+      if (!emails) {
+        alert('Por favor, ingresa al menos una dirección de email');
+        emailInput.focus();
+        return;
+      }
+      
+      // Validar formato de emails
+      const emailList = emails.split(',').map(e => e.trim()).filter(e => e);
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const emailsInvalidos = emailList.filter(e => !emailRegex.test(e));
+      
+      if (emailsInvalidos.length > 0) {
+        alert('Las siguientes direcciones de email no son válidas:\n' + emailsInvalidos.join('\n'));
+        return;
+      }
+      
+      const btnEnviar = document.querySelector('#modalEnviar .btn-primary');
+      const textoOriginal = btnEnviar ? btnEnviar.innerHTML : 'Enviar';
+      
+      if (btnEnviar) {
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Enviando...';
+      }
+      
+      try {
+        const response = await fetch('/dashboard/pedidos/<%= pedido.id %>/transporte/enviar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            emails: emailList
+          })
+        });
+        
+        // Verificar si la respuesta es JSON
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+          data = await response.json();
+        } else {
+          // Si no es JSON, leer como texto para ver el error
+          const text = await response.text();
+          console.error('Respuesta no JSON recibida:', text.substring(0, 200));
+          throw new Error('El servidor devolvió una respuesta inesperada. Código: ' + response.status);
+        }
+        
+        if (response.ok && data.success) {
+          showSuccess('PDF enviado correctamente a: ' + emailList.join(', '));
+          cerrarModalEnviar();
+        } else {
+          showError('Error: ' + (data.error || 'No se pudo enviar el PDF'));
+        }
+      } catch (error) {
+        console.error('Error enviando PDF:', error);
+        let mensajeError = 'Error al enviar el PDF. ';
+        if (error.message) {
+          mensajeError += error.message;
+        } else {
+          mensajeError += 'Por favor, intenta nuevamente.';
+        }
+        showError(mensajeError);
+      } finally {
+        if (btnEnviar) {
+          btnEnviar.disabled = false;
+          btnEnviar.innerHTML = textoOriginal;
+        }
+      }
+    }
+    
+    // Cerrar modal con Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        cerrarModalEnviar();
+      }
+    });
+  </script>
+</body>
+</html>

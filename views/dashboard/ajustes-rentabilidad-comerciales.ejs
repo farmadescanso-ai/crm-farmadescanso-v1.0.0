@@ -1,0 +1,160 @@
+<%- include('index-crm', { 
+  title: title, 
+  user: user, 
+  currentPage: currentPage,
+  error: typeof error !== 'undefined' ? error : null
+}) %>
+
+<div class="container-fluid mt-4" style="margin-left: 0; padding-left: 15px; padding-right: 15px;">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2 class="mb-0">
+                    <i class="fas fa-users me-2"></i>Rentabilidad por Comercial
+                </h2>
+                <div>
+                    <a href="/dashboard/ajustes/rentabilidad-pedidos" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver a Pedidos
+                    </a>
+                </div>
+            </div>
+
+            <!-- Filtros -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <form method="GET" action="/dashboard/ajustes/rentabilidad-pedidos/comerciales" class="row g-3">
+                        <div class="col-md-3">
+                            <label for="comercial_id" class="form-label">Comercial</label>
+                            <select class="form-select" id="comercial_id" name="comercial_id">
+                                <option value="">Todos</option>
+                                <% todosComerciales.forEach(comercial => { %>
+                                <option value="<%= comercial.Id || comercial.id %>" <%= filtros.comercial_id == (comercial.Id || comercial.id) ? 'selected' : '' %>>
+                                    <%= comercial.Nombre || comercial.nombre %>
+                                </option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <label for="fecha_desde" class="form-label">Fecha Desde</label>
+                            <input type="date" class="form-control" id="fecha_desde" name="fecha_desde" value="<%= filtros.fecha_desde || '' %>">
+                        </div>
+                        <div class="col-md-3">
+                            <label for="fecha_hasta" class="form-label">Fecha Hasta</label>
+                            <input type="date" class="form-control" id="fecha_hasta" name="fecha_hasta" value="<%= filtros.fecha_hasta || '' %>">
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-2"></i>Filtrar
+                            </button>
+                            <a href="/dashboard/ajustes/rentabilidad-pedidos/comerciales" class="btn btn-secondary">
+                                <i class="fas fa-redo me-2"></i>Limpiar
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Tabla de comerciales -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Comercial</th>
+                                    <th class="text-center">Total Pedidos</th>
+                                    <th class="text-end">Total Ventas</th>
+                                    <th class="text-end">Total Costo</th>
+                                    <th class="text-end">Total Comisiones</th>
+                                    <th class="text-end">Margen Bruto</th>
+                                    <th class="text-end">Margen Neto</th>
+                                    <th class="text-end">% Rentabilidad</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (comerciales && comerciales.length > 0) { %>
+                                <% comerciales.forEach(comercial => { %>
+                                <% 
+                                const totalVentas = parseFloat(comercial.total_ventas || 0);
+                                const totalCosto = parseFloat(comercial.total_costo || 0);
+                                const totalComisiones = parseFloat(comercial.total_comisiones || 0);
+                                const margenBruto = parseFloat(comercial.margen_bruto || 0);
+                                const margenNeto = parseFloat(comercial.margen_neto || 0);
+                                const porcentajeRentabilidad = parseFloat(comercial.porcentaje_rentabilidad || 0);
+                                %>
+                                <tr>
+                                    <td><strong><%= comercial.comercial_nombre || 'Sin nombre' %></strong></td>
+                                    <td class="text-center"><%= comercial.num_pedidos || comercial.total_pedidos || 0 %></td>
+                                    <td class="text-end">€ <%= totalVentas.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end text-danger">€ <%= totalCosto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end text-info">€ <%= totalComisiones.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></td>
+                                    <td class="text-end <%= margenBruto >= 0 ? 'text-success' : 'text-danger' %>">
+                                        <%= margenBruto >= 0 ? '+' : '' %>€ <%= margenBruto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                                    </td>
+                                    <td class="text-end <%= margenNeto >= 0 ? 'text-success' : 'text-danger' %> fw-bold">
+                                        <%= margenNeto >= 0 ? '+' : '' %>€ <%= margenNeto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %>
+                                    </td>
+                                    <td class="text-end <%= porcentajeRentabilidad >= 0 ? 'text-success' : 'text-danger' %> fw-bold">
+                                        <%= porcentajeRentabilidad >= 0 ? '+' : '' %><%= porcentajeRentabilidad.toFixed(2) %>%
+                                    </td>
+                                </tr>
+                                <% }) %>
+                                
+                                <!-- Línea de totales -->
+                                <% if (comerciales && comerciales.length > 0) { %>
+                                <% 
+                                // Calcular totales
+                                let totalPedidos = 0;
+                                let totalVentasSum = 0;
+                                let totalCostoSum = 0;
+                                let totalComisionesSum = 0;
+                                let totalMargenBruto = 0;
+                                let totalMargenNeto = 0;
+                                
+                                comerciales.forEach(comercial => {
+                                    totalPedidos += parseInt(comercial.num_pedidos || comercial.total_pedidos || 0);
+                                    totalVentasSum += parseFloat(comercial.total_ventas || 0);
+                                    totalCostoSum += parseFloat(comercial.total_costo || 0);
+                                    totalComisionesSum += parseFloat(comercial.total_comisiones || 0);
+                                    totalMargenBruto += parseFloat(comercial.margen_bruto || 0);
+                                    totalMargenNeto += parseFloat(comercial.margen_neto || 0);
+                                });
+                                
+                                const porcentajeRentabilidadTotal = totalCostoSum !== 0 ? (totalMargenNeto / totalCostoSum) * 100 : 0;
+                                const claseMargenTotal = totalMargenNeto >= 0 ? 'text-success' : 'text-danger';
+                                %>
+                                <tr class="table-info fw-bold">
+                                    <td><strong>TOTALES</strong></td>
+                                    <td class="text-center"><strong><%= totalPedidos %></strong></td>
+                                    <td class="text-end"><strong>€ <%= totalVentasSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></strong></td>
+                                    <td class="text-end text-danger"><strong>€ <%= totalCostoSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></strong></td>
+                                    <td class="text-end text-info"><strong>€ <%= totalComisionesSum.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></strong></td>
+                                    <td class="text-end <%= totalMargenBruto >= 0 ? 'text-success' : 'text-danger' %>">
+                                        <strong><%= totalMargenBruto >= 0 ? '+' : '' %>€ <%= totalMargenBruto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></strong>
+                                    </td>
+                                    <td class="text-end <%= claseMargenTotal %>">
+                                        <strong><%= totalMargenNeto >= 0 ? '+' : '' %>€ <%= totalMargenNeto.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, '.') %></strong>
+                                    </td>
+                                    <td class="text-end <%= claseMargenTotal %>">
+                                        <strong><%= porcentajeRentabilidadTotal >= 0 ? '+' : '' %><%= porcentajeRentabilidadTotal.toFixed(2) %>%</strong>
+                                    </td>
+                                </tr>
+                                <% } %>
+                                
+                                <% } else { %>
+                                <tr>
+                                    <td colspan="8" class="text-center text-muted py-4">
+                                        <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                        No hay comerciales que coincidan con los filtros
+                                    </td>
+                                </tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+

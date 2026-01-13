@@ -1,0 +1,805 @@
+├ö┬ú├á Conectado a MySQL correctamente
+┬¡ãÆ├┤├¿ Base de datos: farmadescanso
+├ö┬ú├á UTF-8 configurado: utf8mb4_unicode_ci
+[
+  {
+    "id": 464,
+    "nombre": "Ramos Bleda, Loreto",
+    "poblacion": "Cieza",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 465,
+    "nombre": "Fernandez Perez, Francisco Javier",
+    "poblacion": "Murcia",
+    "movil": "968292956",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 466,
+    "nombre": "Villalobos MuÔö£ÔûÆoz, Maria",
+    "poblacion": "Palmar, el",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 467,
+    "nombre": "Soler Segarra, Manuel, Soler Tenorio, Jose Ramon",
+    "poblacion": "Puebla de Soto",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 468,
+    "nombre": "Serrano Nieto, Alicia",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 469,
+    "nombre": "Anunci Gelabert, Jose Luis y Anunci Diaz, Jose Luis",
+    "poblacion": "Cartagena",
+    "movil": "968505535",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 470,
+    "nombre": "Tomas Barberan, Luis Benjamin",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 471,
+    "nombre": "Lorente Robles, Carmen Maria",
+    "poblacion": "Churra",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 472,
+    "nombre": "Bernal Calderon, Maria Cristina",
+    "poblacion": "San Jose de la Vega",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 473,
+    "nombre": "Campillo Garcia, Maria Ascension",
+    "poblacion": "Murcia",
+    "movil": "968251586",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 474,
+    "nombre": "Solana Moreno, Pedro",
+    "poblacion": "Javali Viejo",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 476,
+    "nombre": "Hernandez Rex, Mercedes",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 479,
+    "nombre": "La Iglesia Fernandez, Mercedes",
+    "poblacion": "Beniajan",
+    "movil": "968824362",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 480,
+    "nombre": "Garcia Gomez, Francisco",
+    "poblacion": "Cieza",
+    "movil": "968760383",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 481,
+    "nombre": "Jimenez Trigueros, Ines",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 483,
+    "nombre": "Galindo Samper, Antonio Enrique",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 484,
+    "nombre": "Sanchez Bolivar, Luis Javier",
+    "poblacion": "Torres de Cotillas, las",
+    "movil": "968865266",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 485,
+    "nombre": "Ortega Ortega, Luis Alberto",
+    "poblacion": "Los Mateos (cartagena)",
+    "movil": "968504449",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 487,
+    "nombre": "Bernabe OrtuÔö£ÔûÆo, Francisco, Bernabe Ruiz, Nuria y Francisco Javier",
+    "poblacion": "Murcia",
+    "movil": "968291678",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 488,
+    "nombre": "Gomez Garcia, Pedro Francisco",
+    "poblacion": "Balsapintada",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 489,
+    "nombre": "Sanchez Polo, Alberto",
+    "poblacion": "Fortuna",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 490,
+    "nombre": "Sola Mendez, Carmen y Segarra Sola, Isabel Rocio",
+    "poblacion": "El Albujon",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 491,
+    "nombre": "Gonzalez-costea Lopez, Daniel",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 492,
+    "nombre": "Cano Ceron, Miguel Salvador",
+    "poblacion": "Cartagena",
+    "movil": "968504009",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 493,
+    "nombre": "Fonolla Briales, Juan Manuel",
+    "poblacion": "Cabezo de Torres",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 494,
+    "nombre": "Martinez Rios, Nila",
+    "poblacion": "Union, la",
+    "movil": "968560228",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 495,
+    "nombre": "Moreno Arribas, Adriana Maria",
+    "poblacion": "Cartagena",
+    "movil": "968122866",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 496,
+    "nombre": "Buendia Diaz, Rebeca",
+    "poblacion": "Canteras (cartagena)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 497,
+    "nombre": "Santa Cruz Siminiani, Ana Maria",
+    "poblacion": "Santa Cruz",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 498,
+    "nombre": "Llorente ViÔö£ÔûÆas, Amalia",
+    "poblacion": "Murcia",
+    "movil": "968232596",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 499,
+    "nombre": "Valverde Valverde, Cristina Nieves",
+    "poblacion": "Murcia",
+    "movil": "968216260",
+    "email": "farmaciacolon@hotmail.com",
+    "dni": ""
+  },
+  {
+    "id": 500,
+    "nombre": "Quilis Arocas, Rosa Maria",
+    "poblacion": "Alguazas",
+    "movil": "968388063",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 501,
+    "nombre": "Santoyo Sanchez, Francisco Javier",
+    "poblacion": "Alumbres (cartagena)",
+    "movil": "968507731",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 502,
+    "nombre": "Sanchez Sanchez, Maria del Carmen",
+    "poblacion": "Murcia",
+    "movil": "968245577",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 503,
+    "nombre": "Martinez Gervilla, Maria Raquel",
+    "poblacion": "Lorca",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 504,
+    "nombre": "Gomez Ros, Maria del Mar",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 505,
+    "nombre": "Gutierrez Perez, Juan Jose",
+    "poblacion": "Cartagena",
+    "movil": "968503829",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 506,
+    "nombre": "Perez Moreno, Alfredo y Perez Moreno, Rosendo Jose",
+    "poblacion": "Alquerias",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 507,
+    "nombre": "Barcelo Mercader, Ascension",
+    "poblacion": "Cartagena",
+    "movil": "968505476",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 508,
+    "nombre": "Aleman Lopez, Jose",
+    "poblacion": "Sangonera la Verde",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 509,
+    "nombre": "Alvarez-gomez Gonzalez, Adela y Maria Caridad",
+    "poblacion": "Cartagena",
+    "movil": "968503123",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 510,
+    "nombre": "Soriano Sanchez, Diego Jesus y Soriano Garcia, Alberto",
+    "poblacion": "Jumilla",
+    "movil": "968782508",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 511,
+    "nombre": "Torregrosa Tomas, Rocio y Falomir Torregrosa Meritxell Rocio",
+    "poblacion": "Yecla",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 512,
+    "nombre": "Yago Torregrosa, Rafael",
+    "poblacion": "Yecla",
+    "movil": "968 75 11 65",
+    "email": "farmacia.yago@parafarmacia.com",
+    "dni": ""
+  },
+  {
+    "id": 513,
+    "nombre": "Mora Mendoza, Pino Isis",
+    "poblacion": "Lorca",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 514,
+    "nombre": "PeÔö£ÔûÆa Ros, Juan Ernesto",
+    "poblacion": "Llano del Beal (cartagena)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 515,
+    "nombre": "PedreÔö£ÔûÆo Ruiz, Belen",
+    "poblacion": "Los Ramos",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 516,
+    "nombre": "Ferrer del Pino, Francisco Javier",
+    "poblacion": "Cartagena",
+    "movil": "968507731",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 517,
+    "nombre": "Suarez Fuentes, Nieves",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 518,
+    "nombre": "Ramos Cerezo, Julia Maria",
+    "poblacion": "Torre Pacheco",
+    "movil": "968 577 106",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 519,
+    "nombre": "Latorre Tora, Maria Mercedes",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 520,
+    "nombre": "Perez-guillermo Valdes, Maria del Carmen",
+    "poblacion": "Fuente Alamo",
+    "movil": "968597181",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 521,
+    "nombre": "Carrion Barbera, Cristina",
+    "poblacion": "Santiago de la Ribera",
+    "movil": "968570160",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 523,
+    "nombre": "Dominguez Lorente, Alejandro Francisco",
+    "poblacion": "Lorca",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 524,
+    "nombre": "Gnecco Lorente, Juan",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 525,
+    "nombre": "Selma Ferrandez, Maria Andrea y Murcia Selma, Francisco Javier",
+    "poblacion": "Zeneta",
+    "movil": "968292956",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 526,
+    "nombre": "Lopez Ruiz, Alfonso",
+    "poblacion": "Los Barreros (cartagena)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 527,
+    "nombre": "Hernandez Gonzalez, Maria Teresa",
+    "poblacion": "Murcia",
+    "movil": "968292956",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 528,
+    "nombre": "Bueno Jimenez, Rafael",
+    "poblacion": "El Esparragal",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 529,
+    "nombre": "Orts Llopis, Luis",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 530,
+    "nombre": "Sanchez Capelo, Francisco Luis",
+    "poblacion": "Lorca",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 531,
+    "nombre": "Rojas Oton, Ana Maria",
+    "poblacion": "Palmar, el",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 532,
+    "nombre": "Canovas Kastenmuller, Cristina",
+    "poblacion": "Cartagena",
+    "movil": "968511242",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 533,
+    "nombre": "Delgado Alcazar, Concepcion",
+    "poblacion": "Alcantarilla",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 534,
+    "nombre": "Romero Sotomayor, Maria Eugenia",
+    "poblacion": "La Raya (murcia)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 535,
+    "nombre": "Moreno Torres, Maria Aranzazu",
+    "poblacion": "Espinardo",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 536,
+    "nombre": "Navarro Gonzalez, Fernando",
+    "poblacion": "Palmar, el",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 537,
+    "nombre": "Tornero Gomez, Gloria y Gomez Tornero, Natalia",
+    "poblacion": "Garres, los",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 538,
+    "nombre": "Sanchez Martinez, Juan Eduardo",
+    "poblacion": "Guadalupe",
+    "movil": "968245319",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 539,
+    "nombre": "MeroÔö£ÔûÆo Rosique, Santiago",
+    "poblacion": "Los Dolores (murcia)",
+    "movil": "968260290",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 540,
+    "nombre": "Martinez Soto, Inmaculada",
+    "poblacion": "Palmar, el",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 541,
+    "nombre": "Martinez Garcia, Juan Bartolome y Martinez Diaz, Carlos",
+    "poblacion": "Almendricos (lorca)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 542,
+    "nombre": "Insausti Sanchez, Maria del Carmen",
+    "poblacion": "Murcia",
+    "movil": "968245577",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 543,
+    "nombre": "Sanchez Martinez, Carmen y Eva Maria",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 544,
+    "nombre": "Hidalgo Oller, Inmaculada Concepcion",
+    "poblacion": "Lorca",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 545,
+    "nombre": "Villalba Perez, Antonio Manuel y Villalba Lopez, Teresa",
+    "poblacion": "Era Alta",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 546,
+    "nombre": "Arcas Lopez, Domingo y Arcas CastiÔö£ÔûÆeiras, Ignacio",
+    "poblacion": "Lorca",
+    "movil": "968466106",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 547,
+    "nombre": "Gil Espallardo, Pedro Gabriel",
+    "poblacion": "Molina de Segura",
+    "movil": "968610179",
+    "email": "atencion@farmaciadesanroque.com",
+    "dni": ""
+  },
+  {
+    "id": 548,
+    "nombre": "Martinez de Haro, Antonio",
+    "poblacion": "Raal, el",
+    "movil": "968346450",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 549,
+    "nombre": "Sanchez Abad, Antonio Vicente y Sanchez Recio, Antonio",
+    "poblacion": "Paca, la (lorca)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 550,
+    "nombre": "Mazzuchelli Lopez, Maria Jose",
+    "poblacion": "Lorca",
+    "movil": "968466023",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 551,
+    "nombre": "Buitrago Perez, Isabel",
+    "poblacion": "San Pedro del Pinatar",
+    "movil": "968183854",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 552,
+    "nombre": "Toledo Romero, Cesar",
+    "poblacion": "Murcia",
+    "movil": "968295301",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 553,
+    "nombre": "CastiÔö£ÔûÆeiras Bueno, Francisco Ramon",
+    "poblacion": "Lorca",
+    "movil": "968466106",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 554,
+    "nombre": "Bosch Prefasi, Maria Teresa",
+    "poblacion": "Llano de Brujas",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 555,
+    "nombre": "Orenes Barcelo, Maria",
+    "poblacion": "Garres, los",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 556,
+    "nombre": "Ortega de los Santos, Manuel",
+    "poblacion": "Cartagena",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 557,
+    "nombre": "Ortega de los Santos, Luis Antonio",
+    "poblacion": "Cartagena",
+    "movil": "968512667",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 558,
+    "nombre": "Abellan Martinez, Maria",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 559,
+    "nombre": "Sanchez Puche, Javier",
+    "poblacion": "Murcia",
+    "movil": "968295925",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 560,
+    "nombre": "Barcelo Vazquez, Maria",
+    "poblacion": "Union, la",
+    "movil": "968560737",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 561,
+    "nombre": "Guirao Hernandez, Maria y Perez-Templado Ladron de Guevara, Elena Maria del Mar",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 562,
+    "nombre": "Perez MuÔö£ÔûÆoz, Victoria",
+    "poblacion": "Archivel (caravaca)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 563,
+    "nombre": "Gonzalez Jordan, Josefa",
+    "poblacion": "Blanca",
+    "movil": "968778348",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 564,
+    "nombre": "Fernandez Lloret, Maria Rosa y Camacho Fernandez, Jose Antonio",
+    "poblacion": "Los Dolores (murcia)",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 565,
+    "nombre": "Palau Gudiol, Mercedes y Polo Palau, Guillermo",
+    "poblacion": "Espinardo",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 566,
+    "nombre": "Gnecco Lorente, Jesus",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 567,
+    "nombre": "Molina Laborda, Santiago",
+    "poblacion": "Alberca, la",
+    "movil": "968214622",
+    "email": "s.molina1@santiagomolina.com",
+    "dni": ""
+  },
+  {
+    "id": 568,
+    "nombre": "Ramon MeroÔö£ÔûÆo, Marina",
+    "poblacion": "Torre Pacheco",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  },
+  {
+    "id": 569,
+    "nombre": "Casanueva Luis, Alicia",
+    "poblacion": "Murcia",
+    "movil": "",
+    "email": "",
+    "dni": ""
+  }
+]

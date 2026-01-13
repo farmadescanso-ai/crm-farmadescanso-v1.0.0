@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container py-4">
+        <% if (typeof query !== 'undefined' && query && query.success === 'cita_actualizada') { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>La cita se actualizó correctamente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+        <% if (typeof query !== 'undefined' && query && query.error) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i><%= query.error %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                    <div>
+                        <h3 class="fw-bold mb-1">
+                            <%= typeof emoji !== 'undefined' ? emoji : '📅' %> Cita #<%= visita.Id || visita.id %>
+                        </h3>
+                        <% if (tipoVisita === 'Farmacia' || tipoVisita === 'farmacia') { %>
+                            <p class="text-muted mb-0">💊 Farmacia: <strong><%= cliente ? (cliente.Nombre || cliente.nombre) : 'Farmacia no encontrada' %></strong></p>
+                        <% } else if (tipoVisita === 'Sanitarios' || tipoVisita === 'sanitarios' || tipoVisita === 'Centro Salud' || tipoVisita === 'centro salud') { %>
+                            <p class="text-muted mb-0">🏥 Sanitarios: <strong><%= centroSalud ? (centroSalud.coqmahyqo5gi3yc || centroSalud.Nombre || centroSalud.nombre) : 'Centro de salud no encontrado' %></strong></p>
+                        <% } else { %>
+                            <p class="text-muted mb-0"><%= typeof emoji !== 'undefined' ? emoji : '📅' %> Tipo: <strong><%= tipoVisita || 'General' %></strong></p>
+                            <% if (cliente) { %>
+                                <p class="text-muted mb-0">Cliente: <strong><%= cliente.Nombre || cliente.nombre %></strong></p>
+                            <% } %>
+                            <% if (centroSalud) { %>
+                                <p class="text-muted mb-0">Centro: <strong><%= centroSalud.coqmahyqo5gi3yc || centroSalud.Nombre || centroSalud.nombre %></strong></p>
+                            <% } %>
+                        <% } %>
+                        <p class="text-muted mb-0">Comercial: <%= comercial ? (comercial.Nombre || comercial.nombre) : 'Comercial no encontrado' %></p>
+                    </div>
+                    <div class="text-end">
+                        <% const estado = visita.Estado || visita.estado || 'Pendiente'; %>
+                        <% const estadoLower = estado.toLowerCase(); %>
+                        <% if (estadoLower.includes('pendiente')) { %>
+                            <span class="badge fs-6 bg-warning text-dark"><%= estado %></span>
+                        <% } else if (estadoLower.includes('completada') || estadoLower.includes('realizada')) { %>
+                            <span class="badge fs-6 bg-success"><%= estado %></span>
+                        <% } else if (estadoLower.includes('cancelada')) { %>
+                            <span class="badge fs-6 bg-danger"><%= estado %></span>
+                        <% } else { %>
+                            <span class="badge fs-6 bg-secondary"><%= estado %></span>
+                        <% } %>
+                    </div>
+                </div>
+
+                <div class="row mt-4 g-3">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small text-uppercase">Fecha</div>
+                            <div class="fw-semibold">
+                                <% const fecha = visita.Fecha || visita.fecha || visita.Fecha_Visita || visita.fecha_visita; %>
+                                <%= fecha ? new Date(fecha).toLocaleDateString('es-ES') : '—' %>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small text-uppercase">Hora</div>
+                            <div class="fw-semibold"><%= visita.Hora || visita.hora || visita.Hora_Visita || visita.hora_visita || '—' %></div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small text-uppercase">Tipo de Cita</div>
+                            <div class="fw-semibold">
+                                <span class="badge bg-info" style="font-size: 1rem;">
+                                    <%= typeof emoji !== 'undefined' ? emoji : '📅' %> <%= tipoVisita || visita.TipoVisita || visita.tipoVisita || visita.Tipo_Visita || visita.tipo_visita || 'General' %>
+                                </span>
+                                <% const tipoDetalle = visita.Tipo || visita.tipo; %>
+                                <% if (tipoDetalle && tipoDetalle !== tipoVisita) { %>
+                                    <br><small class="text-muted mt-1 d-block"><%= tipoDetalle %></small>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 h-100">
+                            <div class="text-muted small text-uppercase">Estado</div>
+                            <div class="fw-semibold">
+                                <% if (estadoLower.includes('pendiente')) { %>
+                                    <span class="badge bg-warning text-dark"><%= estado %></span>
+                                <% } else if (estadoLower.includes('completada') || estadoLower.includes('realizada')) { %>
+                                    <span class="badge bg-success"><%= estado %></span>
+                                <% } else if (estadoLower.includes('cancelada')) { %>
+                                    <span class="badge bg-danger"><%= estado %></span>
+                                <% } else { %>
+                                    <span class="badge bg-secondary"><%= estado %></span>
+                                <% } %>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <% if (visita.Direccion || visita.direccion) { %>
+                <div class="mt-3">
+                    <div class="text-muted small text-uppercase">Dirección</div>
+                    <div class="fw-semibold"><%= visita.Direccion || visita.direccion %></div>
+                </div>
+                <% } %>
+
+                <% if (visita.Telefono || visita.telefono) { %>
+                <div class="mt-3">
+                    <div class="text-muted small text-uppercase">Teléfono</div>
+                    <div class="fw-semibold"><%= visita.Telefono || visita.telefono %></div>
+                </div>
+                <% } %>
+
+                <% if (visita.EnalaceReunion || visita.EnlaceReunion || visita.enlace_reunion) { %>
+                <div class="mt-3">
+                    <div class="text-muted small text-uppercase mb-2">Enlace de Reunión</div>
+                    <% const enlaceReunion = visita.EnalaceReunion || visita.EnlaceReunion || visita.enlace_reunion; %>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="<%= enlaceReunion %>" target="_blank" class="btn btn-primary btn-sm">
+                            <i class="fas fa-video me-1"></i>Unirse a la reunión
+                        </a>
+                        <span class="text-muted small">
+                            <i class="fas fa-link me-1"></i><%= enlaceReunion %>
+                        </span>
+                    </div>
+                </div>
+                <% } %>
+
+                <% if (visita.Observaciones || visita.observaciones || visita.Notas || visita.notas) { %>
+                <div class="mt-3">
+                    <div class="text-muted small text-uppercase">Observaciones</div>
+                    <div class="alert alert-secondary mb-0"><%= visita.Observaciones || visita.observaciones || visita.Notas || visita.notas %></div>
+                </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js">    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión PCP - <%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .table-container {
+            max-height: 75vh;
+            overflow: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+        }
+        .table th {
+            position: sticky;
+            top: 0;
+            background-color: #fff;
+            z-index: 10;
+            border-bottom: 2px solid #dee2e6;
+        }
+        .table td {
+            vertical-align: middle;
+        }
+        .search-box {
+            background: #ffffff;
+            padding: 1rem 1.5rem;
+            border: 1px solid #dee2e6;
+            border-radius: 0.75rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 5px 15px rgba(11, 137, 27, 0.05);
+        }
+        .articulo-row:hover {
+            background-color: rgba(11, 137, 27, 0.05);
+        }
+        .pcp-input {
+            max-width: 120px;
+        }
+        .btn-save-pcp {
+            min-width: 80px;
+        }
+        .badge-pcp {
+            font-size: 0.85rem;
+            padding: 0.35rem 0.65rem;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <!-- Navigation -->
+    <%- include('../partials/navbar-dashboard') %>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || 'Usuario' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="#" data-bs-toggle="collapse" data-bs-target="#ajustesSubmenu" aria-expanded="true" aria-controls="ajustesSubmenu" id="ajustesMenuToggle">
+                                    <i class="fas fa-cog me-2"></i>Ajustes
+                                    <i class="fas fa-chevron-down ms-auto float-end" id="ajustesChevron" style="font-size: 0.75rem; transition: transform 0.3s; transform: rotate(180deg);"></i>
+                                </a>
+                                <ul class="nav flex-column collapse show" id="ajustesSubmenu" style="margin-left: 1.5rem; border-left: 2px solid #dee2e6; padding-left: 0.5rem;">
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/ajustes/webhook-n8n">
+                                            <i class="fas fa-plug me-2"></i>Webhook N8N
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/ajustes/prestashop">
+                                            <i class="fas fa-shopping-bag me-2"></i>Prestashop
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/ajustes/api-keys">
+                                            <i class="fas fa-key me-2"></i>API Keys
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/ajustes/google-oauth">
+                                            <i class="fab fa-google me-2"></i>Google OAuth2
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/api-docs" target="_blank">
+                                            <i class="fas fa-book me-2"></i>Documentación API
+                                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link" href="/dashboard/rentabilidad-articulos">
+                                            <i class="fas fa-chart-line me-2"></i>Rentabilidad Artículos
+                                        </a>
+                                    </li>
+                                    <li class="nav-item mb-1">
+                                        <a class="nav-link active" href="/dashboard/ajustes/pcp">
+                                            <i class="fas fa-euro-sign me-2"></i>Gestión PCP
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+            
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <div>
+                        <h1 class="h2 fw-bold text-primary">
+                            <i class="fas fa-euro-sign me-2"></i>Gestión de Precios de Compra (PCP)
+                        </h1>
+                        <p class="text-muted mb-0">Asigna y actualiza los precios de compra de los productos</p>
+                    </div>
+                    <a href="/dashboard" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Volver
+                    </a>
+                </div>
+
+                <!-- Mensajes de éxito/error -->
+                <% if (success) { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i><%= success %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+                <% if (error) { %>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <i class="fas fa-exclamation-circle me-2"></i><%= error %>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+
+                <!-- Filtros y búsqueda -->
+                <div class="search-box">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="searchInput" class="form-label fw-semibold">
+                                <i class="fas fa-search me-2"></i>Buscar artículo
+                            </label>
+                            <input 
+                                type="text" 
+                                class="form-control" 
+                                id="searchInput" 
+                                placeholder="Buscar por SKU, nombre o marca..."
+                            >
+                        </div>
+                        <div class="col-md-3">
+                            <label for="filterPCP" class="form-label fw-semibold">
+                                <i class="fas fa-filter me-2"></i>Filtrar por PCP
+                            </label>
+                            <select class="form-select" id="filterPCP">
+                                <option value="all">Todos</option>
+                                <option value="with">Con PCP</option>
+                                <option value="without">Sin PCP</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3 d-flex align-items-end">
+                            <button type="button" class="btn btn-outline-secondary w-100" id="btnResetFilters">
+                                <i class="fas fa-redo me-2"></i>Limpiar filtros
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Estadísticas rápidas -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="card text-center border-primary">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted mb-2">
+                                    <i class="fas fa-boxes me-2"></i>Total Artículos
+                                </h5>
+                                <h2 class="text-primary mb-0" id="totalArticulos"><%= articulos.length %></h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center border-success">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted mb-2">
+                                    <i class="fas fa-check-circle me-2"></i>Con PCP
+                                </h5>
+                                <h2 class="text-success mb-0" id="conPCP">
+                                    <%= articulos.filter(a => a.PCP && parseFloat(a.PCP) > 0).length %>
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card text-center border-warning">
+                            <div class="card-body">
+                                <h5 class="card-title text-muted mb-2">
+                                    <i class="fas fa-exclamation-circle me-2"></i>Sin PCP
+                                </h5>
+                                <h2 class="text-warning mb-0" id="sinPCP">
+                                    <%= articulos.filter(a => !a.PCP || parseFloat(a.PCP) === 0).length %>
+                                </h2>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla de artículos -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Lista de Artículos
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-container">
+                            <table class="table table-hover table-striped mb-0" id="articulosTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width: 5%;">ID</th>
+                                        <th style="width: 10%;">SKU</th>
+                                        <th style="width: 25%;">Nombre</th>
+                                        <th style="width: 10%;">Marca</th>
+                                        <th style="width: 10%;">PVL (€)</th>
+                                        <th style="width: 15%;">PCP (€)</th>
+                                        <th style="width: 10%;">Margen (€)</th>
+                                        <th style="width: 10%;">% Rent.</th>
+                                        <th style="width: 5%;">Acción</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% articulos.forEach(articulo => { 
+                                        const pvl = parseFloat(articulo.PVL || 0);
+                                        // PCP puede ser NULL, 0, o un decimal
+                                        const pcp = articulo.PCP !== null && articulo.PCP !== undefined ? parseFloat(articulo.PCP) : null;
+                                        const margen = pcp !== null ? (pvl - pcp) : null;
+                                        const rentabilidad = pcp !== null && pcp > 0 ? ((margen / pcp) * 100).toFixed(2) : null;
+                                        const tienePCP = pcp !== null && pcp > 0;
+                                        const pcpDisplay = pcp !== null ? pcp.toFixed(2) : '';
+                                    %>
+                                    <tr class="articulo-row" data-articulo-id="<%= articulo.Id || articulo.id || '' %>" data-sku="<%= (articulo.SKU || '').toLowerCase() %>" data-nombre="<%= (articulo.Nombre || '').toLowerCase() %>" data-marca="<%= (articulo.Marca || '').toLowerCase() %>" data-pcp-status="<%= tienePCP ? 'with' : 'without' %>">
+                                        <td><%= articulo.Id || articulo.id || '-' %></td>
+                                        <td>
+                                            <span class="badge bg-secondary"><%= articulo.SKU || '-' %></span>
+                                        </td>
+                                        <td>
+                                            <strong><%= articulo.Nombre || '-' %></strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info"><%= articulo.Marca || '-' %></span>
+                                        </td>
+                                        <td>
+                                            <strong class="text-primary"><%= pvl.toFixed(2) %>€</strong>
+                                        </td>
+                                        <td>
+                                            <form class="d-inline-flex align-items-center pcp-form" data-articulo-id="<%= articulo.Id || articulo.id || '' %>">
+                                                <input 
+                                                    type="number" 
+                                                    step="0.01" 
+                                                    min="0" 
+                                                    class="form-control form-control-sm pcp-input" 
+                                                    name="PCP" 
+                                                    value="<%= pcpDisplay %>" 
+                                                    placeholder="Vacío = NULL"
+                                                    id="pcp-<%= articulo.Id || articulo.id || '' %>"
+                                                >
+                                                <button 
+                                                    type="submit" 
+                                                    class="btn btn-sm btn-success btn-save-pcp ms-2"
+                                                    title="Guardar PCP"
+                                                >
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                        <td>
+                                            <% if (margen !== null) { %>
+                                                <span class="<%= margen >= 0 ? 'text-success' : 'text-danger' %>">
+                                                    <strong><%= margen.toFixed(2) %>€</strong>
+                                                </span>
+                                            <% } else { %>
+                                                <span class="text-muted">-</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <% if (rentabilidad !== null) { %>
+                                                <span class="badge <%= parseFloat(rentabilidad) >= 0 ? 'bg-success' : 'bg-danger' %> badge-pcp">
+                                                    <%= parseFloat(rentabilidad) >= 0 ? '+' : '' %><%= rentabilidad %>%
+                                                </span>
+                                            <% } else { %>
+                                                <span class="badge bg-secondary badge-pcp">-</span>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <button 
+                                                class="btn btn-sm btn-outline-primary" 
+                                                data-articulo-id="<%= articulo.Id || articulo.id || '' %>"
+                                                data-pcp-value="<%= pcpDisplay %>"
+                                                onclick="editarPCPFromButton(this)"
+                                                title="Editar PCP"
+                                            >
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    <% }); %>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Modal para editar PCP -->
+    <div class="modal fade" id="editPCPModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>Editar Precio de Compra (PCP)
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editPCPForm">
+                    <div class="modal-body">
+                        <input type="hidden" id="modalArticuloId" name="articuloId">
+                        <div class="mb-3">
+                            <label for="modalPCP" class="form-label fw-semibold">Precio de Compra (PCP) en €</label>
+                            <input 
+                                type="number" 
+                                step="0.01" 
+                                min="0" 
+                                class="form-control" 
+                                id="modalPCP" 
+                                name="PCP" 
+                                placeholder="Vacío = NULL, 0 = 0.00, o ej: 16.23"
+                            >
+                            <small class="form-text text-muted">
+                                Deja vacío para NULL, ingresa 0 para 0.00, o un decimal como 16.23
+                            </small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-2"></i>Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Guardar
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Búsqueda y filtros
+        const searchInput = document.getElementById('searchInput');
+        const filterPCP = document.getElementById('filterPCP');
+        const btnResetFilters = document.getElementById('btnResetFilters');
+        const articulosTable = document.getElementById('articulosTable');
+        const rows = articulosTable.querySelectorAll('tbody tr');
+
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const pcpFilter = filterPCP.value;
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const sku = row.getAttribute('data-sku') || '';
+                const nombre = row.getAttribute('data-nombre') || '';
+                const marca = row.getAttribute('data-marca') || '';
+                const pcpStatus = row.getAttribute('data-pcp-status') || '';
+
+                const matchesSearch = !searchTerm || 
+                    sku.includes(searchTerm) || 
+                    nombre.includes(searchTerm) || 
+                    marca.includes(searchTerm);
+
+                const matchesPCP = pcpFilter === 'all' || 
+                    (pcpFilter === 'with' && pcpStatus === 'with') ||
+                    (pcpFilter === 'without' && pcpStatus === 'without');
+
+                if (matchesSearch && matchesPCP) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            // Actualizar estadísticas
+            updateStats();
+        }
+
+        function updateStats() {
+            const visibleRows = Array.from(rows).filter(r => r.style.display !== 'none');
+            const total = visibleRows.length;
+            const conPCP = visibleRows.filter(r => r.getAttribute('data-pcp-status') === 'with').length;
+            const sinPCP = total - conPCP;
+
+            document.getElementById('totalArticulos').textContent = total;
+            document.getElementById('conPCP').textContent = conPCP;
+            document.getElementById('sinPCP').textContent = sinPCP;
+        }
+
+        searchInput.addEventListener('input', filterTable);
+        filterPCP.addEventListener('change', filterTable);
+        btnResetFilters.addEventListener('click', () => {
+            searchInput.value = '';
+            filterPCP.value = 'all';
+            filterTable();
+        });
+
+        // Guardar PCP desde el formulario inline (similar a edición de artículos)
+        document.querySelectorAll('.pcp-form').forEach(form => {
+            form.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                
+                // Obtener el ID del artículo del data-attribute
+                let articuloId = form.getAttribute('data-articulo-id');
+                
+                // Si no está en el data-attribute, intentar desde el ID del input (formato: pcp-{id})
+                if (!articuloId || articuloId === '' || articuloId === 'null' || articuloId === 'undefined') {
+                    const pcpInput = form.querySelector('input[name="PCP"]');
+                    if (pcpInput && pcpInput.id) {
+                        const match = pcpInput.id.match(/pcp-(\d+)/);
+                        if (match && match[1]) {
+                            articuloId = match[1];
+                        }
+                    }
+                }
+                
+                // Si aún no está, intentar desde la fila de la tabla
+                if (!articuloId || articuloId === '' || articuloId === 'null' || articuloId === 'undefined') {
+                    const tr = form.closest('tr.articulo-row');
+                    if (tr) {
+                        const trId = tr.getAttribute('data-articulo-id');
+                        if (trId && trId !== '' && trId !== 'null' && trId !== 'undefined') {
+                            articuloId = trId;
+                        }
+                    }
+                }
+                
+                if (!articuloId || articuloId === '' || articuloId === 'null' || articuloId === 'undefined') {
+                    console.error('❌ [PCP] No se pudo obtener el ID del artículo. Form:', form);
+                    alert('Error: No se pudo obtener el ID del artículo. Por favor, recarga la página e intenta de nuevo.');
+                    return;
+                }
+                
+                const pcpInput = form.querySelector('input[name="PCP"]');
+                const pcpValue = pcpInput.value.trim() === '' ? '' : pcpInput.value;
+                
+                // TEMPORAL: Confirmar antes de guardar para poder ver los logs
+                const pcpDisplay = pcpValue === '' ? 'NULL' : pcpValue + '€';
+                const confirmar = confirm(`¿Confirmas actualizar el PCP del artículo ID ${articuloId} a ${pcpDisplay}?\n\nRevisa los logs del servidor antes de continuar.`);
+                if (!confirmar) {
+                    console.log('❌ [PCP] Usuario canceló la actualización');
+                    return;
+                }
+                
+                console.log('✅ [PCP] Usuario confirmó la actualización. Revisa los logs del servidor ahora.');
+                console.log('✅ [PCP] Artículo ID:', articuloId);
+                console.log('✅ [PCP] PCP Value:', pcpValue);
+                
+                const submitBtn = form.querySelector('button[type="submit"]');
+                if (!submitBtn) {
+                    console.error('❌ [PCP] ERROR: No se encontró el botón de submit');
+                    alert('Error: No se encontró el botón de envío. Por favor, recarga la página.');
+                    return;
+                }
+                
+                // Deshabilitar botón durante la petición
+                const originalHtml = submitBtn.innerHTML;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+                try {
+                    const formData = new FormData();
+                    formData.append('PCP', pcpValue);
+                    console.log('✅ [PCP] FormData creado. PCP en FormData:', formData.get('PCP'));
+
+                    const url = `/dashboard/ajustes/pcp/${articuloId}`;
+                    console.log('✅ [PCP] URL completa:', url);
+                    console.log('✅ [PCP] Enviando PCP a:', url, 'Valor:', pcpValue, 'Artículo ID:', articuloId);
+                    console.log('✅ [PCP] Iniciando fetch...');
+                    
+                    const response = await fetch(url, {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Accept': 'application/json'
+                        },
+                        redirect: 'manual',
+                        body: formData
+                    });
+
+                    console.log('✅ [PCP] Fetch completado. Respuesta recibida:', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        type: response.type,
+                        ok: response.ok,
+                        url: response.url
+                    });
+
+                    // Manejar redirecciones opacas
+                    if (response.type === 'opaqueredirect' || response.status === 0 || response.status === 302 || response.status === 303) {
+                        console.log('✅ [PCP] Redirección detectada, redirigiendo manualmente...');
+                        window.location.href = '/dashboard/ajustes/pcp?success=' + encodeURIComponent('PCP actualizado correctamente') + '&_t=' + Date.now();
+                        return;
+                    }
+                    
+                    if (response.ok) {
+                        const contentType = response.headers.get('content-type');
+                        console.log('✅ [PCP] Content-Type:', contentType);
+                        if (contentType && contentType.includes('application/json')) {
+                            const data = await response.json();
+                            console.log('✅ [PCP] Respuesta JSON:', data);
+                            if (data.success) {
+                                // Mostrar logs en un alert antes de redirigir
+                                if (data.logs && data.logs.length > 0) {
+                                    const logsTexto = data.logs.join('\n');
+                                    alert('PCP actualizado correctamente\n\nLOGS DEL SERVIDOR:\n' + logsTexto);
+                                }
+                                window.location.href = '/dashboard/ajustes/pcp?success=' + encodeURIComponent(data.message || 'PCP actualizado correctamente') + '&_t=' + Date.now();
+                            } else {
+                                // Mostrar logs de error si existen
+                                if (data.logs && data.logs.length > 0) {
+                                    const logsTexto = data.logs.join('\n');
+                                    alert('Error: ' + (data.error || 'Error desconocido') + '\n\nLOGS DEL SERVIDOR:\n' + logsTexto);
+                                } else {
+                                    alert('Error: ' + (data.error || 'Error desconocido'));
+                                }
+                                submitBtn.disabled = false;
+                                submitBtn.innerHTML = originalHtml;
+                            }
+                        } else {
+                            console.log('✅ [PCP] Respuesta no es JSON, redirigiendo...');
+                            window.location.href = '/dashboard/ajustes/pcp?success=' + encodeURIComponent('PCP actualizado correctamente') + '&_t=' + Date.now();
+                        }
+                    } else {
+                        const contentType = response.headers.get('content-type');
+                        let errorText = '';
+                        let errorLogs = [];
+                        try {
+                            if (contentType && contentType.includes('application/json')) {
+                                const data = await response.json();
+                                errorText = data.error || 'Error desconocido';
+                                if (data.logs && data.logs.length > 0) {
+                                    errorLogs = data.logs;
+                                }
+                            } else {
+                                errorText = await response.text();
+                            }
+                        } catch (e) {
+                            errorText = 'Error desconocido';
+                        }
+                        console.error('❌ [PCP] Error del servidor:', response.status, errorText);
+                        if (errorLogs.length > 0) {
+                            const logsTexto = errorLogs.join('\n');
+                            alert('Error al actualizar el PCP. Código: ' + response.status + (errorText ? '\n' + errorText : '') + '\n\nLOGS DEL SERVIDOR:\n' + logsTexto);
+                        } else {
+                            alert('Error al actualizar el PCP. Código: ' + response.status + (errorText ? '\n' + errorText : ''));
+                        }
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = originalHtml;
+                    }
+            } catch (error) {
+                console.error('❌ [PCP] Error en fetch:', error);
+                console.error('❌ [PCP] Error name:', error.name);
+                console.error('❌ [PCP] Error message:', error.message);
+                console.error('❌ [PCP] Error stack:', error.stack);
+                
+                let errorMessage = 'Error al actualizar el PCP: ' + error.message;
+                if (error.message.includes('Failed to fetch') || error.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
+                    errorMessage = 'Error de conexión: No se pudo conectar al servidor. Por favor, verifica que el servidor esté corriendo y recarga la página.';
+                }
+                
+                alert(errorMessage + '\n\nDetalles del error:\n' + error.name + ': ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+            }
+            });
+        });
+
+        // Función para editar PCP desde el botón (usa data attributes para evitar problemas de sintaxis)
+        function editarPCPFromButton(button) {
+            const articuloId = button.getAttribute('data-articulo-id');
+            const pcpValue = button.getAttribute('data-pcp-value') || '';
+            editarPCP(articuloId, pcpValue);
+        }
+
+        // Función para editar PCP desde el modal
+        function editarPCP(articuloId, pcpActual) {
+            document.getElementById('modalArticuloId').value = articuloId;
+            // pcpActual puede ser vacío (NULL), 0, o un decimal
+            document.getElementById('modalPCP').value = pcpActual || '';
+            
+            const modal = new bootstrap.Modal(document.getElementById('editPCPModal'));
+            modal.show();
+        }
+
+        // Formulario del modal
+        document.getElementById('editPCPForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const articuloId = document.getElementById('modalArticuloId').value;
+            
+            // Validar que el ID existe
+            if (!articuloId || articuloId === '') {
+                console.error('❌ [PCP MODAL] No se pudo obtener el ID del artículo');
+                alert('Error: No se pudo obtener el ID del artículo');
+                return;
+            }
+            
+            const pcpInput = document.getElementById('modalPCP');
+            // Permitir valores vacíos (NULL), 0, o decimales
+            const pcpValue = pcpInput.value.trim() === '' ? '' : pcpInput.value;
+
+            // TEMPORAL: Confirmar antes de guardar para poder ver los logs
+            const pcpDisplay = pcpValue === '' ? 'NULL' : pcpValue + '€';
+            const confirmar = confirm(`¿Confirmas actualizar el PCP del artículo ID ${articuloId} a ${pcpDisplay}?\n\nRevisa los logs del servidor antes de continuar.`);
+            if (!confirmar) {
+                console.log('❌ [PCP MODAL] Usuario canceló la actualización');
+                return;
+            }
+            
+            console.log('✅ [PCP MODAL] Usuario confirmó la actualización. Revisa los logs del servidor ahora.');
+            console.log('✅ [PCP MODAL] Artículo ID:', articuloId);
+            console.log('✅ [PCP MODAL] PCP Value:', pcpValue);
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            if (!submitBtn) {
+                console.error('❌ [PCP MODAL] ERROR: No se encontró el botón de submit');
+                alert('Error: No se encontró el botón de envío. Por favor, recarga la página.');
+                return;
+            }
+            
+            const originalHtml = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+
+            try {
+                const formData = new FormData();
+                formData.append('PCP', pcpValue);
+                console.log('✅ [PCP MODAL] FormData creado. PCP en FormData:', formData.get('PCP'));
+
+                const url = `/dashboard/ajustes/pcp/${articuloId}`;
+                console.log('✅ [PCP MODAL] URL completa:', url);
+                console.log('✅ [PCP MODAL] Enviando PCP a:', url, 'Valor:', pcpValue, 'Artículo ID:', articuloId);
+                console.log('✅ [PCP MODAL] Iniciando fetch...');
+
+                const response = await fetch(url, {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    redirect: 'manual',
+                    body: formData
+                });
+
+                console.log('✅ [PCP MODAL] Fetch completado. Respuesta recibida:', {
+                    status: response.status,
+                    statusText: response.statusText,
+                    type: response.type,
+                    ok: response.ok,
+                    url: response.url
+                });
+
+                // Manejar redirecciones opacas
+                if (response.type === 'opaqueredirect' || response.status === 0 || response.status === 302 || response.status === 303) {
+                    console.log('✅ [PCP MODAL] Redirección detectada, redirigiendo manualmente...');
+                    window.location.href = '/dashboard/ajustes/pcp?success=' + encodeURIComponent('PCP actualizado correctamente') + '&_t=' + Date.now();
+                    return;
+                }
+                    
+                if (response.ok) {
+                    const contentType = response.headers.get('content-type');
+                    console.log('✅ [PCP MODAL] Content-Type:', contentType);
+                    if (contentType && contentType.includes('application/json')) {
+                        const data = await response.json();
+                        console.log('✅ [PCP MODAL] Respuesta JSON:', data);
+                        if (data.success) {
+                            // Mostrar logs en un alert antes de redirigir
+                            if (data.logs && data.logs.length > 0) {
+                                const logsTexto = data.logs.join('\n');
+                                alert('PCP actualizado correctamente\n\nLOGS DEL SERVIDOR:\n' + logsTexto);
+                            }
+                            // Cerrar el modal antes de redirigir
+                            const modal = bootstrap.Modal.getInstance(document.getElementById('editPCPModal'));
+                            if (modal) modal.hide();
+                            window.location.href = '/dashboard/ajustes/pcp?success=' + encodeURIComponent(data.message || 'PCP actualizado correctamente') + '&_t=' + Date.now();
+                        } else {
+                            // Mostrar logs de error si existen
+                            if (data.logs && data.logs.length > 0) {
+                                const logsTexto = data.logs.join('\n');
+                                alert('Error: ' + (data.error || 'Error desconocido') + '\n\nLOGS DEL SERVIDOR:\n' + logsTexto);
+                            } else {
+                                alert('Error: ' + (data.error || 'Error desconocido'));
+                            }
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = originalHtml;
+                        }
+                    } else {
+                        console.log('✅ [PCP MODAL] Respuesta no es JSON, redirigiendo...');
+                        // Cerrar el modal antes de redirigir
+                        const modal = bootstrap.Modal.getInstance(document.getElementById('editPCPModal'));
+                        if (modal) modal.hide();
+                        window.location.href = '/dashboard/ajustes/pcp?success=' + encodeURIComponent('PCP actualizado correctamente') + '&_t=' + Date.now();
+                    }
+                } else {
+                    const contentType = response.headers.get('content-type');
+                    let errorText = '';
+                    let errorLogs = [];
+                    try {
+                        if (contentType && contentType.includes('application/json')) {
+                            const data = await response.json();
+                            errorText = data.error || 'Error desconocido';
+                            if (data.logs && data.logs.length > 0) {
+                                errorLogs = data.logs;
+                            }
+                        } else {
+                            errorText = await response.text();
+                        }
+                    } catch (e) {
+                        errorText = 'Error desconocido';
+                    }
+                    console.error('❌ [PCP MODAL] Error del servidor:', response.status, errorText);
+                    if (errorLogs.length > 0) {
+                        const logsTexto = errorLogs.join('\n');
+                        alert('Error al actualizar el PCP. Código: ' + response.status + (errorText ? '\n' + errorText : '') + '\n\nLOGS DEL SERVIDOR:\n' + logsTexto);
+                    } else {
+                        alert('Error al actualizar el PCP. Código: ' + response.status + (errorText ? '\n' + errorText : ''));
+                    }
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalHtml;
+                }
+            } catch (error) {
+                console.error('❌ [PCP MODAL] Error en fetch:', error);
+                console.error('❌ [PCP MODAL] Error name:', error.name);
+                console.error('❌ [PCP MODAL] Error message:', error.message);
+                console.error('❌ [PCP MODAL] Error stack:', error.stack);
+                
+                let errorMessage = 'Error al actualizar el PCP: ' + error.message;
+                if (error.message.includes('Failed to fetch') || error.message.includes('ERR_SSL_PROTOCOL_ERROR')) {
+                    errorMessage = 'Error de conexión: No se pudo conectar al servidor. Por favor, verifica que el servidor esté corriendo y recarga la página.';
+                }
+                
+                alert(errorMessage + '\n\nDetalles del error:\n' + error.name + ': ' + error.message);
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalHtml;
+            }
+        });
+
+        // Inicializar estadísticas
+        updateStats();
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

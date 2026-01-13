@@ -1,0 +1,256 @@
+<%- include('../partials/header', { title: title, user: user }) %>
+
+    <div class="main-content" style="margin-left: 250px; padding: 20px;">
+        <div class="container-fluid mt-4">
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h4 class="mb-0">
+                                <i class="fas fa-terminal me-2"></i>Logs del Servidor
+                            </h4>
+                            <div>
+                                <button class="btn btn-sm btn-outline-secondary me-2" onclick="recargarLogs()">
+                                    <i class="fas fa-sync-alt me-1"></i>Recargar
+                                </button>
+                                <button class="btn btn-sm btn-outline-info me-2" onclick="mostrarModalCopiar()">
+                                    <i class="fas fa-copy me-1"></i>Copiar Logs
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger me-2" onclick="limpiarLogs()">
+                                    <i class="fas fa-trash me-1"></i>Limpiar
+                                </button>
+                                <a href="/api/logs-servidor/exportar" class="btn btn-sm btn-outline-primary" target="_blank">
+                                    <i class="fas fa-download me-1"></i>Exportar
+                                </a>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">Filtrar por nivel:</label>
+                                    <select class="form-select" id="filtroNivel" onchange="recargarLogs()">
+                                        <option value="">Todos</option>
+                                        <option value="error">Solo Errores</option>
+                                        <option value="warn">Solo Advertencias</option>
+                                        <option value="info">Solo Info</option>
+                                        <option value="debug">Solo Debug</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Cantidad:</label>
+                                    <select class="form-select" id="cantidadLogs" onchange="recargarLogs()">
+                                        <option value="100">Últimos 100</option>
+                                        <option value="500" selected>Últimos 500</option>
+                                        <option value="1000">Últimos 1000</option>
+                                        <option value="all">Todos</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Estadísticas:</label>
+                                    <div class="d-flex gap-3">
+                                        <span class="badge bg-secondary">Total: <span id="totalLogs"><%= totalLogs %></span></span>
+                                        <span class="badge bg-danger">Errores: <span id="totalErrors"><%= totalErrors %></span></span>
+                                        <span class="badge bg-warning">Mostrando: <span id="mostrandoLogs"><%= logs.length %></span></span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="logs-container" id="logsContainer" style="max-height: 70vh; overflow-y: auto; background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 12px;">
+                                <div id="logsContent">
+                                    <% logs.forEach(log => { %>
+                                        <div class="log-entry mb-2" data-level="<%= log.level %>">
+                                            <span class="log-timestamp text-muted">[<%= new Date(log.timestamp).toLocaleString('es-ES') %>]</span>
+                                            <span class="log-level badge bg-<%= log.level === 'error' ? 'danger' : log.level === 'warn' ? 'warning' : log.level === 'info' ? 'info' : 'secondary' %> ms-2">
+                                                <%= log.level.toUpperCase() %>
+                                            </span>
+                                            <span class="log-message ms-2"><%= log.message %></span>
+                                            <% if (log.data) { %>
+                                                <pre class="log-data mt-1 ms-4 text-info" style="font-size: 11px; white-space: pre-wrap;"><%= typeof log.data === 'object' ? JSON.stringify(log.data, null, 2) : log.data %></pre>
+                                            <% } %>
+                                        </div>
+                                    <% }); %>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para copiar logs -->
+    <div class="modal fade" id="modalCopiarLogs" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Logs para compartir</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted">Copia estos logs y compártelos para diagnóstico:</p>
+                    <textarea id="logsParaCopiar" class="form-control" rows="20" readonly style="font-family: monospace; font-size: 11px;"></textarea>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary" onclick="copiarLogs()">
+                        <i class="fas fa-copy me-1"></i>Copiar al Portapapeles
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let autoRefresh = false;
+        let refreshInterval = null;
+
+        function recargarLogs() {
+            const nivel = document.getElementById('filtroNivel').value;
+            const cantidad = document.getElementById('cantidadLogs').value;
+            const errorsOnly = nivel === 'error';
+            
+            let url = '/api/logs-servidor?';
+            if (errorsOnly) {
+                url += 'errorsOnly=true&';
+            } else if (nivel) {
+                url += `level=${nivel}&`;
+            }
+            if (cantidad !== 'all') {
+                url += `count=${cantidad}`;
+            }
+            
+            fetch(url, {
+                credentials: 'include',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarLogs(data.logs);
+                    document.getElementById('totalLogs').textContent = data.totalLogs;
+                    document.getElementById('totalErrors').textContent = data.totalErrors;
+                    document.getElementById('mostrandoLogs').textContent = data.total;
+                } else {
+                    alert('Error al cargar logs: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al cargar logs: ' + error.message);
+            });
+        }
+
+        function mostrarLogs(logs) {
+            const container = document.getElementById('logsContent');
+            container.innerHTML = '';
+            
+            logs.forEach(log => {
+                const entry = document.createElement('div');
+                entry.className = 'log-entry mb-2';
+                entry.setAttribute('data-level', log.level);
+                
+                const timestamp = new Date(log.timestamp).toLocaleString('es-ES');
+                const levelBadge = getLevelBadge(log.level);
+                
+                let html = `
+                    <span class="log-timestamp text-muted">[${timestamp}]</span>
+                    <span class="log-level badge ${levelBadge.class} ms-2">${log.level.toUpperCase()}</span>
+                    <span class="log-message ms-2">${escapeHtml(log.message)}</span>
+                `;
+                
+                if (log.data) {
+                    const dataStr = typeof log.data === 'object' ? JSON.stringify(log.data, null, 2) : String(log.data);
+                    html += `<pre class="log-data mt-1 ms-4 text-info" style="font-size: 11px; white-space: pre-wrap;">${escapeHtml(dataStr)}</pre>`;
+                }
+                
+                entry.innerHTML = html;
+                container.appendChild(entry);
+            });
+            
+            // Scroll al final
+            const logsContainer = document.getElementById('logsContainer');
+            logsContainer.scrollTop = logsContainer.scrollHeight;
+        }
+
+        function getLevelBadge(level) {
+            const badges = {
+                'error': { class: 'bg-danger' },
+                'warn': { class: 'bg-warning' },
+                'info': { class: 'bg-info' },
+                'debug': { class: 'bg-secondary' }
+            };
+            return badges[level] || { class: 'bg-secondary' };
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function limpiarLogs() {
+            if (!confirm('¿Estás seguro de que quieres limpiar todos los logs?')) {
+                return;
+            }
+            
+            fetch('/api/logs-servidor/limpiar', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    recargarLogs();
+                    alert('Logs limpiados correctamente');
+                } else {
+                    alert('Error al limpiar logs: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al limpiar logs: ' + error.message);
+            });
+        }
+
+        function copiarLogs() {
+            const textarea = document.getElementById('logsParaCopiar');
+            textarea.select();
+            document.execCommand('copy');
+            alert('Logs copiados al portapapeles');
+        }
+
+        function mostrarModalCopiar() {
+            fetch('/api/logs-servidor?count=all', {
+                credentials: 'include',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const logsText = data.logs.map(log => {
+                        const dataStr = log.data ? JSON.stringify(log.data, null, 2) : '';
+                        return `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}${dataStr ? '\n' + dataStr : ''}`;
+                    }).join('\n\n');
+                    
+                    document.getElementById('logsParaCopiar').value = logsText;
+                    const modal = new bootstrap.Modal(document.getElementById('modalCopiarLogs'));
+                    modal.show();
+                }
+            });
+        }
+
+        // Cargar logs al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            recargarLogs();
+        });
+    </script>
+</body>
+</html>

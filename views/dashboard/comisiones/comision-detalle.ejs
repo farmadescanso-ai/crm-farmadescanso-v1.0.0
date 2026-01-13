@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detalle de Comisión - Farmadescaso CRM</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+    <%- include('../../partials/navbar-dashboard') %>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 sidebar bg-light p-0">
+                <div class="sidebar-content">
+                    <div class="user-info p-3 border-bottom">
+                        <div class="d-flex align-items-center">
+                            <div class="user-avatar me-3">
+                                <i class="fas fa-user-circle text-primary"></i>
+                            </div>
+                            <div>
+                                <h6 class="mb-0 fw-bold"><%= user.nombre %></h6>
+                                <small class="text-muted"><%= user.zona || '' %></small>
+                            </div>
+                        </div>
+                    </div>
+                    <nav class="sidebar-nav p-3">
+                        <ul class="nav flex-column">
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/articulos">
+                                    <i class="fas fa-boxes me-2"></i>Artículos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/clientes">
+                                    <i class="fas fa-users me-2"></i>Clientes
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/pedidos">
+                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/agenda">
+                                    <i class="fas fa-calendar-check me-2"></i>Agenda
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link active" href="/dashboard/comisiones/comisiones">
+                                    <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
+                                </a>
+                            </li>
+                            <li class="nav-item mb-2">
+                                <a class="nav-link" href="/dashboard/comerciales">
+                                    <i class="fas fa-user-tie me-2"></i>Comerciales
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+
+            <main class="col-md-9 col-lg-10 ms-sm-auto px-md-4 main-content">
+                <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+                    <h1 class="h2">
+                        <i class="fas fa-money-bill-wave me-2 text-primary"></i>Detalle de Comisión
+                    </h1>
+                    <a href="/dashboard/comisiones/comisiones" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Volver
+                    </a>
+                </div>
+
+                <!-- Resumen de la comisión -->
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        <div class="card border-primary">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Fijo Mensual</h6>
+                                <h4 class="text-primary mb-0">€ <%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-info">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Comisión Ventas</h6>
+                                <h4 class="text-info mb-0">€ <%= parseFloat(comision.comision_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-success">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Comisión Presupuesto</h6>
+                                <h4 class="text-success mb-0">€ <%= parseFloat(comision.comision_presupuesto || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h4>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card border-warning">
+                            <div class="card-body text-center">
+                                <h6 class="text-muted mb-2">Total Comisión</h6>
+                                <h4 class="text-warning mb-0 fw-bold">€ <%= parseFloat(comision.total_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Información general -->
+                <div class="card mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información General</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <strong>Comercial:</strong><br>
+                                <%= comision.comercial_nombre || '-' %>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Período:</strong><br>
+                                <%= ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][comision.mes - 1] %>/<%= comision.año %>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Estado:</strong><br>
+                                <% if (comision.estado === 'Pagada') { %>
+                                <span class="badge bg-success">Pagada</span>
+                                <% } else if (comision.estado === 'Calculada') { %>
+                                <span class="badge bg-info">Calculada</span>
+                                <% } else { %>
+                                <span class="badge bg-warning">Pendiente</span>
+                                <% } %>
+                            </div>
+                            <div class="col-md-3">
+                                <strong>Total Ventas:</strong><br>
+                                € <%= parseFloat(comision.total_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>
+                            </div>
+                        </div>
+                        <% if (comision.observaciones) { %>
+                        <div class="row mt-3">
+                            <div class="col-12">
+                                <strong>Observaciones:</strong><br>
+                                <%= comision.observaciones %>
+                            </div>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+
+                <!-- Detalle de comisiones -->
+                <div class="card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-list me-2"></i>Detalle de Comisiones
+                            <% if (detalle && detalle.length > 0) { %>
+                            <span class="badge bg-primary ms-2"><%= detalle.length %> línea(s)</span>
+                            <% } else { %>
+                            <span class="badge bg-secondary ms-2">Sin detalles de ventas</span>
+                            <% } %>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (!detalle || detalle.length === 0) { %>
+                        <div class="alert alert-info mb-0">
+                            <div class="d-flex align-items-start">
+                                <i class="fas fa-info-circle fa-2x me-3 mt-1"></i>
+                                <div>
+                                    <% if (parseFloat(comision.total_ventas || 0) === 0) { %>
+                                    <h6 class="alert-heading mb-2"><strong>No hay ventas registradas en este período</strong></h6>
+                                    <p class="mb-2">Esta comisión incluye únicamente los siguientes conceptos:</p>
+                                    <ul class="mb-0">
+                                        <li><strong>Fijo mensual:</strong> €<%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></li>
+                                        <% if (parseFloat(comision.comision_presupuesto || 0) > 0) { %>
+                                        <li><strong>Comisión por presupuesto:</strong> €<%= parseFloat(comision.comision_presupuesto || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></li>
+                                        <% } %>
+                                    </ul>
+                                    <% } else { %>
+                                    <h6 class="alert-heading mb-2"><strong>No hay detalles disponibles para esta comisión</strong></h6>
+                                    <p class="mb-0">Aunque hay ventas registradas (€<%= parseFloat(comision.total_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %>), los detalles no se han guardado correctamente. Por favor, contacta con el administrador.</p>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                        <% } else { %>
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Pedido</th>
+                                        <th>Artículo</th>
+                                        <th class="text-end">Cantidad</th>
+                                        <th class="text-end">Importe Venta</th>
+                                        <th class="text-end">% Comisión</th>
+                                        <th class="text-end">Importe Comisión</th>
+                                        <th>Tipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <% detalle.forEach(item => { %>
+                                    <tr>
+                                        <td>
+                                            <%= item.pedido_numero || 'N/A' %>
+                                            <% if (item.pedido_fecha) { %>
+                                            <br><small class="text-muted"><%= new Date(item.pedido_fecha).toLocaleDateString('es-ES') %></small>
+                                            <% } %>
+                                        </td>
+                                        <td>
+                                            <%= item.articulo_nombre || '-' %>
+                                            <% if (item.articulo_sku) { %>
+                                            <br><small class="text-muted">SKU: <%= item.articulo_sku %></small>
+                                            <% } %>
+                                        </td>
+                                        <td class="text-end"><%= parseFloat(item.cantidad || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end">€ <%= parseFloat(item.importe_venta || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td class="text-end"><%= parseFloat(item.porcentaje_comision || 0).toFixed(2) %>%</td>
+                                        <td class="text-end fw-bold">€ <%= parseFloat(item.importe_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                        <td><span class="badge bg-secondary"><%= item.tipo_comision || 'Venta' %></span></td>
+                                    </tr>
+                                    <% }) %>
+                                </tbody>
+                            </table>
+                        </div>
+                        <% } %>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const comisionesSubmenu = document.getElementById('comisionesSubmenu');
+            if (comisionesSubmenu) {
+                comisionesSubmenu.classList.add('show');
+            }
+        });
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+

@@ -1,0 +1,428 @@
+­ƒÜÇ [INICIO] Servidor CRM Farmadescaso iniciando...
+­ƒÜÇ [INICIO] Modo: development
+­ƒÜÇ [INICIO] Timestamp: 2025-12-21T17:27:16.304Z
+­ƒöº [CONFIG] Modo: Desarrollo Local
+­ƒöº [CONFIG] Cookies: secure=false, sameSite=lax (HTTP)
+­ƒÜÇ Servidor Farmadescaso CRM ejecut├índose en puerto 3000
+­ƒîÉ Disponible en http://localhost:3000
+­ƒîÉ Tambi├®n disponible en http://127.0.0.1:3000
+Ô£à Servidor escuchando en http://127.0.0.1:3000
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ignoring invalid configuration option passed to Connection: collation. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: acquireTimeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ignoring invalid configuration option passed to Connection: timeout. This is currently a warning, but in future versions of MySQL2, an error will be thrown if you pass an invalid configuration option to a Connection
+Ô£à Conectado a MySQL correctamente
+­ƒôè Base de datos: farmadescanso
+Ô£à UTF-8 configurado: utf8mb4_unicode_ci
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒÜÇ [DASHBOARD] Iniciando carga del dashboard...
+­ƒöì [DASHBOARD] Comercial ID: 1
+­ƒôè [DASHBOARD] Obteniendo pedidos, productos y estad├¡sticas...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+Ô£à Obtenidos 2 comerciales
+Ô£à Obtenidos 20 art├¡culos
+Ô£à Obtenidos 799 clientes
+Ô£à [DASHBOARD] Pedidos obtenidos: 1
+­ƒôï [DASHBOARD] Primer pedido: {
+  Id: 2,
+  NumPedido: 'P250001',
+  Cliente_id: undefined,
+  Id_Cliente: 808,
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  TotalPedido: '61.84',
+  BaseImponible: '51.10',
+  TotalIva: '10.74'
+}
+Ô£à Obtenidos 799 clientes
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+­ƒöì [DASHBOARD] Total pedidos: 1, IDs de clientes ├║nicos: 1 [ 808 ]
+Ô£à [DASHBOARD] Cliente 808: MACUCOS SL
+­ƒöì [DASHBOARD] Pedido 2: NumPedido=P250001, FechaPedido=Thu Dec 11 2025 00:00:00 GMT+0100 (hora est├índar de Europa central)
+­ƒöì [DASHBOARD] Pedido 2: clienteId=808, nombre=MACUCOS SL
+­ƒöì [DASHBOARD] Pedido 2: TotalPedido=61.84, totalCalculado=61.84, total final=61.84
+­ƒôè [DASHBOARD] Estad├¡sticas finales: {
+  totalVentas: 61.84,
+  totalVentasEsteMes: 61.84,
+  pedidosEsteMes: 1,
+  totalPedidos: 1
+}
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôï [LISTADO PEDIDOS] Obteniendo pedidos...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [LISTADO PEDIDOS] Pedidos raw obtenidos: 1
+­ƒôï [LISTADO PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  Id_Cial: 2,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+Ô£à Obtenidos 20 art├¡culos
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒÜÇ [DASHBOARD] Iniciando carga del dashboard...
+­ƒöì [DASHBOARD] Comercial ID: 1
+­ƒôè [DASHBOARD] Obteniendo pedidos, productos y estad├¡sticas...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+Ô£à Obtenidos 20 art├¡culos
+Ô£à Obtenidos 2 comerciales
+Ô£à Obtenidos 799 clientes
+Ô£à [DASHBOARD] Pedidos obtenidos: 1
+­ƒôï [DASHBOARD] Primer pedido: {
+  Id: 2,
+  NumPedido: 'P250001',
+  Cliente_id: undefined,
+  Id_Cliente: 808,
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  TotalPedido: '61.84',
+  BaseImponible: '51.10',
+  TotalIva: '10.74'
+}
+Ô£à Obtenidos 799 clientes
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+­ƒöì [DASHBOARD] Total pedidos: 1, IDs de clientes ├║nicos: 1 [ 808 ]
+Ô£à [DASHBOARD] Cliente 808: MACUCOS SL
+­ƒöì [DASHBOARD] Pedido 2: NumPedido=P250001, FechaPedido=Thu Dec 11 2025 00:00:00 GMT+0100 (hora est├índar de Europa central)
+­ƒöì [DASHBOARD] Pedido 2: clienteId=808, nombre=MACUCOS SL
+­ƒöì [DASHBOARD] Pedido 2: TotalPedido=61.84, totalCalculado=61.84, total final=61.84
+­ƒôè [DASHBOARD] Estad├¡sticas finales: {
+  totalVentas: 61.84,
+  totalVentasEsteMes: 61.84,
+  pedidosEsteMes: 1,
+  totalPedidos: 1
+}
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôï [LISTADO PEDIDOS] Obteniendo pedidos...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [LISTADO PEDIDOS] Pedidos raw obtenidos: 1
+­ƒôï [LISTADO PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  Id_Cial: 2,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+Ô£à Obtenidos 20 art├¡culos
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [INFORME PEDIDOS] Generando informe completo de pedidos...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [INFORME PEDIDOS] Total pedidos encontrados: 1
+Ô£à Obtenidos 20 art├¡culos
+­ƒöì [CONSTRUIR LINEAS] Procesando 7 l├¡neas raw
+­ƒöì [CONSTRUIR LINEAS] Primera l├¡nea raw (muestra): {
+  Id: 11,
+  Cantidad: 1,
+  todasLasClaves: [
+    'id',          'Id_NumPedido',
+    'Id_Articulo', 'NumPedido',
+    'Articulo',    'Cantidad',
+    'PVP',         'DtoLinea',
+    'Subtotal',    'DtoTotal',
+    'IVA'
+  ],
+  camposArticulo: [ 'Id_Articulo', 'Articulo' ],
+  'muestraArt├¡culo_id': undefined,
+  'muestraArt├¡culo_Id': undefined,
+  muestraArticulo_id: undefined,
+  muestraArticulo_Id: undefined
+}
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôï [LISTADO PEDIDOS] Obteniendo pedidos...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [LISTADO PEDIDOS] Pedidos raw obtenidos: 1
+­ƒôï [LISTADO PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  Id_Cial: 2,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+Ô£à Obtenidos 20 art├¡culos
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒÜÇ [DASHBOARD] Iniciando carga del dashboard...
+­ƒöì [DASHBOARD] Comercial ID: 1
+­ƒôè [DASHBOARD] Obteniendo pedidos, productos y estad├¡sticas...
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+­ƒôè [GET PEDIDOS] Total pedidos obtenidos: 1
+­ƒôï [GET PEDIDOS] Primer pedido (muestra): {
+  Id: 2,
+  NumPedido: 'P250001',
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  Cliente_id: 808,
+  todasLasClaves: [
+    'id',                 'Id_Cial',
+    'Id_Cliente',         'Id_FormaPago',
+    'Id_TipoPedido',      'Serie',
+    'NumPedido',          'FechaPedido',
+    'FechaEntrega',       'EstadoPedido',
+    'TotalDescuento',     'BaseImponible',
+    'TotalIva',           'TotalPedido',
+    'numero_cooperativa', 'cooperativa_nombre',
+    'Observaciones'
+  ]
+}
+Ô£à Obtenidos 20 art├¡culos
+Ô£à Obtenidos 2 comerciales
+Ô£à Obtenidos 799 clientes
+Ô£à [DASHBOARD] Pedidos obtenidos: 1
+­ƒôï [DASHBOARD] Primer pedido: {
+  Id: 2,
+  NumPedido: 'P250001',
+  Cliente_id: undefined,
+  Id_Cliente: 808,
+  FechaPedido: 2025-12-10T23:00:00.000Z,
+  TotalPedido: '61.84',
+  BaseImponible: '51.10',
+  TotalIva: '10.74'
+}
+Ô£à Obtenidos 799 clientes
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+­ƒöì [DASHBOARD] Total pedidos: 1, IDs de clientes ├║nicos: 1 [ 808 ]
+Ô£à [DASHBOARD] Cliente 808: MACUCOS SL
+­ƒöì [DASHBOARD] Pedido 2: NumPedido=P250001, FechaPedido=Thu Dec 11 2025 00:00:00 GMT+0100 (hora est├índar de Europa central)
+­ƒöì [DASHBOARD] Pedido 2: clienteId=808, nombre=MACUCOS SL
+­ƒöì [DASHBOARD] Pedido 2: TotalPedido=61.84, totalCalculado=61.84, total final=61.84
+­ƒôè [DASHBOARD] Estad├¡sticas finales: {
+  totalVentas: 61.84,
+  totalVentasEsteMes: 61.84,
+  pedidosEsteMes: 1,
+  totalPedidos: 1
+}
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+­ƒôè [COUNT CLIENTES] Total de clientes: 799
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à Obtenidos 20 art├¡culos
+Ô£à Obtenidos 2 comerciales
+Ô£à Obtenidos 799 clientes
+­ƒôè [GET ALL] Total registros en Clientes_Cooperativas: 1
+­ƒôè [GET ALL] Total registros en clientes_cooperativas: 1
+Ô£à [GET ALL] Relaciones obtenidas con tabla Clientes_Cooperativas: 1
+­ƒôï [GET ALL] Primer registro: {
+  "id": 4,
+  "Id_Cliente": 808,
+  "Id_Cooperativa": 1,
+  "NumAsociado": "10121509",
+  "ClienteNombre": "MACUCOS SL",
+  "CooperativaNombre": "HEFAME"
+}
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)
+Ô£à [AUTH] Usuario autenticado: paco@fralabu.com (ID: 1, Rol: Administrador)

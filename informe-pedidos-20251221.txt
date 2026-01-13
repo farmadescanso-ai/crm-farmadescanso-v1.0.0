@@ -1,0 +1,137 @@
+═══════════════════════════════════════════════════════════════
+           INFORME DE PEDIDOS - FARMADESCANSO CRM
+═══════════════════════════════════════════════════════════════
+
+Fecha de generación: 21/12/2025, 17:38:18
+Total de pedidos: 1
+
+═══════════════════════════════════════════════════════════════
+PEDIDO #1 - ID: 2
+═══════════════════════════════════════════════════════════════
+
+Número de pedido: P250001
+Serie: P
+Fecha de pedido: 2025-12-11
+Fecha de entrega: 2025-12-13
+Estado: Pendiente
+Observaciones: —
+
+CLIENTE:
+  ID: 808
+  Nombre: MACUCOS SL
+  DNI/CIF: B05520911
+  Email: masmacu@gmail.com
+  Teléfono: 968881296
+
+COMERCIAL:
+  ID: 2
+  Nombre:  Jesús Francisco Ros Medina
+  Email: rosmedi@yahoo.es
+
+FORMA DE PAGO:
+  Contado (0 días)
+
+TIPO DE PEDIDO:
+  Transfer Hefame
+
+COOPERATIVA:
+  Nombre: HEFAME
+  Número de asociado: 10121509
+
+TOTALES:
+  Base imponible: € 51.10
+  Total descuento: € 2.69
+  Total IVA: € 10.74
+  Total pedido: € 61.84
+
+LÍNEAS DE PEDIDO (7):
+
+  Línea 1:
+    ID: 4
+    Artículo ID: 14
+    Artículo: Ialozon Clean Spray 100 Ml
+    Cantidad: 1
+    Precio unitario: € 10.41
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 9.89
+    Total línea: € 11.97
+
+  Línea 2:
+    ID: 5
+    Artículo ID: 15
+    Artículo: Ialozon Enjuague Bucal Azul 300 Ml
+    Cantidad: 1
+    Precio unitario: € 7.46
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 7.09
+    Total línea: € 8.58
+
+  Línea 3:
+    ID: 6
+    Artículo ID: 16
+    Artículo: Ialozon Enjuague Bucal Rosa 300 Ml
+    Cantidad: 1
+    Precio unitario: € 7.46
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 7.09
+    Total línea: € 8.58
+
+  Línea 4:
+    ID: 7
+    Artículo ID: 17
+    Artículo: Ialozon Enjuague Bucal Superhidradante 300 Ml
+    Cantidad: 1
+    Precio unitario: € 9.14
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 8.68
+    Total línea: € 10.51
+
+  Línea 5:
+    ID: 8
+    Artículo ID: 18
+    Artículo: Ialozon Gel Oral 15 Ml
+    Cantidad: 1
+    Precio unitario: € 10.99
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 10.44
+    Total línea: € 12.63
+
+  Línea 6:
+    ID: 9
+    Artículo ID: 19
+    Artículo: Ialozon Pasta Dentrifical Azul 100 Ml
+    Cantidad: 1
+    Precio unitario: € 3.99
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 3.79
+    Total línea: € 4.59
+
+  Línea 7:
+    ID: 10
+    Artículo ID: 20
+    Artículo: Ialozon Pasta Dentrifical Rosa 100 Ml
+    Cantidad: 1
+    Precio unitario: € 4.34
+    Descuento: 5%
+    IVA: 21%
+    Subtotal: € 4.12
+    Total línea: € 4.99
+
+
+═══════════════════════════════════════════════════════════════
+                        RESUMEN GENERAL
+═══════════════════════════════════════════════════════════════
+
+Total de pedidos: 1
+Total de líneas: 7
+Base imponible total: € 51.10
+Total descuentos: € 2.69
+Total IVA: € 10.74
+Total pedidos: € 61.84
+

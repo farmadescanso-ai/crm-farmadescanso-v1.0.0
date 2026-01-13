@@ -1,0 +1,96 @@
+node_modules/
+npm-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Entorno
+.env
+.env.*
+
+# Archivos temporales
+*.tmp
+*.log
+
+# Despliegues legacy
+deploy/
+
+# Scripts locales
+*.ps1
+
+# Documentación interna (mantén solo README y documentación importante)
+*.md
+!README.md
+!SOLUCION-LOGIN.md
+!SINCRONIZAR-CLIENTES.md
+!VERIFICAR-DESPLIEGUE-VERCEL.md
+!DESPLIEGUE-ACTUALIZACION.md
+!VERIFICACION-LOGIN.md
+!SOLUCION-VERCEL-SESIONES.md
+!SOLUCION-JWT-VERCEL.md
+!DIAGNOSTICO-LOGIN.md
+!SISTEMA-VERSIONES.md
+# Dependencias
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Variables de entorno y archivos sensibles
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Archivos de configuración del IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Archivos de despliegue (contienen configuraciones específicas del servidor)
+deploy/onecom/
+deploy/*.js
+deploy/.htaccess
+
+# Archivos temporales
+tmp/
+temp/
+*.tmp
+.cache/
+
+# Archivos de sistema operativo
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Archivos de prueba y desarrollo
+test-results/
+coverage/
+.nyc_output/
+
+# Archivos de backup
+*.bak
+*.backup
+*.old
+
+# Certificados y claves (nunca subir)
+*.pem
+*.key
+*.cert
+*.crt
+
+# Archivos de sesión
+sessions/

@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .tipo-visita-selector {
+            transition: all 0.3s ease;
+        }
+        .campo-condicional {
+            display: none;
+        }
+        .campo-condicional.show {
+            display: block;
+        }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container py-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="mb-0 text-primary"><i class="fas fa-plus-circle me-2"></i>Nueva Cita</h3>
+        </div>
+
+        <% if (error) { %>
+        <div class="alert alert-danger">
+            <strong>Error:</strong>
+            <pre style="white-space: pre-wrap; word-wrap: break-word; margin-top: 10px; background: #f8f9fa; padding: 10px; border-radius: 4px; font-size: 0.9em;"><%= error %></pre>
+        </div>
+        <% } %>
+
+        <form method="POST" action="/dashboard/agenda/nuevo" id="visitaForm">
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Información de la Visita</h5>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Comercial <span class="text-danger">*</span></label>
+                            <select name="comercial_id" id="comercial_id" class="form-select" required 
+                                    <%= (user && user.Roll && user.Roll.toLowerCase() === 'administrador') || (user && user.roll && user.roll.toLowerCase() === 'administrador') ? '' : 'readonly' %>>
+                                <option value="">— Seleccionar comercial —</option>
+                                <% comerciales.forEach(comercial => { %>
+                                    <% 
+                                    const comercialId = comercial.Id || comercial.id;
+                                    // Valor por defecto: primero formValues, luego el usuario logueado
+                                    const comercialSeleccionado = formValues.comercial_id || (user && (user.Id || user.id || user.comercialId));
+                                    const isAdmin = (user && user.Roll && user.Roll.toLowerCase() === 'administrador') || (user && user.roll && user.roll.toLowerCase() === 'administrador');
+                                    %>
+                                    <option value="<%= comercialId %>" 
+                                            <%= String(comercialSeleccionado) === String(comercialId) ? 'selected' : '' %>>
+                                        <%= comercial.Nombre || comercial.nombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                            <small class="form-text text-muted">
+                                <% if ((user && user.Roll && user.Roll.toLowerCase() === 'administrador') || (user && user.roll && user.roll.toLowerCase() === 'administrador')) { %>
+                                    Selecciona el comercial responsable de esta visita
+                                <% } else { %>
+                                    Por defecto se asignará el comercial logueado (solo administradores pueden cambiarlo)
+                                <% } %>
+                            </small>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Tipo de Visita <span class="text-danger">*</span></label>
+                            <select name="tipo_visita" id="tipoVisita" class="form-select tipo-visita-selector" required>
+                                <option value="Farmacia" <%= (formValues.tipo_visita || 'Farmacia') === 'Farmacia' ? 'selected' : '' %>>💊 Farmacia</option>
+                                <option value="Sanitarios" <%= (formValues.tipo_visita || '') === 'Sanitarios' ? 'selected' : '' %>>🏥 Sanitarios</option>
+                                <option value="Reunión" <%= (formValues.tipo_visita || '') === 'Reunión' ? 'selected' : '' %>>🤝 Reunión</option>
+                                <option value="Notas" <%= (formValues.tipo_visita || '') === 'Notas' ? 'selected' : '' %>>📝 Notas</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Fecha <span class="text-danger">*</span></label>
+                            <input type="date" name="fecha" class="form-control" value="<%= formValues.fecha || '' %>" required>
+                        </div>
+                        
+                        <!-- Selector de Farmacia (Cliente) - Solo visible cuando tipo es "Farmacia" -->
+                        <div class="col-md-6 campo-condicional" id="campoFarmacia">
+                            <label class="form-label fw-semibold">Farmacia <span class="text-danger">*</span></label>
+                            <select name="cliente_id" id="cliente_id" class="form-select">
+                                <option value="">— Seleccionar farmacia —</option>
+                                <% clientes.forEach(cliente => { %>
+                                    <% 
+                                    const direccionCliente = cliente.Direccion || cliente.direccion || cliente.CALLE || cliente.calle || cliente.Dirección || cliente.dirección || '';
+                                    const codigoPostal = cliente.CodigoPostal || cliente.codigoPostal || cliente.Codigo_Postal || cliente.codigo_postal || cliente.CP || cliente.cp || cliente['Código Postal'] || cliente['código postal'] || '';
+                                    const poblacion = cliente.Poblacion || cliente.poblacion || cliente.Población || cliente.población || cliente.Ciudad || cliente.ciudad || cliente.City || cliente.city || '';
+                                    %>
+                                    <option value="<%= cliente.Id || cliente.id %>" 
+                                            data-direccion="<%= direccionCliente %>"
+                                            data-codigo-postal="<%= codigoPostal %>"
+                                            data-poblacion="<%= poblacion %>"
+                                            data-telefono="<%= cliente.Telefono || cliente.telefono || cliente.Telefono_Contacto || cliente.telefono_contacto || '' %>"
+                                            <%= String(formValues.cliente_id || '') === String(cliente.Id || cliente.id) ? 'selected' : '' %>>
+                                        <%= cliente.Nombre || cliente.nombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        
+                        <!-- Campo de Impactos Farmacia - Solo visible cuando tipo es "Farmacia" -->
+                        <div class="col-md-6 campo-condicional" id="campoImpactosFarmacia">
+                            <label class="form-label fw-semibold">Impactos Farmacia</label>
+                            <input type="number" name="impactos_farmacia" id="impactos_farmacia" class="form-control" 
+                                   value="<%= formValues.impactos_farmacia || formValues.ImpactosFarmacia || '0' %>" 
+                                   min="0" step="1" placeholder="0">
+                            <small class="form-text text-muted">Número de impactos comerciales para esta farmacia</small>
+                        </div>
+
+                        <!-- Selector de Centro de Salud - Solo visible cuando tipo es "Sanitarios" -->
+                        <div class="col-md-6 campo-condicional" id="campoCentroSalud">
+                            <label class="form-label fw-semibold">Centro Salud <span class="text-danger">*</span></label>
+                            <select name="centro_salud_id" id="centro_salud_id" class="form-select">
+                                <option value="">— Seleccionar centro de salud —</option>
+                                <% if (centrosSalud && centrosSalud.length > 0) { %>
+                                    <% centrosSalud.forEach(centro => { %>
+                                        <% 
+                                        const direccionCentro = centro.Direccion || centro.direccion || centro.CALLE || centro.calle || centro.Dirección || centro.dirección || '';
+                                        const codigoPostal = centro.CodigoPostal || centro.codigoPostal || centro.Codigo_Postal || centro.codigo_postal || centro.CP || centro.cp || centro['Código Postal'] || centro['código postal'] || '';
+                                        const poblacion = centro.Poblacion || centro.poblacion || centro.Población || centro.población || centro.Ciudad || centro.ciudad || centro.City || centro.city || '';
+                                        %>
+                                        <option value="<%= centro.Id || centro.id %>" 
+                                                data-direccion="<%= direccionCentro %>"
+                                                data-codigo-postal="<%= codigoPostal %>"
+                                                data-poblacion="<%= poblacion %>"
+                                                data-telefono="<%= centro.Telefono || centro.telefono || centro.Telefono_Contacto || centro.telefono_contacto || '' %>"
+                                                <%= String(formValues.centro_salud_id || '') === String(centro.Id || centro.id) ? 'selected' : '' %>>
+                                            <%= centro.nombreMostrar || centro.coqmahyqo5gi3yc || centro.Nombre || centro.nombre || 'Centro sin nombre' %>
+                                        </option>
+                                    <% }) %>
+                                <% } else { %>
+                                    <option value="" disabled>No hay centros de salud disponibles</option>
+                                <% } %>
+                            </select>
+                        </div>
+                        
+                        <!-- Campo de Impactos Centro Salud - Solo visible cuando tipo es "Sanitarios" -->
+                        <div class="col-md-6 campo-condicional" id="campoImpactosCentroSalud">
+                            <label class="form-label fw-semibold">Impactos Centro Salud</label>
+                            <input type="number" name="impactos_centro_salud" id="impactos_centro_salud" class="form-control" 
+                                   value="<%= formValues.impactos_centro_salud || formValues.ImpactosCentroSalud || '0' %>" 
+                                   min="0" step="1" placeholder="0">
+                            <small class="form-text text-muted">Número de impactos comerciales para este centro de salud</small>
+                        </div>
+
+                        <!-- Campo de texto para Reunión y Otro -->
+                        <div class="col-md-6 campo-condicional" id="campoTipoDetalle">
+                            <label class="form-label fw-semibold">Descripción del tipo <span class="text-danger">*</span></label>
+                            <input type="text" name="tipo_detalle" id="tipo_detalle" class="form-control" 
+                                   value="<%= formValues.tipo_detalle || '' %>" 
+                                   placeholder="Describe el tipo de visita (ej: Reunión con equipo, Presentación de producto, etc.)">
+                            <small class="form-text text-muted">Describe el tipo de visita que vas a realizar</small>
+                        </div>
+                        
+                        <!-- Campo de URL de reunión - Solo visible cuando tipo es "Reunión" -->
+                        <div class="col-12 campo-condicional" id="campoEnlaceReunion">
+                            <label class="form-label fw-semibold">Enlace de Reunión</label>
+                            <div class="input-group">
+                                <input type="url" name="enlace_reunion" id="enlace_reunion" class="form-control" 
+                                       value="<%= formValues.enlace_reunion || formValues.EnalaceReunion || formValues.EnlaceReunion || '' %>" 
+                                       placeholder="Ingresa el enlace de acceso a la videollamada (Teams, Meet, Zoom, etc.)">
+                                <button type="button" class="btn btn-outline-secondary" id="btnProbarEnlace" title="Probar enlace">
+                                    <i class="fas fa-external-link-alt"></i>
+                                </button>
+                            </div>
+                            <small class="form-text text-muted">
+                                Ingresa el enlace de acceso a la videollamada para poder guardarlo con la visita
+                            </small>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Hora</label>
+                            <input type="time" name="hora" class="form-control" value="<%= formValues.hora || '09:00' %>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Estado</label>
+                            <select name="estado" class="form-select">
+                                <option value="Pendiente" <%= (formValues.estado || 'Pendiente') === 'Pendiente' ? 'selected' : '' %>>Pendiente</option>
+                                <option value="Confirmada" <%= (formValues.estado || '') === 'Confirmada' ? 'selected' : '' %>>Confirmada</option>
+                                <option value="Completada" <%= (formValues.estado || '') === 'Completada' ? 'selected' : '' %>>Completada</option>
+                                <option value="Cancelada" <%= (formValues.estado || '') === 'Cancelada' ? 'selected' : '' %>>Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Dirección</label>
+                            <input type="text" name="direccion" id="direccion" class="form-control" value="<%= formValues.direccion || '' %>" placeholder="Dirección de la visita">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Teléfono</label>
+                            <input type="text" name="telefono" id="telefono" class="form-control" value="<%= formValues.telefono || '' %>" placeholder="Teléfono de contacto">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Observaciones</label>
+                            <textarea name="observaciones" class="form-control" rows="3" placeholder="Notas adicionales sobre la visita..."><%= formValues.observaciones || '' %></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end gap-2">
+                <a href="/dashboard/agenda" class="btn btn-outline-secondary">Cancelar</a>
+                <button type="submit" class="btn btn-primary">Guardar Cita</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const tipoVisitaSelect = document.getElementById('tipoVisita');
+        const campoFarmacia = document.getElementById('campoFarmacia');
+        const campoCentroSalud = document.getElementById('campoCentroSalud');
+        const campoImpactosFarmacia = document.getElementById('campoImpactosFarmacia');
+        const campoImpactosCentroSalud = document.getElementById('campoImpactosCentroSalud');
+        const campoTipoDetalle = document.getElementById('campoTipoDetalle');
+        const campoEnlaceReunion = document.getElementById('campoEnlaceReunion');
+        const clienteSelect = document.getElementById('cliente_id');
+        const centroSaludSelect = document.getElementById('centro_salud_id');
+        const tipoDetalleInput = document.getElementById('tipo_detalle');
+        const direccionInput = document.getElementById('direccion');
+        const telefonoInput = document.getElementById('telefono');
+        const enlaceReunionInput = document.getElementById('enlace_reunion');
+        const btnProbarEnlace = document.getElementById('btnProbarEnlace');
+
+        function actualizarCampos() {
+            if (!tipoVisitaSelect) {
+                console.error('❌ tipoVisitaSelect no encontrado');
+                return;
+            }
+            
+            const tipo = tipoVisitaSelect.value;
+            console.log('🔄 [ACTUALIZAR CAMPOS] Tipo seleccionado:', tipo);
+            
+            // Ocultar todos los campos condicionales
+            if (campoFarmacia) campoFarmacia.classList.remove('show');
+            if (campoCentroSalud) campoCentroSalud.classList.remove('show');
+            if (campoImpactosFarmacia) campoImpactosFarmacia.classList.remove('show');
+            if (campoImpactosCentroSalud) campoImpactosCentroSalud.classList.remove('show');
+            if (campoTipoDetalle) campoTipoDetalle.classList.remove('show');
+            if (campoEnlaceReunion) campoEnlaceReunion.classList.remove('show');
+            
+            // Remover required de todos
+            if (clienteSelect) clienteSelect.removeAttribute('required');
+            if (centroSaludSelect) centroSaludSelect.removeAttribute('required');
+            if (tipoDetalleInput) tipoDetalleInput.removeAttribute('required');
+
+            // Limpiar dirección y teléfono cuando cambia el tipo
+            if (direccionInput) direccionInput.value = '';
+            if (telefonoInput) telefonoInput.value = '';
+            if (enlaceReunionInput) enlaceReunionInput.value = '';
+
+            // Mostrar campos según el tipo
+            if (tipo === 'Farmacia') {
+                if (campoFarmacia) campoFarmacia.classList.add('show');
+                if (campoImpactosFarmacia) campoImpactosFarmacia.classList.add('show');
+                if (clienteSelect) clienteSelect.setAttribute('required', 'required');
+                // Si ya hay un cliente seleccionado, rellenar sus datos
+                if (clienteSelect && clienteSelect.value) {
+                    rellenarDatosCliente();
+                }
+            } else if (tipo === 'Sanitarios') {
+                if (campoCentroSalud) campoCentroSalud.classList.add('show');
+                if (campoImpactosCentroSalud) campoImpactosCentroSalud.classList.add('show');
+                if (centroSaludSelect) centroSaludSelect.setAttribute('required', 'required');
+                console.log('🔄 [ACTUALIZAR CAMPOS] Tipo es Sanitarios, centro de salud visible');
+                console.log('🔄 [ACTUALIZAR CAMPOS] Centro seleccionado:', centroSaludSelect ? centroSaludSelect.value : 'N/A');
+                // Si ya hay un centro de salud seleccionado, rellenar sus datos
+                if (centroSaludSelect && centroSaludSelect.value) {
+                    rellenarDatosCentroSalud();
+                }
+            } else if (tipo === 'Reunión' || tipo === 'Notas') {
+                console.log('🔄 [ACTUALIZAR CAMPOS] Tipo es Reunión o Notas');
+                if (campoTipoDetalle) {
+                    campoTipoDetalle.classList.add('show');
+                    console.log('✅ [ACTUALIZAR CAMPOS] campoTipoDetalle mostrado');
+                }
+                if (tipoDetalleInput) tipoDetalleInput.setAttribute('required', 'required');
+                
+                // Mostrar campos de reunión solo para Reunión
+                if (tipo === 'Reunión') {
+                    console.log('🔄 [ACTUALIZAR CAMPOS] Mostrando campos de reunión');
+                    if (campoEnlaceReunion) {
+                        campoEnlaceReunion.classList.add('show');
+                        console.log('✅ [ACTUALIZAR CAMPOS] campoEnlaceReunion mostrado');
+                    }
+                }
+            }
+        }
+
+
+        // Inicializar campos al cargar
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                actualizarCampos();
+            });
+        } else {
+            // DOM ya está listo
+            actualizarCampos();
+        }
+
+        // Actualizar cuando cambia el tipo
+        if (tipoVisitaSelect) {
+            tipoVisitaSelect.addEventListener('change', actualizarCampos);
+        }
+
+        // Función para construir dirección completa con código postal y población
+        function construirDireccionCompleta(direccion, codigoPostal, poblacion) {
+            let direccionCompleta = direccion || '';
+            
+            // Agregar código postal y población si existen
+            const partes = [];
+            if (direccionCompleta) partes.push(direccionCompleta);
+            if (codigoPostal && poblacion) {
+                partes.push(codigoPostal + ' ' + poblacion);
+            } else if (codigoPostal) {
+                partes.push(codigoPostal);
+            } else if (poblacion) {
+                partes.push(poblacion);
+            }
+            
+            return partes.join(', ');
+        }
+
+        // Función para rellenar dirección y teléfono desde el cliente seleccionado
+        function rellenarDatosCliente() {
+            const selectedOption = clienteSelect.options[clienteSelect.selectedIndex];
+            if (selectedOption && selectedOption.value) {
+                const direccion = selectedOption.getAttribute('data-direccion') || '';
+                const codigoPostal = selectedOption.getAttribute('data-codigo-postal') || '';
+                const poblacion = selectedOption.getAttribute('data-poblacion') || '';
+                const telefono = selectedOption.getAttribute('data-telefono') || '';
+                
+                const direccionCompleta = construirDireccionCompleta(direccion, codigoPostal, poblacion);
+                direccionInput.value = direccionCompleta;
+                telefonoInput.value = telefono;
+            } else {
+                // Si no hay selección, limpiar campos
+                direccionInput.value = '';
+                telefonoInput.value = '';
+            }
+        }
+
+        // Función para rellenar dirección y teléfono desde el centro de salud seleccionado
+        function rellenarDatosCentroSalud() {
+            const selectedOption = centroSaludSelect.options[centroSaludSelect.selectedIndex];
+            console.log('🔄 [RELLENAR DATOS] Centro de salud seleccionado:', selectedOption ? selectedOption.value : 'NINGUNO');
+            console.log('🔄 [RELLENAR DATOS] Opción completa:', selectedOption);
+            if (selectedOption && selectedOption.value) {
+                const direccion = selectedOption.getAttribute('data-direccion') || '';
+                const codigoPostal = selectedOption.getAttribute('data-codigo-postal') || '';
+                const poblacion = selectedOption.getAttribute('data-poblacion') || '';
+                const telefono = selectedOption.getAttribute('data-telefono') || '';
+                
+                console.log('🔄 [RELLENAR DATOS] Datos extraídos:', {
+                    direccion,
+                    codigoPostal,
+                    poblacion,
+                    telefono
+                });
+                
+                const direccionCompleta = construirDireccionCompleta(direccion, codigoPostal, poblacion);
+                direccionInput.value = direccionCompleta;
+                telefonoInput.value = telefono;
+                
+                console.log('✅ [RELLENAR DATOS] Campos actualizados - Dirección:', direccionCompleta, 'Teléfono:', telefono);
+            } else {
+                // Si no hay selección, limpiar campos
+                direccionInput.value = '';
+                telefonoInput.value = '';
+                console.log('⚠️ [RELLENAR DATOS] No hay selección, campos limpiados');
+            }
+        }
+
+        // Event listeners para rellenar automáticamente cuando se selecciona un cliente o centro de salud
+        clienteSelect.addEventListener('change', function() {
+            if (tipoVisitaSelect.value === 'Farmacia') {
+                rellenarDatosCliente();
+            }
+        });
+
+        centroSaludSelect.addEventListener('change', function() {
+            console.log('🔄 [CENTRO SALUD CHANGE] Tipo de visita:', tipoVisitaSelect.value);
+            console.log('🔄 [CENTRO SALUD CHANGE] Centro seleccionado:', centroSaludSelect.value);
+            if (tipoVisitaSelect.value === 'Sanitarios') {
+                rellenarDatosCentroSalud();
+            }
+        });
+
+        // Si hay un cliente o centro de salud preseleccionado, rellenar los datos al cargar
+        // (El script ya se ejecuta después de que el DOM está cargado, así que no necesitamos DOMContentLoaded)
+        if (tipoVisitaSelect.value === 'Farmacia' && clienteSelect.value) {
+            rellenarDatosCliente();
+        } else if (tipoVisitaSelect.value === 'Sanitarios' && centroSaludSelect.value) {
+            rellenarDatosCentroSalud();
+        }
+
+        // Función para probar el enlace
+        btnProbarEnlace.addEventListener('click', function() {
+            const url = enlaceReunionInput.value.trim();
+            if (url) {
+                window.open(url, '_blank');
+            } else {
+                alert('Por favor, ingresa un enlace primero');
+            }
+        });
+
+        // Validación del formulario
+        document.getElementById('visitaForm').addEventListener('submit', function(e) {
+            const tipo = tipoVisitaSelect.value;
+            let valido = true;
+
+            if (tipo === 'Farmacia' && !clienteSelect.value) {
+                alert('Por favor, selecciona una farmacia');
+                valido = false;
+            } else if (tipo === 'Sanitarios' && !centroSaludSelect.value) {
+                alert('Por favor, selecciona un centro de salud');
+                valido = false;
+            } else if ((tipo === 'Reunión' || tipo === 'Notas') && !tipoDetalleInput.value.trim()) {
+                alert('Por favor, describe el tipo de visita');
+                valido = false;
+            }
+
+            if (!valido) {
+                e.preventDefault();
+            }
+        });
+
+    </script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
