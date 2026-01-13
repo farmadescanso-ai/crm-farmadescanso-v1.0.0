@@ -94,3 +94,6 @@ coverage/
 
 # Archivos de sesión
 sessions/
+
+# Scripts con credenciales (no subir secretos)
+# scripts/configurar-google-oauth.js contiene referencias a variables de entorno
