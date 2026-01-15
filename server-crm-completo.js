@@ -450,6 +450,66 @@ const crm = require('./config/mysql-crm');
 const calculadorComisiones = require('./utils/calcular-comisiones');
 
 // ============================================
+// HEALTHCHECK DB (para diagnosticar ETIMEDOUT en Vercel)
+// ============================================
+// No expone credenciales; solo host/puerto/db y el error code/message.
+app.get('/api/health/db', async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    if (!crm.connected) {
+      await crm.connect();
+    }
+    await crm.query('SELECT 1 as ok');
+    res.json({
+      ok: true,
+      ms: Date.now() - startedAt,
+      dbHost: process.env.DB_HOST || '(no definido)',
+      dbPort: process.env.DB_PORT || '(no definido)',
+      dbName: process.env.DB_NAME || '(no definido)'
+    });
+  } catch (error) {
+    res.status(503).json({
+      ok: false,
+      ms: Date.now() - startedAt,
+      dbHost: process.env.DB_HOST || '(no definido)',
+      dbPort: process.env.DB_PORT || '(no definido)',
+      dbName: process.env.DB_NAME || '(no definido)',
+      code: error.code || null,
+      message: error.message
+    });
+  }
+});
+
+// Alias simple para debugging desde navegador (algunas builds prueban /db y mostraban 404).
+// Mantiene el mismo payload que /api/health/db.
+app.get('/db', async (req, res) => {
+  const startedAt = Date.now();
+  try {
+    if (!crm.connected) {
+      await crm.connect();
+    }
+    await crm.query('SELECT 1 as ok');
+    res.json({
+      ok: true,
+      ms: Date.now() - startedAt,
+      dbHost: process.env.DB_HOST || '(no definido)',
+      dbPort: process.env.DB_PORT || '(no definido)',
+      dbName: process.env.DB_NAME || '(no definido)'
+    });
+  } catch (error) {
+    res.status(503).json({
+      ok: false,
+      ms: Date.now() - startedAt,
+      dbHost: process.env.DB_HOST || '(no definido)',
+      dbPort: process.env.DB_PORT || '(no definido)',
+      dbName: process.env.DB_NAME || '(no definido)',
+      code: error.code || null,
+      message: error.message
+    });
+  }
+});
+
+// ============================================
 // RUTA DE PRUEBA TEMPORAL PARA VERIFICAR MARCAS
 // ============================================
 // Esta ruta se registra muy temprano para asegurar que funcione
@@ -508,11 +568,14 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net"],
+      // Vercel puede inyectar scripts de feedback en producción/preview (vercel.live).
+      // Si no lo permitimos, el navegador mostrará warnings CSP (no rompe la app, pero ensucia la consola).
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://vercel.live"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://vercel.live"],
       scriptSrcAttr: ["'self'", "'unsafe-inline'"],
       fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "http:"],
-      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com"],
+      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://vercel.live"],
     },
   },
 }));

@@ -24,12 +24,38 @@ class MySQLCRM {
       timeout: 10000 // 10 segundos para queries
     };
 
+    // Debug: Log de configuración (solo en producción para diagnosticar)
+    if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+      console.log('🔍 [DB CONFIG] DB_HOST:', this.config.host);
+      console.log('🔍 [DB CONFIG] DB_PORT:', this.config.port);
+      console.log('🔍 [DB CONFIG] DB_NAME:', this.config.database);
+      console.log('🔍 [DB CONFIG] DB_USER:', this.config.user);
+    }
+
     this.pool = null;
     this.connected = false;
   }
 
   async connect() {
+    // En entornos serverless (Vercel), este módulo puede vivir entre invocaciones.
+    // Si ya estamos conectados, reutilizar el pool.
+    if (this.pool && this.connected) {
+      return true;
+    }
+    
     try {
+      // Si existe un pool previo pero no está marcado como conectado (p.ej. fallo anterior),
+      // cerrarlo para evitar quedar en un estado inconsistente.
+      if (this.pool && !this.connected) {
+        try {
+          await this.pool.end();
+        } catch (_) {
+          // Ignorar errores al cerrar pool previo
+        } finally {
+          this.pool = null;
+        }
+      }
+
       this.pool = mysql.createPool(this.config);
       
       // Configurar UTF-8 para todas las conexiones
@@ -46,10 +72,25 @@ class MySQLCRM {
       this.connected = true;
       console.log('✅ Conectado a MySQL correctamente');
       console.log(`📊 Base de datos: ${this.config.database}`);
+      console.log(`🌐 Host: ${this.config.host}:${this.config.port}`);
       console.log('✅ UTF-8 configurado: utf8mb4_unicode_ci');
       return true;
     } catch (error) {
       console.error('❌ Error conectando a MySQL:', error.message);
+      console.error(`🔍 [DEBUG] Intentando conectar a: ${this.config.host}:${this.config.port}`);
+      console.error(`🔍 [DEBUG] Base de datos: ${this.config.database}`);
+      
+      // Evitar quedar con un pool creado a medias si la conexión falló (muy importante en serverless)
+      if (this.pool) {
+        try {
+          await this.pool.end();
+        } catch (_) {
+          // ignore
+        } finally {
+          this.pool = null;
+          this.connected = false;
+        }
+      }
       throw error;
     }
   }
@@ -64,7 +105,8 @@ class MySQLCRM {
 
   // Método helper para ejecutar consultas
   async query(sql, params = []) {
-    if (!this.connected && !this.pool) {
+    // Si no estamos conectados (aunque exista un pool), intentar reconectar.
+    if (!this.connected) {
       await this.connect();
     }
     
