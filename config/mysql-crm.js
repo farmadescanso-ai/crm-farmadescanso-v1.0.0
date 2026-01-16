@@ -1125,9 +1125,14 @@ class MySQLCRM {
   // COOPERATIVAS
   async getCooperativas() {
     try {
-      const sql = 'SELECT * FROM cooperativas ORDER BY Id ASC';
-      const rows = await this.query(sql);
-      return rows;
+      // En algunos entornos (MariaDB/Linux) la PK puede ser `id` en lugar de `Id`.
+      try {
+        const rows = await this.query('SELECT * FROM cooperativas ORDER BY Id ASC');
+        return rows;
+      } catch (e1) {
+        const rows = await this.query('SELECT * FROM cooperativas ORDER BY id ASC');
+        return rows;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo cooperativas:', error.message);
       return [];
@@ -1136,9 +1141,13 @@ class MySQLCRM {
 
   async getCooperativaById(id) {
     try {
-      const sql = 'SELECT * FROM cooperativas WHERE Id = ? LIMIT 1';
-      const rows = await this.query(sql, [id]);
-      return rows.length > 0 ? rows[0] : null;
+      try {
+        const rows = await this.query('SELECT * FROM cooperativas WHERE Id = ? LIMIT 1', [id]);
+        return rows.length > 0 ? rows[0] : null;
+      } catch (e1) {
+        const rows = await this.query('SELECT * FROM cooperativas WHERE id = ? LIMIT 1', [id]);
+        return rows.length > 0 ? rows[0] : null;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo cooperativa por ID:', error.message);
       return null;
@@ -1414,8 +1423,13 @@ class MySQLCRM {
       const values = Object.values(payload);
       values.push(id);
       
-      const sql = `UPDATE cooperativas SET ${fields} WHERE Id = ?`;
-      await this.query(sql, values);
+      try {
+        const sql = `UPDATE cooperativas SET ${fields} WHERE Id = ?`;
+        await this.query(sql, values);
+      } catch (e1) {
+        const sql = `UPDATE cooperativas SET ${fields} WHERE id = ?`;
+        await this.query(sql, values);
+      }
       return { affectedRows: 1 };
     } catch (error) {
       console.error('❌ Error actualizando cooperativa:', error.message);
@@ -1425,8 +1439,11 @@ class MySQLCRM {
 
   async deleteCooperativa(id) {
     try {
-      const sql = 'DELETE FROM cooperativas WHERE Id = ?';
-      await this.query(sql, [id]);
+      try {
+        await this.query('DELETE FROM cooperativas WHERE Id = ?', [id]);
+      } catch (e1) {
+        await this.query('DELETE FROM cooperativas WHERE id = ?', [id]);
+      }
       return { affectedRows: 1 };
     } catch (error) {
       console.error('❌ Error eliminando cooperativa:', error.message);

@@ -582,7 +582,8 @@ app.get('/api/health/db/diag', async (req, res) => {
       ['articulos', 'Articulos'],
       ['visitas', 'Visitas'],
       ['codigos_postales', 'Codigos_Postales'],
-      ['clientes_cooperativas', 'Clientes_Cooperativas']
+      ['clientes_cooperativas', 'Clientes_Cooperativas'],
+      ['cooperativas', 'Cooperativas']
     ];
 
     for (const [lower, upper] of tablePairs) {
