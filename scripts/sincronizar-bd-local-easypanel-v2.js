@@ -201,10 +201,12 @@ async function ensureTableExists(localConn, remoteConn, localTableName, remoteTa
   const createStmt = await getShowCreate(localConn, localTableName);
   if (!createStmt) throw new Error(`No se pudo obtener SHOW CREATE TABLE de local: ${localTableName}`);
 
+  const escapeRegex = (s) => String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
   // Reemplazar nombre de tabla por el nombre remoto deseado (por si varía en mayúsculas)
   const replaced = createStmt.replace(
-    new RegExp(`CREATE TABLE\\s+\`?${localTableName}\\`?`, 'i'),
-    `CREATE TABLE \`${remoteTableName}\``
+    new RegExp('CREATE TABLE\\s+`?' + escapeRegex(localTableName) + '`?', 'i'),
+    'CREATE TABLE `' + remoteTableName + '`'
   );
 
   await remoteConn.query(replaced);
