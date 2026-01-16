@@ -1135,17 +1135,10 @@ const requireAdmin = (req, res, next) => {
           error: 'Solo los administradores pueden acceder a esta sección.' 
         });
       }
-      // Para rutas de comerciales, mostrar vista especial con modal bonito
-      if (req.path.includes('/comerciales')) {
-        return res.status(403).render('access-denied', {
-          title: 'Acceso Denegado - Farmadescaso',
-          user: req.comercial || req.session?.comercial || null
-        });
-      }
-      // Para otras rutas, usar la vista de error estándar
-      return res.status(403).render('error', {
-        error: 'Acceso denegado',
-        message: 'Solo los administradores pueden acceder a esta sección.'
+      // Para cualquier ruta web (no /api), usar siempre la vista de acceso denegado (consistente con el dashboard).
+      return res.status(403).render('access-denied', {
+        title: 'Acceso Denegado - Farmadescaso',
+        user: req.comercial || req.session?.comercial || null
       });
     }
     
