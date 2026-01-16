@@ -281,8 +281,69 @@ function normalizeRowValue(row, col) {
   return null;
 }
 
+function buildNotNullDefault(meta, tableName, colName, row, pkCols) {
+  const name = String(colName || '');
+  const nameLower = name.toLowerCase();
+
+  // Caso especial: DNI / DNI_CIF no puede ser NULL en remoto
+  if (nameLower.includes('dni')) {
+    const pk = pkCols?.[0];
+    const pkVal = pk ? normalizeRowValue(row, pk) : null;
+    if (pkVal !== null && pkVal !== undefined && pkVal !== '') return `SIN_DNI_${pkVal}`;
+    return 'SIN_DNI';
+  }
+
+  const t = String(meta?.Type || meta?.type || '').toLowerCase();
+
+  // Si hay DEFAULT en la tabla remota y no es NULL, úsalo
+  if (meta && meta.Default !== null && meta.Default !== undefined) {
+    // CURRENT_TIMESTAMP lo dejamos como-is para que lo aplique la BD (si procede),
+    // pero en inserts por valor necesitamos un valor concreto.
+    const def = meta.Default;
+    if (String(def).toUpperCase() === 'CURRENT_TIMESTAMP') {
+      return new Date();
+    }
+    return def;
+  }
+
+  if (t.includes('int') || t.includes('decimal') || t.includes('float') || t.includes('double')) return 0;
+  if (t.includes('datetime') || t.includes('timestamp')) return '1970-01-01 00:00:00';
+  if (t.includes('date')) return '1970-01-01';
+  if (t.includes('json')) return '{}';
+
+  // enum('a','b') -> 'a'
+  if (t.startsWith('enum(') || t.startsWith('set(')) {
+    const m = t.match(/\((.*)\)/);
+    if (m?.[1]) {
+      const first = m[1].split(',')[0]?.trim();
+      if (first) return first.replace(/^'|'$/g, '');
+    }
+    return '';
+  }
+
+  // default string for varchar/text/etc
+  return '';
+}
+
+function coerceNotNullsForRemote(row, columns, remoteColsMap, tableName, pkCols) {
+  const coerced = [];
+  const out = [];
+  for (const c of columns) {
+    let v = normalizeRowValue(row, c);
+    const meta = remoteColsMap.get(String(c).toLowerCase());
+    if ((v === null || v === undefined) && meta && String(meta.Null).toUpperCase() === 'NO') {
+      v = buildNotNullDefault(meta, tableName, c, row, pkCols);
+      coerced.push(c);
+    }
+    out.push(v);
+  }
+  return { values: out, coerced };
+}
+
 async function syncTableData(localConn, remoteConn, localTableName, remoteTableName, batchSize) {
   const localColsDesc = await describeTable(localConn, localTableName);
+  const remoteColsDesc = await describeTable(remoteConn, remoteTableName);
+  const remoteColsMap = new Map((remoteColsDesc || []).map(c => [String(c.Field).toLowerCase(), c]));
   const columns = localColsDesc.map(c => c.Field);
   const pkCols = await getPrimaryKeyColumns(localConn, localTableName);
   const upsert = buildUpsertSql(remoteTableName, columns, pkCols);
@@ -294,6 +355,7 @@ async function syncTableData(localConn, remoteConn, localTableName, remoteTableN
 
   let insertedBatches = 0;
   let totalRows = 0;
+  const coercedTotals = {};
 
   if (singleNumericPk) {
     const pk = pkCols[0];
@@ -308,7 +370,9 @@ async function syncTableData(localConn, remoteConn, localTableName, remoteTableN
 
       const values = [];
       for (const r of rows) {
-        for (const c of columns) values.push(normalizeRowValue(r, c));
+        const { values: rowVals, coerced } = coerceNotNullsForRemote(r, columns, remoteColsMap, remoteTableName, pkCols);
+        for (const colName of coerced) coercedTotals[colName] = (coercedTotals[colName] || 0) + 1;
+        values.push(...rowVals);
       }
       if (opts.dryRun) {
         totalRows += rows.length;
@@ -331,7 +395,9 @@ async function syncTableData(localConn, remoteConn, localTableName, remoteTableN
 
       const values = [];
       for (const r of rows) {
-        for (const c of columns) values.push(normalizeRowValue(r, c));
+        const { values: rowVals, coerced } = coerceNotNullsForRemote(r, columns, remoteColsMap, remoteTableName, pkCols);
+        for (const colName of coerced) coercedTotals[colName] = (coercedTotals[colName] || 0) + 1;
+        values.push(...rowVals);
       }
       if (opts.dryRun) {
         totalRows += rows.length;
@@ -342,6 +408,10 @@ async function syncTableData(localConn, remoteConn, localTableName, remoteTableN
       totalRows += rows.length;
       insertedBatches++;
     }
+  }
+
+  if (Object.keys(coercedTotals).length) {
+    console.log(`${colors.yellow}⚠️  ${remoteTableName}: valores NULL convertidos a defaults en columnas:${colors.reset}`, coercedTotals);
   }
 
   return { totalRows, insertedBatches, mode: upsert.mode };
