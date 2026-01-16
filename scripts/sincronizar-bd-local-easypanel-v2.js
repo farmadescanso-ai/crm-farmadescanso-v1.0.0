@@ -164,10 +164,15 @@ async function describeTable(conn, tableName) {
 }
 
 async function getPrimaryKeyColumns(conn, tableName) {
+  // MariaDB no acepta ORDER BY en SHOW KEYS; ordenamos en JS.
   const [keys] = await conn.query(
-    `SHOW KEYS FROM \`${tableName}\` WHERE Key_name = 'PRIMARY' ORDER BY Seq_in_index ASC`
+    `SHOW KEYS FROM \`${tableName}\` WHERE Key_name = 'PRIMARY'`
   );
-  return keys.map(k => k.Column_name).filter(Boolean);
+  return (keys || [])
+    .slice()
+    .sort((a, b) => Number(a.Seq_in_index || 0) - Number(b.Seq_in_index || 0))
+    .map(k => k.Column_name)
+    .filter(Boolean);
 }
 
 async function countTable(conn, tableName) {
@@ -257,12 +262,13 @@ function buildUpsertSql(tableName, columns, pkColumns) {
     };
   }
 
-  // MySQL 8: VALUES() está deprecado, usar alias
-  const updateClause = updateCols.map(c => `\`${c}\` = new.\`${c}\``).join(', ');
+  // Compatibilidad MariaDB/MySQL: usar VALUES(col) en ON DUPLICATE KEY UPDATE.
+  // (En MySQL 8 está deprecado pero sigue funcionando; en MariaDB es el patrón estándar.)
+  const updateClause = updateCols.map(c => `\`${c}\` = VALUES(\`${c}\`)`).join(', ');
   return {
     mode: 'upsert',
     makeSql: (rowsCount) =>
-      `INSERT INTO \`${tableName}\` (${colList}) VALUES ${Array(rowsCount).fill(placeholdersRow).join(', ')} AS new
+      `INSERT INTO \`${tableName}\` (${colList}) VALUES ${Array(rowsCount).fill(placeholdersRow).join(', ')}
 ON DUPLICATE KEY UPDATE ${updateClause}`
   };
 }
