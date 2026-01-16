@@ -16,6 +16,9 @@ class ComisionesCRM {
       collation: 'utf8mb4_unicode_ci'
     };
     this.pool = null;
+    this._cache = {
+      articulosHasMarcaColumn: null
+    };
   }
 
   async connect() {
@@ -87,6 +90,28 @@ class ComisionesCRM {
     }
   }
 
+  async hasArticulosMarcaColumn() {
+    if (this._cache.articulosHasMarcaColumn !== null) {
+      return this._cache.articulosHasMarcaColumn;
+    }
+    try {
+      const rows = await this.query(
+        `SELECT COUNT(*) as c
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE()
+           AND TABLE_NAME = 'articulos'
+           AND COLUMN_NAME = 'Marca'`
+      );
+      const has = Number(rows?.[0]?.c ?? 0) > 0;
+      this._cache.articulosHasMarcaColumn = has;
+      return has;
+    } catch (e) {
+      // Si falla la comprobación (permisos/compat), asumir que NO existe para evitar romper en MariaDB remoto.
+      this._cache.articulosHasMarcaColumn = false;
+      return false;
+    }
+  }
+
   // =====================================================
   // PRESUPUESTOS
   // =====================================================
@@ -96,15 +121,17 @@ class ComisionesCRM {
    */
   async getPresupuestos(filters = {}) {
     try {
+      const hasMarca = await this.hasArticulosMarcaColumn();
       let sql = `
         SELECT p.*, 
                c.Nombre as comercial_nombre,
                a.Nombre as articulo_nombre,
                a.SKU as articulo_sku,
-               a.Marca as articulo_marca
+               ${hasMarca ? 'a.Marca' : 'm.Nombre'} as articulo_marca
         FROM presupuestos p
         LEFT JOIN comerciales c ON p.comercial_id = c.id
         LEFT JOIN articulos a ON p.articulo_id = a.id
+        LEFT JOIN marcas m ON m.id = a.Id_Marca
         WHERE 1=1
       `;
       const params = [];
@@ -148,15 +175,17 @@ class ComisionesCRM {
    */
   async getPresupuestoById(id) {
     try {
+      const hasMarca = await this.hasArticulosMarcaColumn();
       const sql = `
         SELECT p.*, 
                c.Nombre as comercial_nombre,
                a.Nombre as articulo_nombre,
                a.SKU as articulo_sku,
-               a.Marca as articulo_marca
+               ${hasMarca ? 'a.Marca' : 'm.Nombre'} as articulo_marca
         FROM presupuestos p
         LEFT JOIN comerciales c ON p.comercial_id = c.id
         LEFT JOIN articulos a ON p.articulo_id = a.id
+        LEFT JOIN marcas m ON m.id = a.Id_Marca
         WHERE p.id = ?
       `;
       const rows = await this.query(sql, [id]);
