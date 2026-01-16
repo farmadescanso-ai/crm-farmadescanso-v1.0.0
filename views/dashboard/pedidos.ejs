@@ -296,6 +296,7 @@
                                         }
                                     }
                                     const estadoPedido = pedido.estado || 'Pendiente';
+                                    const estadoLower = String(estadoPedido || '').toLowerCase();
                                     const estadoClass = getEstadoClass(estadoPedido);
                                     %>
                                     <span class="badge <%= estadoClass %>">

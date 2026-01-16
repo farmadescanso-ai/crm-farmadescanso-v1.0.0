@@ -676,6 +676,8 @@ app.use(helmet({
       scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://vercel.live"],
       scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://vercel.live"],
       scriptSrcAttr: ["'self'", "'unsafe-inline'"],
+      // Vercel feedback puede usar iframes (vercel.live). Si no, el navegador mostrará warning de framing.
+      frameSrc: ["'self'", "https://vercel.live"],
       fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "http:"],
       connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://vercel.live"],
