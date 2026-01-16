@@ -510,6 +510,109 @@ app.get('/db', async (req, res) => {
 });
 
 // ============================================
+// DIAGNÓSTICO DE DATOS/TABLAS (para ver por qué el dashboard sale vacío)
+// ============================================
+// Devuelve: tablas visibles por el usuario actual + COUNT(*) de tablas clave (probando minúsculas y mayúsculas).
+// NOTA: No expone contraseñas; solo datos técnicos mínimos para depurar.
+app.get('/api/health/db/diag', async (req, res) => {
+  const startedAt = Date.now();
+  const result = {
+    ok: false,
+    ms: null,
+    dbHost: process.env.DB_HOST || '(no definido)',
+    dbPort: process.env.DB_PORT || '(no definido)',
+    dbName: process.env.DB_NAME || '(no definido)',
+    currentUser: null,
+    database: null,
+    showTables: {
+      ok: false,
+      tableCount: 0,
+      tablesSample: [],
+      error: null
+    },
+    counts: {},
+    errors: []
+  };
+
+  const safeError = (e) => ({
+    code: e?.code || null,
+    errno: e?.errno || null,
+    sqlState: e?.sqlState || null,
+    message: e?.message || String(e)
+  });
+
+  const tryCount = async (tableName) => {
+    const sql = `SELECT COUNT(*) as total FROM \`${tableName}\``;
+    const rows = await crm.query(sql);
+    return Number(rows?.[0]?.total ?? 0);
+  };
+
+  try {
+    if (!crm.connected) {
+      await crm.connect();
+    }
+
+    try {
+      const who = await crm.query('SELECT CURRENT_USER() as currentUser, USER() as user, DATABASE() as db');
+      result.currentUser = who?.[0]?.currentUser || who?.[0]?.user || null;
+      result.database = who?.[0]?.db || null;
+    } catch (e) {
+      result.errors.push({ step: 'whoami', ...safeError(e) });
+    }
+
+    try {
+      const tables = await crm.query('SHOW TABLES');
+      result.showTables.ok = true;
+      result.showTables.tableCount = Array.isArray(tables) ? tables.length : 0;
+      // Normalizar: SHOW TABLES devuelve columna con nombre variable (Tables_in_<db>)
+      const sample = (tables || []).slice(0, 60).map((row) => {
+        if (!row || typeof row !== 'object') return String(row);
+        const firstKey = Object.keys(row)[0];
+        return row[firstKey];
+      }).filter(Boolean);
+      result.showTables.tablesSample = sample;
+    } catch (e) {
+      result.showTables.error = safeError(e);
+    }
+
+    const tablePairs = [
+      ['comerciales', 'Comerciales'],
+      ['clientes', 'Clientes'],
+      ['pedidos', 'Pedidos'],
+      ['articulos', 'Articulos'],
+      ['visitas', 'Visitas'],
+      ['codigos_postales', 'Codigos_Postales'],
+      ['clientes_cooperativas', 'Clientes_Cooperativas']
+    ];
+
+    for (const [lower, upper] of tablePairs) {
+      const key = `${lower}|${upper}`;
+      result.counts[key] = { used: null, total: null, error: null };
+      try {
+        const totalLower = await tryCount(lower);
+        result.counts[key] = { used: lower, total: totalLower, error: null };
+      } catch (e1) {
+        try {
+          const totalUpper = await tryCount(upper);
+          result.counts[key] = { used: upper, total: totalUpper, error: null };
+        } catch (e2) {
+          result.counts[key] = { used: null, total: null, error: { lower: safeError(e1), upper: safeError(e2) } };
+        }
+      }
+    }
+
+    result.ok = true;
+    result.ms = Date.now() - startedAt;
+    return res.json(result);
+  } catch (e) {
+    result.ok = false;
+    result.ms = Date.now() - startedAt;
+    result.errors.push({ step: 'connect_or_root', ...safeError(e) });
+    return res.status(503).json(result);
+  }
+});
+
+// ============================================
 // RUTA DE PRUEBA TEMPORAL PARA VERIFICAR MARCAS
 // ============================================
 // Esta ruta se registra muy temprano para asegurar que funcione
