@@ -283,6 +283,7 @@ router.post('/:id/precios', async (req, res) => {
       }
     }
 
+    // Normalizar entradas
     const entries = Object.entries(precios || {});
     if (!Number.isFinite(tarifaId) || tarifaId < 0) {
       return res.redirect('/dashboard/ajustes/tarifas-clientes?error=' + encodeURIComponent('ID de tarifa inválido'));
@@ -296,32 +297,73 @@ router.post('/:id/precios', async (req, res) => {
       entries: entries.length
     });
 
-    // precios = { [articuloId]: "12.34", ... }
     let totalRecibidos = entries.length;
     let totalProcesados = 0;
     let totalSaltados = 0;
-    let totalGuardados = 0;
+    let totalSinCambios = 0;
+    let totalInsertados = 0;
+    let totalActualizados = 0;
 
-    const fallos = [];
+    // 1) Limpiar/validar entradas y preparar IDs
+    const preciosLimpios = [];
     for (const [articuloIdStr, precioStr] of entries) {
       const articuloId = Number(articuloIdStr);
-      // Importante: evitar 0 o negativos (provocan fallo FK)
       if (!Number.isFinite(articuloId) || articuloId <= 0) { totalSaltados++; continue; }
       const precio = Number(String(precioStr).replace(',', '.'));
       if (!Number.isFinite(precio) || precio < 0) { totalSaltados++; continue; }
-      totalProcesados++;
+      // Comparación robusta a céntimos
+      const precioCents = Math.round(precio * 100);
+      preciosLimpios.push({ articuloId, precio, precioCents });
+    }
+
+    totalProcesados = preciosLimpios.length;
+
+    // 2) Cargar precios existentes para comparar y evitar updates innecesarios
+    const existentesCents = new Map(); // Id_Articulo -> cents
+    const ids = Array.from(new Set(preciosLimpios.map(p => p.articuloId)));
+    const chunkSize = 500;
+    for (let i = 0; i < ids.length; i += chunkSize) {
+      const chunk = ids.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => '?').join(', ');
+      const rows = await crm.query(
+        `SELECT Id_Articulo, Precio
+         FROM tarifasClientes_precios
+         WHERE Id_Tarifa = ?
+           AND Id_Articulo IN (${placeholders})`,
+        [tarifaId, ...chunk]
+      );
+      for (const r of rows || []) {
+        const idA = Number(r.Id_Articulo);
+        const cents = Math.round(Number(r.Precio || 0) * 100);
+        if (Number.isFinite(idA)) existentesCents.set(idA, Number.isFinite(cents) ? cents : 0);
+      }
+    }
+
+    // 3) Insertar/actualizar solo cambios
+    const fallos = [];
+    for (const item of preciosLimpios) {
+      const existente = existentesCents.has(item.articuloId) ? existentesCents.get(item.articuloId) : null;
+      if (existente !== null && existente === item.precioCents) {
+        totalSinCambios++;
+        continue;
+      }
 
       try {
-        const r = await crm.query(
-          `INSERT INTO tarifasClientes_precios (Id_Tarifa, Id_Articulo, Precio)
-           VALUES (?, ?, ?)
-           ON DUPLICATE KEY UPDATE Precio = VALUES(Precio)`,
-          [tarifaId, articuloId, precio]
-        );
-        const affected = Number(r?.affectedRows ?? 0);
-        if (Number.isFinite(affected) && affected > 0) totalGuardados++;
+        if (existente === null) {
+          await crm.query(
+            'INSERT INTO tarifasClientes_precios (Id_Tarifa, Id_Articulo, Precio) VALUES (?, ?, ?)',
+            [tarifaId, item.articuloId, item.precio]
+          );
+          totalInsertados++;
+        } else {
+          await crm.query(
+            'UPDATE tarifasClientes_precios SET Precio = ? WHERE Id_Tarifa = ? AND Id_Articulo = ?',
+            [item.precio, tarifaId, item.articuloId]
+          );
+          totalActualizados++;
+        }
       } catch (e) {
-        fallos.push({ articuloId, error: e.message });
+        fallos.push({ articuloId: item.articuloId, error: e.message });
       }
     }
 
@@ -339,17 +381,24 @@ router.post('/:id/precios', async (req, res) => {
         (marcaId ? '&' : '?') +
         'error=' +
         encodeURIComponent(
-          `Se guardaron ${totalGuardados} precios, pero fallaron ${fallos.length} por FK. Ejemplos: ${ejemplo}. ` +
+          `Guardado parcial. Insertados: ${totalInsertados}, Actualizados: ${totalActualizados}, Sin cambios: ${totalSinCambios}, Omitidos: ${totalSaltados}. ` +
+          `Fallos: ${fallos.length}. Ejemplos: ${ejemplo}. ` +
           `Comprueba que esos Id_Articulo existen en articulos (SELECT * FROM articulos WHERE id IN (...)).`
         )
       );
     }
 
+    // Mensaje de éxito más limpio
+    const cambios = totalInsertados + totalActualizados;
+    const successMsg = cambios === 0
+      ? `Sin cambios: no había precios modificados. (Omitidos: ${totalSaltados})`
+      : `Precios guardados. Cambios: ${cambios} (Nuevos: ${totalInsertados}, Actualizados: ${totalActualizados}). Sin cambios: ${totalSinCambios}. Omitidos: ${totalSaltados}.`;
+
     return res.redirect(
       redirect +
       (marcaId ? '&' : '?') +
       'success=' +
-      encodeURIComponent(`Precios guardados. Recibidos: ${totalRecibidos}, Procesados: ${totalProcesados}, Guardados: ${totalGuardados}, Saltados: ${totalSaltados}.`)
+      encodeURIComponent(successMsg)
     );
   } catch (error) {
     console.error('❌ [TARIFAS] Error guardando precios:', {
