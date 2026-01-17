@@ -256,10 +256,36 @@ router.get('/:id/precios', async (req, res) => {
 router.post('/:id/precios', async (req, res) => {
   try {
     const tarifaId = Number(req.params.id);
-    const precios = req.body?.precios || {};
+    // En algunos despliegues (o con muchos inputs) el parser puede no construir el objeto anidado `precios`.
+    // Soportar ambos formatos:
+    // - precios: { [articuloId]: "12.34" }
+    // - keys planas: "precios[123]": "12.34"
+    let precios = req.body?.precios;
+    if (!precios || typeof precios !== 'object') {
+      precios = {};
+      const body = req.body || {};
+      for (const [k, v] of Object.entries(body)) {
+        const m = /^precios\[(\d+)\]$/.exec(String(k));
+        if (m) {
+          precios[m[1]] = v;
+        }
+      }
+    }
+
+    const entries = Object.entries(precios || {});
+    if (!Number.isFinite(tarifaId) || tarifaId < 0) {
+      return res.redirect('/dashboard/ajustes/tarifas-clientes?error=' + encodeURIComponent('ID de tarifa inválido'));
+    }
+
+    // Logging de diagnóstico (útil en Vercel)
+    console.log('💾 [TARIFAS] Guardando precios:', {
+      tarifaId,
+      bodyKeys: Object.keys(req.body || {}).slice(0, 30),
+      preciosType: typeof (req.body && req.body.precios),
+      entries: entries.length
+    });
 
     // precios = { [articuloId]: "12.34", ... }
-    const entries = Object.entries(precios);
     for (const [articuloIdStr, precioStr] of entries) {
       const articuloId = Number(articuloIdStr);
       if (!Number.isFinite(articuloId)) continue;
@@ -278,6 +304,10 @@ router.post('/:id/precios', async (req, res) => {
     const redirect = `/dashboard/ajustes/tarifas-clientes/${tarifaId}/precios` + (marcaId ? `?marcaId=${encodeURIComponent(marcaId)}` : '');
     res.redirect(redirect + (marcaId ? '&' : '?') + 'success=' + encodeURIComponent('Precios guardados correctamente'));
   } catch (error) {
+    console.error('❌ [TARIFAS] Error guardando precios:', {
+      message: error.message,
+      stack: error.stack
+    });
     res.redirect(`/dashboard/ajustes/tarifas-clientes/${req.params.id}/precios?error=` + encodeURIComponent('Error guardando precios: ' + error.message));
   }
 });
