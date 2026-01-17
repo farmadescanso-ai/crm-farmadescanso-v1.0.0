@@ -235,6 +235,16 @@ router.get('/:id/precios', async (req, res) => {
 
     const articulos = await crm.query(sql, params);
 
+    let debugDb = null;
+    if (String(req.query.debug || '') === '1') {
+      try {
+        const r = await crm.query('SELECT DATABASE() AS db');
+        debugDb = r && r.length > 0 ? r[0].db : null;
+      } catch (_) {
+        debugDb = null;
+      }
+    }
+
     res.render('dashboard/ajustes-tarifa-cliente-precios', {
       title: `Precios Tarifa - ${tarifa.NombreTarifa} - Farmadescanso`,
       user,
@@ -244,6 +254,7 @@ router.get('/:id/precios', async (req, res) => {
       marcaId: marcaId || '',
       marcaNombre: marcaNombre || '',
       articulos: articulos || [],
+      debugDb,
       error: null,
       success: req.query.success || null
     });
@@ -286,23 +297,41 @@ router.post('/:id/precios', async (req, res) => {
     });
 
     // precios = { [articuloId]: "12.34", ... }
+    let totalRecibidos = entries.length;
+    let totalProcesados = 0;
+    let totalSaltados = 0;
+    let totalGuardados = 0;
+
     for (const [articuloIdStr, precioStr] of entries) {
       const articuloId = Number(articuloIdStr);
-      if (!Number.isFinite(articuloId)) continue;
+      if (!Number.isFinite(articuloId)) { totalSaltados++; continue; }
       const precio = Number(String(precioStr).replace(',', '.'));
-      if (!Number.isFinite(precio) || precio < 0) continue;
+      if (!Number.isFinite(precio) || precio < 0) { totalSaltados++; continue; }
+      totalProcesados++;
 
-      await crm.query(
+      const r = await crm.query(
         `INSERT INTO tarifasClientes_precios (Id_Tarifa, Id_Articulo, Precio)
          VALUES (?, ?, ?)
          ON DUPLICATE KEY UPDATE Precio = VALUES(Precio)`,
         [tarifaId, articuloId, precio]
       );
+      const affected = Number(r?.affectedRows ?? 0);
+      if (Number.isFinite(affected) && affected > 0) totalGuardados++;
     }
 
     const marcaId = req.body?.marcaId ? String(req.body.marcaId) : '';
     const redirect = `/dashboard/ajustes/tarifas-clientes/${tarifaId}/precios` + (marcaId ? `?marcaId=${encodeURIComponent(marcaId)}` : '');
-    res.redirect(redirect + (marcaId ? '&' : '?') + 'success=' + encodeURIComponent('Precios guardados correctamente'));
+
+    if (totalProcesados === 0) {
+      return res.redirect(redirect + (marcaId ? '&' : '?') + 'error=' + encodeURIComponent('No se recibió ningún precio válido para guardar (posible problema de envío/formato). Añade &debug=1 a la URL para ver la BD activa.'));
+    }
+
+    res.redirect(
+      redirect +
+      (marcaId ? '&' : '?') +
+      'success=' +
+      encodeURIComponent(`Precios guardados. Recibidos: ${totalRecibidos}, Procesados: ${totalProcesados}, Guardados: ${totalGuardados}, Saltados: ${totalSaltados}.`)
+    );
   } catch (error) {
     console.error('❌ [TARIFAS] Error guardando precios:', {
       message: error.message,
