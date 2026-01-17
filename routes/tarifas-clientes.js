@@ -395,11 +395,17 @@ router.post('/:id/precios', async (req, res) => {
     for (const [articuloIdStr, precioStr] of entries) {
       const articuloId = Number(articuloIdStr);
       if (!Number.isFinite(articuloId) || articuloId <= 0) { totalSaltados++; continue; }
-      const precio = Number(String(precioStr).replace(',', '.'));
+      const raw = String(precioStr ?? '').trim();
+      // Vacío => significa "sin override" (no insertar) o "borrar override" si existía
+      if (raw === '') {
+        preciosLimpios.push({ articuloId, precio: null, precioCents: null, empty: true });
+        continue;
+      }
+      const precio = Number(raw.replace(',', '.'));
       if (!Number.isFinite(precio) || precio < 0) { totalSaltados++; continue; }
       // Comparación robusta a céntimos
       const precioCents = Math.round(precio * 100);
-      preciosLimpios.push({ articuloId, precio, precioCents });
+      preciosLimpios.push({ articuloId, precio, precioCents, empty: false });
     }
 
     totalProcesados = preciosLimpios.length;
@@ -429,6 +435,30 @@ router.post('/:id/precios', async (req, res) => {
     const fallos = [];
     for (const item of preciosLimpios) {
       const existente = existentesCents.has(item.articuloId) ? existentesCents.get(item.articuloId) : null;
+      // Si viene vacío:
+      // - Para tarifa 0 (General) NO se borra (es la base).
+      // - Para tarifa != 0, si existía override -> borrar, si no existía -> sin cambios.
+      if (item.empty) {
+        if (tarifaId === 0) {
+          totalSaltados++;
+          continue;
+        }
+        if (existente === null) {
+          totalSinCambios++;
+          continue;
+        }
+        try {
+          await crm.query(
+            'DELETE FROM tarifasClientes_precios WHERE Id_Tarifa = ? AND Id_Articulo = ?',
+            [tarifaId, item.articuloId]
+          );
+          totalActualizados++; // cuenta como cambio (se elimina override)
+        } catch (e) {
+          fallos.push({ articuloId: item.articuloId, error: e.message });
+        }
+        continue;
+      }
+
       if (existente !== null && existente === item.precioCents) {
         totalSinCambios++;
         continue;

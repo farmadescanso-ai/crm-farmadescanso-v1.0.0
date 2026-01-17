@@ -106,7 +106,15 @@
                                         <% articulos.forEach(function(a) { %>
                                             <% const articuloId = a.Id || a.id; %>
                                             <% const general = (a.PrecioGeneral !== null && a.PrecioGeneral !== undefined) ? a.PrecioGeneral : (a.PVL || a.Pvl || a.pvl || 0); %>
-                                            <% const precioTarifa = (a.PrecioTarifa !== null && a.PrecioTarifa !== undefined) ? a.PrecioTarifa : general; %>
+                                            <% 
+                                            // Para tarifas != 0: si no hay precio propio, dejar vacío (se aplicará General).
+                                            // Para tarifa 0 (General): siempre mostrar un valor (fallback a General/PVL).
+                                            const esGeneral = Number(tarifa.Id) === 0;
+                                            const tienePrecioPropio = (a.PrecioTarifa !== null && a.PrecioTarifa !== undefined);
+                                            const precioTarifaValue = esGeneral
+                                                ? (tienePrecioPropio ? a.PrecioTarifa : general)
+                                                : (tienePrecioPropio ? a.PrecioTarifa : '');
+                                            %>
                                             <tr>
                                                 <td><%= articuloId %></td>
                                                 <td><%= a.SKU || '-' %></td>
@@ -122,7 +130,8 @@
                                                         step="0.01"
                                                         min="0"
                                                         name="precios[<%= articuloId %>]"
-                                                        value="<%= Number(precioTarifa || 0).toFixed(2) %>"
+                                                        value="<%= (precioTarifaValue === '' ? '' : Number(precioTarifaValue || 0).toFixed(2)) %>"
+                                                        placeholder="<%= Number(general || 0).toFixed(2) %>"
                                                     >
                                                 </td>
                                             </tr>
