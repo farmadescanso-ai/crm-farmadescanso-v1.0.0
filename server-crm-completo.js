@@ -1537,6 +1537,9 @@ const comisionesRoutes = require('./routes/comisiones');
 app.use('/dashboard/comisiones', requireAuth, comisionesRoutes);
 const presupuestosVentasRoutes = require('./routes/presupuestos-vs-ventas');
 app.use('/dashboard/presupuestos-vs-ventas', requireAuth, presupuestosVentasRoutes);
+// Tarifas de clientes (solo Admin)
+const tarifasClientesRoutes = require('./routes/tarifas-clientes');
+app.use('/dashboard/ajustes/tarifas-clientes', requireAuth, requireAdmin, tarifasClientesRoutes);
 
 // RUTA PRINCIPAL - Redirigir a dashboard o login
 app.get('/', (req, res) => {
@@ -6731,6 +6734,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     const idiomas = await crm.query('SELECT id, Idioma FROM idiomas').catch(() => []);
     const monedas = await crm.query('SELECT id, Moneda FROM monedas').catch(() => []);
     const comerciales = await crm.getComerciales().catch(() => []);
+    const tarifasClientes = await crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => []);
     
     res.render('dashboard/cliente-editar', {
       title: 'Nuevo Cliente - Farmadescaso',
@@ -6744,6 +6748,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       idiomas: idiomas || [],
       monedas: monedas || [],
       comerciales: comerciales || [],
+      tarifasClientes: tarifasClientes || [],
       isNew: true,
       error: null
     });
@@ -6782,6 +6787,7 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
       crm.query('SELECT id, Moneda FROM monedas').catch(err => { console.error('Error obteniendo monedas:', err); return []; }),
       crm.getComerciales().catch(err => { console.error('Error obteniendo comerciales:', err); return []; })
     ]);
+    const tarifasClientes = await crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => []);
     
     // Normalizar nombres de países antes de pasarlos a la vista
     const paisesNormalizados = paises ? paises.map(p => ({ ...p, Nombre_pais: normalizeUTF8(p.Nombre_pais || '') })) : [];
@@ -6800,6 +6806,7 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
       idiomas: idiomas || [],
       monedas: monedas || [],
       comerciales: comerciales || [],
+      tarifasClientes: tarifasClientes || [],
       isNew: false,
       error: null
     });
@@ -7669,7 +7676,8 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
           Poblacion: getField(cliente, ['Poblacion', 'Población', 'poblacion', 'población', 'Ciudad', 'ciudad', 'City', 'city']),
           Provincia: getField(cliente, ['Provincia', 'provincia']),
           CodigoPostal: getField(cliente, ['CodigoPostal', 'Código Postal', 'codigoPostal', 'codigo_postal', 'PostalCode', 'postal_code', 'CP', 'cp']),
-          NomContacto: getField(cliente, ['NomContacto', 'Nom Contacto', 'nomContacto', 'nom_contacto', 'Contacto', 'contacto'])
+          NomContacto: getField(cliente, ['NomContacto', 'Nom Contacto', 'nomContacto', 'nom_contacto', 'Contacto', 'contacto']),
+          Tarifa: cliente.Tarifa ?? cliente.tarifa ?? 0
         };
       })
       .sort((a, b) => {
@@ -7697,6 +7705,102 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     console.error('❌ Error buscando clientes:', error);
     console.error('❌ Stack:', error.stack);
     res.status(500).json({ error: 'Error al buscar clientes', clientes: [] });
+  }
+});
+
+// API: Obtener precio por tarifa (para rellenar el precio en pedido-nuevo / pedido-editar)
+// Reglas:
+// - Si el cliente no tiene tarifa o la tarifa está inactiva/terminada, usar General (0)
+// - Si no hay precio en tarifa, fallback a General; si no existe, fallback a PVL del artículo
+app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
+  try {
+    const clienteId = req.query.clienteId ? Number(req.query.clienteId) : null;
+    const articuloId = req.query.articuloId ? Number(req.query.articuloId) : null;
+
+    if (!clienteId || !articuloId) {
+      return res.status(400).json({ success: false, error: 'clienteId y articuloId son obligatorios' });
+    }
+
+    // 1) Tarifa del cliente
+    let tarifaCliente = 0;
+    try {
+      const rowsCliente = await crm.query('SELECT Tarifa FROM clientes WHERE Id = ? OR id = ? LIMIT 1', [clienteId, clienteId]);
+      if (rowsCliente && rowsCliente.length > 0) {
+        const raw = rowsCliente[0].Tarifa ?? rowsCliente[0].tarifa ?? 0;
+        const parsed = Number(raw);
+        tarifaCliente = Number.isFinite(parsed) ? parsed : 0;
+      }
+    } catch (_) {
+      tarifaCliente = 0;
+    }
+
+    // 2) Validar si la tarifa está activa (si tiene FechaFin, se considera no activa)
+    let tarifaAplicada = tarifaCliente || 0;
+    if (tarifaAplicada !== 0) {
+      try {
+        const rowsTarifa = await crm.query(
+          `SELECT Activa, FechaFin
+           FROM tarifasClientes
+           WHERE Id = ?
+           LIMIT 1`,
+          [tarifaAplicada]
+        );
+        const t = rowsTarifa && rowsTarifa.length > 0 ? rowsTarifa[0] : null;
+        const activa = Number(t?.Activa ?? 0) === 1;
+        const fechaFin = t?.FechaFin ? String(t.FechaFin).slice(0, 10) : null;
+        const fechaFinInvalida = !fechaFin || fechaFin === '0000-00-00';
+        // Si hay fecha fin válida, la tarifa deja de estar activa
+        if (!activa || !fechaFinInvalida) {
+          tarifaAplicada = 0;
+        }
+      } catch (_) {
+        tarifaAplicada = 0;
+      }
+    }
+
+    // 3) Precio por tarifa/artículo con fallbacks
+    const obtenerPrecioDesdeTarifa = async (tarifaId) => {
+      const rows = await crm.query(
+        'SELECT Precio FROM tarifasClientes_precios WHERE Id_Tarifa = ? AND Id_Articulo = ? LIMIT 1',
+        [tarifaId, articuloId]
+      );
+      if (rows && rows.length > 0) {
+        const precio = Number(rows[0].Precio ?? 0);
+        return Number.isFinite(precio) ? precio : null;
+      }
+      return null;
+    };
+
+    let precio = null;
+    try {
+      precio = await obtenerPrecioDesdeTarifa(tarifaAplicada);
+      if (precio === null) precio = await obtenerPrecioDesdeTarifa(0);
+    } catch (_) {
+      precio = null;
+    }
+
+    if (precio === null) {
+      try {
+        const rowsArticulo = await crm.query('SELECT PVL FROM articulos WHERE Id = ? OR id = ? LIMIT 1', [articuloId, articuloId]);
+        const pvl = rowsArticulo && rowsArticulo.length > 0 ? Number(rowsArticulo[0].PVL ?? rowsArticulo[0].pvl ?? 0) : 0;
+        precio = Number.isFinite(pvl) ? pvl : 0;
+      } catch (_) {
+        precio = 0;
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        clienteId,
+        articuloId,
+        tarifaCliente,
+        tarifaAplicada,
+        precio
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 

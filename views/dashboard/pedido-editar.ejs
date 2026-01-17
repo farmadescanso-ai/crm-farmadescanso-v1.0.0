@@ -555,6 +555,22 @@
         lineasPayloadInput.name = 'lineas_payload';
         pedidoForm.appendChild(lineasPayloadInput);
 
+        async function obtenerPrecioTarifa(articuloId) {
+            try {
+                const clienteId = Number(clienteSelect?.value || 0);
+                if (!clienteId || !articuloId) return null;
+                const response = await fetch(`/api/tarifas-clientes/precio?clienteId=${encodeURIComponent(clienteId)}&articuloId=${encodeURIComponent(articuloId)}`, {
+                    headers: { 'Accept': 'application/json' }
+                });
+                const data = await response.json();
+                if (!data || !data.success) return null;
+                const precio = Number(data.data?.precio);
+                return Number.isFinite(precio) ? precio : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
         function mostrarAlerta(mensaje, tipo = 'danger') {
             // Crear o encontrar contenedor de alertas
             let alertContainer = document.getElementById('alertContainer');
@@ -715,7 +731,22 @@
                 if (articulo) {
                     hiddenInput.value = articulo.Id || articulo.id;
                     articuloNombre.textContent = `${articulo.Id || articulo.id} - ${articulo.Nombre || articulo.nombre}`;
-                    precioInput.value = Number(articulo.PVL || articulo.Pvl || articulo.precio || data.precio || 0).toFixed(2);
+                    const precioBase = Number(articulo.PVL || articulo.Pvl || articulo.precio || 0);
+                    const precioData = (data.precio !== undefined && data.precio !== null) ? Number(data.precio) : null;
+                    const precioInicial = Number.isFinite(precioData) ? precioData : precioBase;
+                    precioInput.value = Number(precioInicial || 0).toFixed(2);
+                    
+                    // Si el precio viene "por defecto" (igual a PVL o no viene), intentar aplicar tarifa del cliente
+                    if (!Number.isFinite(precioData) || Number(precioData) === Number(precioBase)) {
+                        obtenerPrecioTarifa(Number(hiddenInput.value)).then((precioTarifa) => {
+                            if (precioTarifa === null) return;
+                            const actual = Number(precioInput.value);
+                            if (Number.isFinite(actual) && Number(actual) === Number(precioInicial)) {
+                                precioInput.value = Number(precioTarifa || 0).toFixed(2);
+                                recalcularTotales();
+                            }
+                        });
+                    }
                     console.log(`✅ [CLIENTE] Artículo encontrado: ${articulo.Nombre || articulo.nombre}`);
                 } else {
                     console.warn(`⚠️ [CLIENTE] Artículo con ID ${articuloId} no encontrado en la lista de artículos`);

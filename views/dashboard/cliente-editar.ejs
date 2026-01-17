@@ -295,7 +295,21 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Tarifa</label>
-                        <input type="text" name="Tarifa" class="form-control" value="<%= cliente ? (cliente.Tarifa || '') : '' %>">
+                        <% const tarifaSeleccionada = cliente ? (cliente.Tarifa ?? cliente.tarifa ?? 0) : 0; %>
+                        <% if (typeof tarifasClientes !== 'undefined' && tarifasClientes && tarifasClientes.length > 0) { %>
+                        <select name="Tarifa" class="form-select">
+                            <% tarifasClientes.forEach(function(t) { %>
+                                <% const tid = t.Id || t.id; %>
+                                <option value="<%= tid %>" <%= String(tarifaSeleccionada) === String(tid) ? 'selected' : '' %>>
+                                    <%= t.NombreTarifa %> <%= (t.Activa === 0 || t.Activa === '0') ? '(Inactiva)' : '' %>
+                                </option>
+                            <% }); %>
+                        </select>
+                        <small class="text-muted">Tarifa aplicada por defecto a este cliente (si la tarifa termina, se usará la General)</small>
+                        <% } else { %>
+                        <input type="number" name="Tarifa" class="form-control" value="<%= tarifaSeleccionada %>">
+                        <small class="text-muted">No se pudieron cargar las tarifas; introduzca el ID manualmente (0 = General)</small>
+                        <% } %>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Dto (%)</label>
