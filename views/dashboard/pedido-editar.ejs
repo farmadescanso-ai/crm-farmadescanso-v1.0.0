@@ -559,7 +559,9 @@
             try {
                 const clienteId = Number(clienteSelect?.value || 0);
                 if (!clienteId || !articuloId) return null;
-                const response = await fetch(`/api/tarifas-clientes/precio?clienteId=${encodeURIComponent(clienteId)}&articuloId=${encodeURIComponent(articuloId)}`, {
+                const fechaPedido = document.querySelector('input[name="fecha_pedido"]')?.value || '';
+                const fechaParam = fechaPedido ? `&fecha=${encodeURIComponent(fechaPedido)}` : '';
+                const response = await fetch(`/api/tarifas-clientes/precio?clienteId=${encodeURIComponent(clienteId)}&articuloId=${encodeURIComponent(articuloId)}${fechaParam}`, {
                     headers: { 'Accept': 'application/json' }
                 });
                 const data = await response.json();
