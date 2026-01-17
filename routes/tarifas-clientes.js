@@ -18,6 +18,35 @@ const normalizarActiva = (value) => {
   return (v === '1' || v === 'true' || v === 'si' || v === 'sí' || v === 'on') ? 1 : 0;
 };
 
+let __articulosColsCache = null;
+let __marcasTableCache = null;
+
+async function getArticulosColumns() {
+  if (__articulosColsCache) return __articulosColsCache;
+  const rows = await crm.query(
+    `SELECT COLUMN_NAME
+     FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'articulos'`
+  );
+  const set = new Set((rows || []).map(r => String(r.COLUMN_NAME || r.column_name || '').trim()).filter(Boolean));
+  __articulosColsCache = set;
+  return set;
+}
+
+async function getMarcasTableName() {
+  if (__marcasTableCache) return __marcasTableCache;
+  try {
+    await crm.query('SELECT 1 FROM `marcas` LIMIT 1');
+    __marcasTableCache = 'marcas';
+    return __marcasTableCache;
+  } catch (_) {
+    await crm.query('SELECT 1 FROM `Marcas` LIMIT 1');
+    __marcasTableCache = 'Marcas';
+    return __marcasTableCache;
+  }
+}
+
 async function getMarcasCompat() {
   try {
     // Preferible: tabla en minúsculas
@@ -155,12 +184,28 @@ router.get('/:id/precios', async (req, res) => {
     const marcaId = req.query.marcaId ? Number(req.query.marcaId) : null;
     const marcaNombre = req.query.marcaNombre ? String(req.query.marcaNombre) : null;
 
+    const cols = await getArticulosColumns().catch(() => new Set());
+    const hasMarcaText = cols.has('Marca') || cols.has('marca');
+    const hasIdMarca = cols.has('Id_Marca') || cols.has('id_marca');
+    const hasNombre = cols.has('Nombre') || cols.has('nombre');
+
+    const marcasTable = hasIdMarca ? await getMarcasTableName().catch(() => null) : null;
+
+    const marcaSelect = hasMarcaText
+      ? 'a.Marca'
+      : (hasIdMarca && marcasTable ? 'm.Nombre' : "''");
+
+    const nombreSelect = hasNombre ? 'a.Nombre' : "''";
+
     let sql = `
       SELECT
         a.*,
+        ${nombreSelect} AS NombreArticulo,
+        ${marcaSelect} AS MarcaArticulo,
         tp.Precio AS PrecioTarifa,
         tg.Precio AS PrecioGeneral
       FROM articulos a
+      ${hasIdMarca && marcasTable ? `LEFT JOIN \`${marcasTable}\` m ON (m.id = a.Id_Marca OR m.Id = a.Id_Marca)` : ''}
       LEFT JOIN tarifasClientes_precios tp
         ON tp.Id_Tarifa = ?
        AND (tp.Id_Articulo = a.Id OR tp.Id_Articulo = a.id)
@@ -172,14 +217,21 @@ router.get('/:id/precios', async (req, res) => {
     const params = [tarifaId];
 
     if (marcaId && Number.isFinite(marcaId)) {
-      sql += ' AND (a.Id_Marca = ? OR a.id_marca = ?)';
-      params.push(marcaId, marcaId);
+      if (hasIdMarca) {
+        sql += ' AND (a.Id_Marca = ? OR a.id_marca = ?)';
+        params.push(marcaId, marcaId);
+      }
     } else if (marcaNombre) {
-      sql += ' AND (a.Marca = ?)';
-      params.push(marcaNombre);
+      if (hasMarcaText) {
+        sql += ' AND (a.Marca = ?)';
+        params.push(marcaNombre);
+      } else if (marcasTable) {
+        sql += ' AND (m.Nombre = ?)';
+        params.push(marcaNombre);
+      }
     }
 
-    sql += ' ORDER BY a.Marca ASC, a.Nombre ASC';
+    sql += ' ORDER BY MarcaArticulo ASC, NombreArticulo ASC';
 
     const articulos = await crm.query(sql, params);
 

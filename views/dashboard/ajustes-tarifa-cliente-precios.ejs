@@ -108,8 +108,8 @@
                                                 <td><%= articuloId %></td>
                                                 <td><%= a.SKU || '-' %></td>
                                                 <td>
-                                                    <div class="fw-semibold"><%= a.Nombre || a.nombre || '-' %></div>
-                                                    <div class="text-muted small"><%= a.Marca || '-' %></div>
+                                                    <div class="fw-semibold"><%= a.NombreArticulo || a.Nombre || a.nombre || '-' %></div>
+                                                    <div class="text-muted small"><%= a.MarcaArticulo || a.Marca || '-' %></div>
                                                 </td>
                                                 <td class="text-end">€ <%= Number(general || 0).toFixed(2) %></td>
                                                 <td class="text-end">
