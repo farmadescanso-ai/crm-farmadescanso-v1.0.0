@@ -7755,9 +7755,21 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
   try {
     const clienteId = req.query.clienteId ? Number(req.query.clienteId) : null;
     const articuloId = req.query.articuloId ? Number(req.query.articuloId) : null;
+    const fechaParam = req.query.fecha ? String(req.query.fecha) : null;
+    const yearParam = req.query.year ? Number(req.query.year) : null;
 
     if (!clienteId || !articuloId) {
       return res.status(400).json({ success: false, error: 'clienteId y articuloId son obligatorios' });
+    }
+
+    // Fecha de referencia (para históricos). Acepta:
+    // - fecha=YYYY-MM-DD
+    // - year=2025
+    let fechaReferencia = null;
+    if (fechaParam && /^\d{4}-\d{2}-\d{2}$/.test(fechaParam)) {
+      fechaReferencia = fechaParam;
+    } else if (Number.isFinite(yearParam) && yearParam > 2000 && yearParam < 2100) {
+      fechaReferencia = `${yearParam}-01-01`;
     }
 
     // 1) Tarifa del cliente
@@ -7813,6 +7825,26 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
     let precio = null;
     try {
       precio = await obtenerPrecioDesdeTarifa(tarifaAplicada);
+      if (precio === null) {
+        // Si estamos consultando un año histórico, preferir una tarifa "General 2025" (si existe)
+        if (fechaReferencia && /^2025-/.test(fechaReferencia)) {
+          try {
+            const tRows = await crm.query(
+              `SELECT Id
+               FROM tarifasClientes
+               WHERE NombreTarifa = 'General 2025'
+                 AND FechaInicio <= ?
+                 AND FechaFin >= ?
+               LIMIT 1`,
+              [fechaReferencia, fechaReferencia]
+            );
+            const idGeneral2025 = tRows && tRows.length > 0 ? Number(tRows[0].Id) : null;
+            if (Number.isFinite(idGeneral2025)) {
+              precio = await obtenerPrecioDesdeTarifa(idGeneral2025);
+            }
+          } catch (_) {}
+        }
+      }
       if (precio === null) precio = await obtenerPrecioDesdeTarifa(0);
     } catch (_) {
       precio = null;
@@ -7835,6 +7867,7 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
         articuloId,
         tarifaCliente,
         tarifaAplicada,
+        fechaReferencia,
         precio
       }
     });

@@ -158,17 +158,49 @@ router.post('/presupuestos', async (req, res) => {
       importePresupuestado = 0;
     }
 
-    // Si el importe no viene o es 0, calcularlo automáticamente: cantidad × PVL
+    // Si el importe no viene o es 0, calcularlo automáticamente.
+    // Importante para histórico: si el año es 2025, usar "General 2025" si existe, en vez del PVL actual.
     if (!importePresupuestado || importePresupuestado === 0) {
       try {
         const articuloId = parseInt(req.body.articulo_id);
         if (articuloId) {
-          const articulo = await crm.getArticuloById(articuloId);
-          if (articulo && articulo.PVL) {
-            const pvl = parseFloat(articulo.PVL || articulo.Pvl || articulo.pvl || 0);
-            importePresupuestado = cantidadPresupuestada * pvl;
-            console.log(`💰 [PRESUPUESTO] Calculado automáticamente: ${cantidadPresupuestada} × ${pvl} = ${importePresupuestado}`);
+          const año = parseInt(req.body.año);
+          let precioUnitario = null;
+
+          if (año === 2025) {
+            try {
+              const tRows = await crm.query(
+                `SELECT Id
+                 FROM tarifasClientes
+                 WHERE NombreTarifa = 'General 2025'
+                   AND FechaInicio <= '2025-01-01'
+                   AND FechaFin >= '2025-01-01'
+                 LIMIT 1`
+              );
+              const idGeneral2025 = tRows && tRows.length > 0 ? Number(tRows[0].Id) : null;
+              if (Number.isFinite(idGeneral2025)) {
+                const pRows = await crm.query(
+                  'SELECT Precio FROM tarifasClientes_precios WHERE Id_Tarifa = ? AND Id_Articulo = ? LIMIT 1',
+                  [idGeneral2025, articuloId]
+                );
+                if (pRows && pRows.length > 0) {
+                  const p = Number(pRows[0].Precio ?? 0);
+                  precioUnitario = Number.isFinite(p) ? p : null;
+                }
+              }
+            } catch (_) {
+              // fallback abajo
+            }
           }
+
+          if (precioUnitario === null) {
+            const articulo = await crm.getArticuloById(articuloId);
+            const pvl = parseFloat(articulo?.PVL || articulo?.Pvl || articulo?.pvl || 0);
+            precioUnitario = Number.isFinite(pvl) ? pvl : 0;
+          }
+
+          importePresupuestado = cantidadPresupuestada * (precioUnitario || 0);
+          console.log(`💰 [PRESUPUESTO] Calculado automático (${req.body.año}): ${cantidadPresupuestada} × ${precioUnitario} = ${importePresupuestado}`);
         }
       } catch (calcError) {
         console.error('⚠️ [PRESUPUESTO] Error al calcular importe automáticamente:', calcError.message);
