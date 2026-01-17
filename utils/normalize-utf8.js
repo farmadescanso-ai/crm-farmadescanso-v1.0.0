@@ -68,6 +68,13 @@ function normalizeObjectUTF8(obj) {
   if (typeof obj === 'string') {
     return normalizeUTF8(obj);
   }
+
+  // Preservar tipos especiales de objeto (p.ej. Date) para no perder información.
+  // Nota: un Date no tiene propiedades enumerables, por lo que el bloque genérico de "object"
+  // lo convertiría en {} y rompería el render/formateo de fechas.
+  if (obj instanceof Date) {
+    return obj;
+  }
   
   if (Array.isArray(obj)) {
     return obj.map(item => normalizeObjectUTF8(item));

@@ -97,3 +97,16 @@ sessions/
 
 # Scripts con credenciales (no subir secretos)
 # scripts/configurar-google-oauth.js contiene referencias a variables de entorno
+
+# ============================================
+# Exportaciones / backups locales (NO subir)
+# ============================================
+export-sql/*.sql
+*export-*.sql
+*backup*.sql
+sincronizacion-*.sql
+sincronizar-*.sql
+comerciales-local-*.csv
+comerciales-local-para-comparar-*.csv
+comerciales-local-para-comparar-*.json
+*.xlsx

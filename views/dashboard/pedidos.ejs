@@ -179,6 +179,44 @@
             </div>
         </div>
 
+        <% if (typeof debugRequested !== 'undefined' && debugRequested) { %>
+        <div class="alert alert-warning small">
+            <div class="d-flex justify-content-between flex-wrap gap-2">
+                <div>
+                    <strong>🧪 Diagnóstico fechas solicitado</strong>
+                    <% if (typeof debugDatesEnabled !== 'undefined' && debugDatesEnabled) { %>
+                        (admin: ✅)
+                    <% } else { %>
+                        (admin: ❌ — no se mostrarán samples)
+                    <% } %>
+                </div>
+                <div>
+                    <strong>commit:</strong> <%= (buildInfo && buildInfo.commit) ? buildInfo.commit : '—' %> |
+                    <strong>deployment:</strong> <%= (buildInfo && buildInfo.deploymentId) ? buildInfo.deploymentId : '—' %> |
+                    <strong>env:</strong> <%= (buildInfo && buildInfo.env) ? buildInfo.env : '—' %> |
+                    <strong>now:</strong> <%= (buildInfo && buildInfo.now) ? buildInfo.now : '—' %>
+                </div>
+            </div>
+            <details class="mt-2">
+                <summary class="fw-semibold">Ver diagnóstico de permisos/rol</summary>
+                <pre class="mb-0" style="white-space: pre-wrap;"><%= JSON.stringify(debugAuthInfo || {}, null, 2) %></pre>
+            </details>
+            <details class="mt-2">
+                <summary class="fw-semibold">Ver sample (raw + normalizado)</summary>
+                <div class="mt-2">
+                    <% if (!(typeof debugDatesEnabled !== 'undefined' && debugDatesEnabled)) { %>
+                        <div class="text-muted">No eres admin (o no se detecta como admin). Mira el bloque de “permisos/rol” arriba.</div>
+                    <% } else { %>
+                    <div class="fw-semibold">RAW (crm.getPedidos)</div>
+                    <pre class="mb-2" style="white-space: pre-wrap;"><%= JSON.stringify(debugRawSample || [], null, 2) %></pre>
+                    <div class="fw-semibold">NORMALIZADO (objeto que se pasa a la tabla)</div>
+                    <pre class="mb-0" style="white-space: pre-wrap;"><%= JSON.stringify(debugNormalizedSample || [], null, 2) %></pre>
+                    <% } %>
+                </div>
+            </details>
+        </div>
+        <% } %>
+
         <div class="table-container">
             <div class="table-responsive">
                 <table class="table table-hover" id="pedidosTable">
@@ -251,19 +289,98 @@
                         </tr>
                         <% } else { %>
                             <% 
+                            // Parseo robusto para fechas que pueden venir en distintos formatos desde MySQL/normalización.
+                            // Soporta: Date, timestamp, "YYYY-MM-DD", "YYYY-MM-DD HH:mm:ss", "DD/MM/YYYY", Buffers serializados.
+                            function parseFechaFlexible(value) {
+                                if (!value) return null;
+                                try {
+                                    if (value instanceof Date) {
+                                        return isNaN(value.getTime()) ? null : value;
+                                    }
+
+                                    if (typeof value === 'number') {
+                                        const d = new Date(value);
+                                        return isNaN(d.getTime()) ? null : d;
+                                    }
+
+                                    // Buffer serializado tipo { type: 'Buffer', data: [...] }
+                                    if (typeof value === 'object' && value && value.type === 'Buffer' && Array.isArray(value.data)) {
+                                        try {
+                                            const str = Buffer.from(value.data).toString('utf8');
+                                            return parseFechaFlexible(str);
+                                        } catch (_) {
+                                            return null;
+                                        }
+                                    }
+
+                                    if (typeof value === 'string') {
+                                        const str = value.trim();
+                                        if (!str) return null;
+
+                                        // DD/MM/YYYY o DD-MM-YYYY
+                                        let m = str.match(/^(\d{2})[\/\-](\d{2})[\/\-](\d{4})$/);
+                                        if (m) {
+                                            const dd = Number(m[1]);
+                                            const mm = Number(m[2]);
+                                            const yyyy = Number(m[3]);
+                                            const d = new Date(yyyy, mm - 1, dd);
+                                            return isNaN(d.getTime()) ? null : d;
+                                        }
+
+                                        // YYYY-MM-DD
+                                        m = str.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                                        if (m) {
+                                            const yyyy = Number(m[1]);
+                                            const mm = Number(m[2]);
+                                            const dd = Number(m[3]);
+                                            const d = new Date(yyyy, mm - 1, dd);
+                                            return isNaN(d.getTime()) ? null : d;
+                                        }
+
+                                        // YYYY-MM-DD HH:mm:ss (MySQL datetime)
+                                        m = str.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/);
+                                        if (m) {
+                                            const yyyy = Number(m[1]);
+                                            const mm = Number(m[2]);
+                                            const dd = Number(m[3]);
+                                            const hh = Number(m[4] || 0);
+                                            const min = Number(m[5] || 0);
+                                            const ss = Number(m[6] || 0);
+                                            const d = new Date(yyyy, mm - 1, dd, hh, min, ss);
+                                            return isNaN(d.getTime()) ? null : d;
+                                        }
+
+                                        // ISO u otros parseables
+                                        const d = new Date(str);
+                                        return isNaN(d.getTime()) ? null : d;
+                                    }
+
+                                    return null;
+                                } catch (e) {
+                                    return null;
+                                }
+                            }
+
                             // Función helper para formatear fechas en DD/MM/YYYY
                             function formatearFechaDDMMYYYY(fecha) {
-                                if (!fecha) return '—';
-                                try {
-                                    const date = fecha instanceof Date ? fecha : new Date(fecha);
-                                    if (isNaN(date.getTime())) return '—';
-                                    const dia = String(date.getDate()).padStart(2, '0');
-                                    const mes = String(date.getMonth() + 1).padStart(2, '0');
-                                    const año = date.getFullYear();
-                                    return `${dia}/${mes}/${año}`;
-                                } catch (e) {
+                                const date = parseFechaFlexible(fecha);
+                                if (!date) {
+                                    // Fallback: si hay valor pero no se puede parsear, mostrarlo tal cual para no quedar vacío.
+                                    // Esto ayuda a identificar formatos inesperados en producción.
+                                    if (fecha !== null && fecha !== undefined && String(fecha).trim() !== '') {
+                                        try {
+                                            if (typeof fecha === 'object') return JSON.stringify(fecha);
+                                            return String(fecha);
+                                        } catch (_) {
+                                            return String(fecha);
+                                        }
+                                    }
                                     return '—';
                                 }
+                                const dia = String(date.getDate()).padStart(2, '0');
+                                const mes = String(date.getMonth() + 1).padStart(2, '0');
+                                const año = date.getFullYear();
+                                return `${dia}/${mes}/${año}`;
                             }
                             %>
                             <% pedidos.forEach(pedido => { %>

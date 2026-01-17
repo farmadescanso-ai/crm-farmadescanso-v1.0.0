@@ -1037,28 +1037,39 @@ const getUsuarioRol = (req) => {
     const comercial = req.comercial || req.session?.comercial;
     if (!comercial) return null;
     
-    // Manejar Roll como JSON array o string
-    let rollValue = comercial.roll || comercial.Roll;
+    // Manejar rol/roles con distintos nombres/casing (según BD/entorno)
+    // Ejemplos vistos: roll/Roll, Roles (json), roles, role, rol, etc.
+    let rollValue =
+      comercial.roll ??
+      comercial.Roll ??
+      comercial.rol ??
+      comercial.Rol ??
+      comercial.role ??
+      comercial.Role ??
+      comercial.Roles ??
+      comercial.roles ??
+      null;
     
     if (!rollValue) {
       return 'comercial';
     }
     
-    // Si es un string que parece JSON, intentar parsearlo
-    if (typeof rollValue === 'string') {
-      // Si es un JSON array como ["Administrador"]
-      if (rollValue.trim().startsWith('[')) {
+    // Normalizar arrays/JSON
+    if (Array.isArray(rollValue)) {
+      rollValue = rollValue.length > 0 ? rollValue[0] : 'comercial';
+    } else if (typeof rollValue === 'string') {
+      const trimmed = rollValue.trim();
+      // JSON array tipo ["Administrador"]
+      if (trimmed.startsWith('[')) {
         try {
-          const rollArray = JSON.parse(rollValue);
-          if (Array.isArray(rollArray) && rollArray.length > 0) {
-            rollValue = rollArray[0]; // Tomar el primer rol
+          const arr = JSON.parse(trimmed);
+          if (Array.isArray(arr) && arr.length > 0) {
+            rollValue = arr[0];
           }
         } catch (e) {
-          // Si falla el parse, usar el valor original
+          // mantener el string original
         }
       }
-    } else if (Array.isArray(rollValue) && rollValue.length > 0) {
-      rollValue = rollValue[0]; // Si ya es un array, tomar el primero
     }
     
     return String(rollValue).toLowerCase();
@@ -1115,10 +1126,9 @@ const requireAdmin = (req, res, next) => {
     try {
       const comercial = req.comercial || req.session?.comercial;
       if (comercial) {
-        const roll = comercial.roll || comercial.Roll || '';
-        const rollStr = String(roll).toLowerCase();
-        adminCheck = rollStr.includes('administrador') || rollStr.includes('admin');
-        console.log(`🔍 [REQUIRE_ADMIN] Roll: ${rollStr}, isAdmin: ${adminCheck}`);
+        const rol = getUsuarioRol(req) || '';
+        adminCheck = String(rol).toLowerCase().includes('administrador') || String(rol).toLowerCase().includes('admin');
+        console.log(`🔍 [REQUIRE_ADMIN] Rol(normalizado): ${rol}, isAdmin: ${adminCheck}`);
       } else {
         console.log(`⚠️ [REQUIRE_ADMIN] No se encontró objeto comercial`);
       }
@@ -8954,11 +8964,67 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       console.warn('⚠️ Error cargando marcas para optimización:', error.message);
     }
  
+    // Flags de diagnóstico
+    // - debugRequested: se pidió explícitamente por query param
+    // - debugDatesEnabled: solo si además es admin (para no exponer muestras de pedidos a no-admin)
+    const debugRequested = (req.query.__debug_dates === '1' || req.query.__debug === '1');
+    const debugIsAdmin = getUserIsAdmin(req);
+    const debugDatesEnabled = debugRequested && debugIsAdmin;
+
+    const buildInfo = debugRequested ? {
+      commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GITHUB_COMMIT_SHA || process.env.GIT_COMMIT_SHA || null,
+      deploymentId: process.env.VERCEL_DEPLOYMENT_ID || null,
+      env: process.env.VERCEL_ENV || process.env.NODE_ENV || null,
+      now: new Date().toISOString()
+    } : null;
+
+    const debugAuthInfo = debugRequested ? (() => {
+      const comercial = req.comercial || req.session?.comercial || null;
+      const rol = getUsuarioRol(req);
+      const roleFields = comercial ? {
+        roll: comercial.roll,
+        Roll: comercial.Roll,
+        Roles: comercial.Roles,
+        roles: comercial.roles,
+        role: comercial.role,
+        rol: comercial.rol
+      } : null;
+      return {
+        isAdmin: debugIsAdmin,
+        rolNormalizado: rol,
+        comercialKeys: comercial ? Object.keys(comercial) : [],
+        roleFields
+      };
+    })() : null;
+
+    const debugRawSample = debugDatesEnabled
+      ? (pedidosRaw || []).slice(0, 3).map(p => ({
+          keys: Object.keys(p || {}),
+          Id: p?.Id ?? p?.id ?? null,
+          NumPedido: p?.NumPedido ?? p?.Numero_Pedido ?? p?.numero ?? null,
+          FechaPedido: p?.FechaPedido ?? p?.fecha_pedido ?? p?.fechaPedido ?? p?.Fecha ?? p?.fecha ?? null,
+          FechaEntrega: p?.FechaEntrega ?? p?.fecha_entrega ?? p?.fechaEntrega ?? p?.Fecha_Entrega ?? p?.['Fecha Entrega'] ?? null
+        }))
+      : null;
+
     // Calcular totales con IVA para cada pedido
     const pedidos = await Promise.all((pedidosRaw || []).map(async (pedido) => {
       const id = pedido.Id || pedido.id;
-      // Usar el nombre correcto de la columna: FechaPedido
-      const fecha = pedido.FechaPedido || pedido['Fecha Pedido'] || pedido.fecha || pedido.Fecha || null;
+      // Usar el nombre correcto de la columna: FechaPedido (pero en algunos entornos puede venir con otros alias/casing)
+      const fecha = pedido.FechaPedido
+        || pedido.Fecha_Pedido
+        || pedido['Fecha_Pedido']
+        || pedido['Fecha Pedido']
+        || pedido.fecha_pedido
+        || pedido.fechaPedido
+        || pedido.fechapedido
+        || pedido.fecha
+        || pedido.Fecha
+        || pedido.CreatedAt
+        || pedido.created_at
+        || pedido.CreadoEn
+        || pedido.creado_en
+        || null;
       const numeroRaw = pedido.NumPedido || pedido['Número_Pedido'] || pedido['Número Pedido'] || pedido.Numero_Pedido || pedido.NumeroPedido || pedido.numero || pedido.Numero || id;
       const numeroOrden = obtenerParteNumericaPedido(numeroRaw, fecha) || 0;
       const numero = formatearNumeroPedido(numeroRaw, fecha) || `P${String(new Date().getFullYear()).slice(-2)}${String(numeroOrden || id).padStart(4, '0')}`;
@@ -8988,8 +9054,15 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       // Normalizar estado: puede venir como Estado, EstadoPedido, o estado
       const estado = pedido.EstadoPedido || pedido.Estado || pedido.estado || 'Pendiente';
       
-      // Normalizar fecha entrega - usar el nombre correcto de la columna
-      const fechaEntrega = pedido.FechaEntrega || pedido['Fecha_Entrega'] || pedido['Fecha Entrega'] || pedido.fecha_entrega || null;
+      // Normalizar fecha entrega - usar el nombre correcto de la columna (con fallbacks por alias/casing)
+      const fechaEntrega = pedido.FechaEntrega
+        || pedido.Fecha_Entrega
+        || pedido['Fecha_Entrega']
+        || pedido['Fecha Entrega']
+        || pedido.fecha_entrega
+        || pedido.fechaEntrega
+        || pedido.fechaentrega
+        || null;
       
       // Normalizar forma de pago - obtener desde Id_FormaPago
       let formaPago = '—';
@@ -9141,6 +9214,16 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
         esMixto: esMixto
       };
     }));
+
+    const debugNormalizedSample = debugDatesEnabled
+      ? (pedidos || []).slice(0, 3).map(p => ({
+          keys: Object.keys(p || {}),
+          id: p?.id ?? null,
+          numero: p?.numero ?? null,
+          fecha: p?.fecha ?? null,
+          fechaEntrega: p?.fechaEntrega ?? null
+        }))
+      : null;
     
     // Ordenar por número de orden
     pedidos.sort((a, b) => (b.numeroOrden || 0) - (a.numeroOrden || 0));
@@ -9171,6 +9254,12 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       pedidos: pedidos ? pedidos.map(p => normalizeObjectUTF8(p)) : [],
       resumen,
       marcasDisponibles: marcasDisponibles ? marcasDisponibles.map(m => normalizeObjectUTF8(m)) : [],
+      debugRequested,
+      debugDatesEnabled,
+      debugAuthInfo,
+      buildInfo,
+      debugRawSample,
+      debugNormalizedSample,
       query: req.query,
       error: null
     });
