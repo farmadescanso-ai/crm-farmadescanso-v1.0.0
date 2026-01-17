@@ -179,43 +179,7 @@
             </div>
         </div>
 
-        <% if (typeof debugRequested !== 'undefined' && debugRequested) { %>
-        <div class="alert alert-warning small">
-            <div class="d-flex justify-content-between flex-wrap gap-2">
-                <div>
-                    <strong>🧪 Diagnóstico fechas solicitado</strong>
-                    <% if (typeof debugDatesEnabled !== 'undefined' && debugDatesEnabled) { %>
-                        (admin: ✅)
-                    <% } else { %>
-                        (admin: ❌ — no se mostrarán samples)
-                    <% } %>
-                </div>
-                <div>
-                    <strong>commit:</strong> <%= (buildInfo && buildInfo.commit) ? buildInfo.commit : '—' %> |
-                    <strong>deployment:</strong> <%= (buildInfo && buildInfo.deploymentId) ? buildInfo.deploymentId : '—' %> |
-                    <strong>env:</strong> <%= (buildInfo && buildInfo.env) ? buildInfo.env : '—' %> |
-                    <strong>now:</strong> <%= (buildInfo && buildInfo.now) ? buildInfo.now : '—' %>
-                </div>
-            </div>
-            <details class="mt-2">
-                <summary class="fw-semibold">Ver diagnóstico de permisos/rol</summary>
-                <pre class="mb-0" style="white-space: pre-wrap;"><%= JSON.stringify(debugAuthInfo || {}, null, 2) %></pre>
-            </details>
-            <details class="mt-2">
-                <summary class="fw-semibold">Ver sample (raw + normalizado)</summary>
-                <div class="mt-2">
-                    <% if (!(typeof debugDatesEnabled !== 'undefined' && debugDatesEnabled)) { %>
-                        <div class="text-muted">No eres admin (o no se detecta como admin). Mira el bloque de “permisos/rol” arriba.</div>
-                    <% } else { %>
-                    <div class="fw-semibold">RAW (crm.getPedidos)</div>
-                    <pre class="mb-2" style="white-space: pre-wrap;"><%= JSON.stringify(debugRawSample || [], null, 2) %></pre>
-                    <div class="fw-semibold">NORMALIZADO (objeto que se pasa a la tabla)</div>
-                    <pre class="mb-0" style="white-space: pre-wrap;"><%= JSON.stringify(debugNormalizedSample || [], null, 2) %></pre>
-                    <% } %>
-                </div>
-            </details>
-        </div>
-        <% } %>
+        <!-- Diagnóstico desactivado -->
 
         <div class="table-container">
             <div class="table-responsive">
@@ -364,19 +328,7 @@
                             // Función helper para formatear fechas en DD/MM/YYYY
                             function formatearFechaDDMMYYYY(fecha) {
                                 const date = parseFechaFlexible(fecha);
-                                if (!date) {
-                                    // Fallback: si hay valor pero no se puede parsear, mostrarlo tal cual para no quedar vacío.
-                                    // Esto ayuda a identificar formatos inesperados en producción.
-                                    if (fecha !== null && fecha !== undefined && String(fecha).trim() !== '') {
-                                        try {
-                                            if (typeof fecha === 'object') return JSON.stringify(fecha);
-                                            return String(fecha);
-                                        } catch (_) {
-                                            return String(fecha);
-                                        }
-                                    }
-                                    return '—';
-                                }
+                                if (!date) return '—';
                                 const dia = String(date.getDate()).padStart(2, '0');
                                 const mes = String(date.getMonth() + 1).padStart(2, '0');
                                 const año = date.getFullYear();

@@ -8964,48 +8964,7 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       console.warn('⚠️ Error cargando marcas para optimización:', error.message);
     }
  
-    // Flags de diagnóstico
-    // - debugRequested: se pidió explícitamente por query param
-    // - debugDatesEnabled: solo si además es admin (para no exponer muestras de pedidos a no-admin)
-    const debugRequested = (req.query.__debug_dates === '1' || req.query.__debug === '1');
-    const debugIsAdmin = getUserIsAdmin(req);
-    const debugDatesEnabled = debugRequested && debugIsAdmin;
-
-    const buildInfo = debugRequested ? {
-      commit: process.env.VERCEL_GIT_COMMIT_SHA || process.env.VERCEL_GITHUB_COMMIT_SHA || process.env.GIT_COMMIT_SHA || null,
-      deploymentId: process.env.VERCEL_DEPLOYMENT_ID || null,
-      env: process.env.VERCEL_ENV || process.env.NODE_ENV || null,
-      now: new Date().toISOString()
-    } : null;
-
-    const debugAuthInfo = debugRequested ? (() => {
-      const comercial = req.comercial || req.session?.comercial || null;
-      const rol = getUsuarioRol(req);
-      const roleFields = comercial ? {
-        roll: comercial.roll,
-        Roll: comercial.Roll,
-        Roles: comercial.Roles,
-        roles: comercial.roles,
-        role: comercial.role,
-        rol: comercial.rol
-      } : null;
-      return {
-        isAdmin: debugIsAdmin,
-        rolNormalizado: rol,
-        comercialKeys: comercial ? Object.keys(comercial) : [],
-        roleFields
-      };
-    })() : null;
-
-    const debugRawSample = debugDatesEnabled
-      ? (pedidosRaw || []).slice(0, 3).map(p => ({
-          keys: Object.keys(p || {}),
-          Id: p?.Id ?? p?.id ?? null,
-          NumPedido: p?.NumPedido ?? p?.Numero_Pedido ?? p?.numero ?? null,
-          FechaPedido: p?.FechaPedido ?? p?.fecha_pedido ?? p?.fechaPedido ?? p?.Fecha ?? p?.fecha ?? null,
-          FechaEntrega: p?.FechaEntrega ?? p?.fecha_entrega ?? p?.fechaEntrega ?? p?.Fecha_Entrega ?? p?.['Fecha Entrega'] ?? null
-        }))
-      : null;
+    // (Diagnóstico desactivado)
 
     // Calcular totales con IVA para cada pedido
     const pedidos = await Promise.all((pedidosRaw || []).map(async (pedido) => {
@@ -9215,15 +9174,7 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       };
     }));
 
-    const debugNormalizedSample = debugDatesEnabled
-      ? (pedidos || []).slice(0, 3).map(p => ({
-          keys: Object.keys(p || {}),
-          id: p?.id ?? null,
-          numero: p?.numero ?? null,
-          fecha: p?.fecha ?? null,
-          fechaEntrega: p?.fechaEntrega ?? null
-        }))
-      : null;
+    // (Diagnóstico desactivado)
     
     // Ordenar por número de orden
     pedidos.sort((a, b) => (b.numeroOrden || 0) - (a.numeroOrden || 0));
@@ -9254,12 +9205,6 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       pedidos: pedidos ? pedidos.map(p => normalizeObjectUTF8(p)) : [],
       resumen,
       marcasDisponibles: marcasDisponibles ? marcasDisponibles.map(m => normalizeObjectUTF8(m)) : [],
-      debugRequested,
-      debugDatesEnabled,
-      debugAuthInfo,
-      buildInfo,
-      debugRawSample,
-      debugNormalizedSample,
       query: req.query,
       error: null
     });
