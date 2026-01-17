@@ -302,21 +302,27 @@ router.post('/:id/precios', async (req, res) => {
     let totalSaltados = 0;
     let totalGuardados = 0;
 
+    const fallos = [];
     for (const [articuloIdStr, precioStr] of entries) {
       const articuloId = Number(articuloIdStr);
-      if (!Number.isFinite(articuloId)) { totalSaltados++; continue; }
+      // Importante: evitar 0 o negativos (provocan fallo FK)
+      if (!Number.isFinite(articuloId) || articuloId <= 0) { totalSaltados++; continue; }
       const precio = Number(String(precioStr).replace(',', '.'));
       if (!Number.isFinite(precio) || precio < 0) { totalSaltados++; continue; }
       totalProcesados++;
 
-      const r = await crm.query(
-        `INSERT INTO tarifasClientes_precios (Id_Tarifa, Id_Articulo, Precio)
-         VALUES (?, ?, ?)
-         ON DUPLICATE KEY UPDATE Precio = VALUES(Precio)`,
-        [tarifaId, articuloId, precio]
-      );
-      const affected = Number(r?.affectedRows ?? 0);
-      if (Number.isFinite(affected) && affected > 0) totalGuardados++;
+      try {
+        const r = await crm.query(
+          `INSERT INTO tarifasClientes_precios (Id_Tarifa, Id_Articulo, Precio)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE Precio = VALUES(Precio)`,
+          [tarifaId, articuloId, precio]
+        );
+        const affected = Number(r?.affectedRows ?? 0);
+        if (Number.isFinite(affected) && affected > 0) totalGuardados++;
+      } catch (e) {
+        fallos.push({ articuloId, error: e.message });
+      }
     }
 
     const marcaId = req.body?.marcaId ? String(req.body.marcaId) : '';
@@ -326,7 +332,20 @@ router.post('/:id/precios', async (req, res) => {
       return res.redirect(redirect + (marcaId ? '&' : '?') + 'error=' + encodeURIComponent('No se recibió ningún precio válido para guardar (posible problema de envío/formato). Añade &debug=1 a la URL para ver la BD activa.'));
     }
 
-    res.redirect(
+    if (fallos.length > 0) {
+      const ejemplo = fallos.slice(0, 3).map(f => `Id_Articulo=${f.articuloId} (${f.error})`).join(' | ');
+      return res.redirect(
+        redirect +
+        (marcaId ? '&' : '?') +
+        'error=' +
+        encodeURIComponent(
+          `Se guardaron ${totalGuardados} precios, pero fallaron ${fallos.length} por FK. Ejemplos: ${ejemplo}. ` +
+          `Comprueba que esos Id_Articulo existen en articulos (SELECT * FROM articulos WHERE id IN (...)).`
+        )
+      );
+    }
+
+    return res.redirect(
       redirect +
       (marcaId ? '&' : '?') +
       'success=' +
