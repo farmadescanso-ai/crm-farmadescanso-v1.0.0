@@ -74,7 +74,8 @@ async function getTarifasActivas() {
     `SELECT Id, NombreTarifa
      FROM tarifasClientes
      WHERE (Activa = 1 OR Activa = '1')
-       AND (FechaFin IS NULL OR FechaFin = '0000-00-00')
+       -- Evitar literal DATE '0000-00-00' (en MySQL strict da "Incorrect DATE value")
+       AND (FechaFin IS NULL OR CAST(FechaFin AS CHAR) = '0000-00-00')
      ORDER BY (Id = 0) DESC, NombreTarifa ASC`
   );
   return rows || [];
