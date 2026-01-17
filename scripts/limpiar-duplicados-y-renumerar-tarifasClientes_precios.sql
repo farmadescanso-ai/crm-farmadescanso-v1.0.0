@@ -26,12 +26,14 @@ SET @__refs := (
     AND REFERENCED_TABLE_NAME = 'tarifasClientes_precios'
 );
 
-SET @__sql_renumerar := IF(
-  @__refs > 0,
-  'SELECT "INFO: No se renumeran IDs porque existen FKs que referencian tarifasClientes_precios" AS info;',
-  'SET @i := 0; UPDATE tarifasClientes_precios SET Id = (@i := @i + 1) ORDER BY Id;'
-);
-PREPARE stmt FROM @__sql_renumerar; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+-- phpMyAdmin/MySQL: PREPARE no soporta múltiples sentencias.
+-- Así que mostramos el contador y la renumeración se ejecuta SOLO si @__refs = 0.
+SELECT @__refs AS referencias_a_tarifasClientes_precios;
+
+-- Si referencias_a_tarifasClientes_precios > 0: NO renumeres (sería peligroso).
+-- Si referencias_a_tarifasClientes_precios = 0: ejecuta estas 2 sentencias:
+--   SET @i := 0;
+--   UPDATE tarifasClientes_precios SET Id = (@i := @i + 1) ORDER BY Id;
 
 -- Reajustar AUTO_INCREMENT al final (si la renumeración se hizo)
 SET @__max_id := (SELECT COALESCE(MAX(Id), 0) FROM tarifasClientes_precios);
