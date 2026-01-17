@@ -2689,6 +2689,22 @@ app.get('/api/debug/db', requireAuth, requireAdmin, async (req, res) => {
   }
 });
 
+// Debug: confirmar versión/commit desplegado en Vercel
+app.get('/api/debug/build', requireAuth, requireAdmin, (req, res) => {
+  res.json({
+    success: true,
+    vercel: {
+      VERCEL: process.env.VERCEL || null,
+      VERCEL_ENV: process.env.VERCEL_ENV || null,
+      VERCEL_GIT_COMMIT_SHA: process.env.VERCEL_GIT_COMMIT_SHA || null,
+      VERCEL_GIT_COMMIT_REF: process.env.VERCEL_GIT_COMMIT_REF || null
+    },
+    node: {
+      NODE_ENV: process.env.NODE_ENV || null
+    }
+  });
+});
+
 // Función helper para obtener estadísticas globales
 async function getEstadisticasGlobales() {
   try {

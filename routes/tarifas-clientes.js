@@ -255,7 +255,7 @@ router.get('/:id/precios', async (req, res) => {
       marcaNombre: marcaNombre || '',
       articulos: articulos || [],
       debugDb,
-      error: null,
+      error: req.query.error || null,
       success: req.query.success || null
     });
   } catch (error) {
