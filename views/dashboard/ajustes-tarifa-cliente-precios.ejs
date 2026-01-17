@@ -74,6 +74,20 @@
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tarifa de referencia</label>
+                            <select class="form-select" name="refTarifaId">
+                                <% const refId = (typeof refTarifaId !== 'undefined') ? refTarifaId : 0; %>
+                                <% if (typeof tarifasReferencia !== 'undefined' && tarifasReferencia && tarifasReferencia.length > 0) { %>
+                                    <% tarifasReferencia.forEach(function(t) { %>
+                                        <option value="<%= t.Id %>" <%= String(refId) === String(t.Id) ? 'selected' : '' %>><%= t.NombreTarifa %></option>
+                                    <% }); %>
+                                <% } else { %>
+                                    <option value="0" selected>General</option>
+                                <% } %>
+                            </select>
+                            <small class="text-muted">Se muestra como columna de referencia; si no hay precio, se muestra 0,00.</small>
+                        </div>
+                        <div class="col-md-4">
                             <button class="btn btn-primary" type="submit"><i class="fas fa-filter me-1"></i>Aplicar filtro</button>
                             <a class="btn btn-outline-secondary" href="/dashboard/ajustes/tarifas-clientes/<%= tarifa.Id %>/precios"><i class="fas fa-eraser me-1"></i>Limpiar</a>
                         </div>
@@ -84,6 +98,7 @@
 
             <form method="POST" action="/dashboard/ajustes/tarifas-clientes/<%= tarifa.Id %>/precios">
                 <input type="hidden" name="marcaId" value="<%= marcaId %>">
+                <input type="hidden" name="refTarifaId" value="<%= typeof refTarifaId !== 'undefined' ? refTarifaId : 0 %>">
                 <div class="card shadow-sm">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -97,7 +112,7 @@
                                         <th style="width:90px;">Id</th>
                                         <th style="width:140px;">SKU</th>
                                         <th>Artículo</th>
-                                        <th style="width:120px;" class="text-end">General</th>
+                                        <th style="width:140px;" class="text-end">Ref: <%= (refTarifa && refTarifa.NombreTarifa) ? refTarifa.NombreTarifa : 'General' %></th>
                                         <th style="width:150px;" class="text-end">Precio Tarifa</th>
                                     </tr>
                                 </thead>
@@ -105,14 +120,14 @@
                                     <% if (articulos && articulos.length > 0) { %>
                                         <% articulos.forEach(function(a) { %>
                                             <% const articuloId = a.Id || a.id; %>
-                                            <% const general = (a.PrecioGeneral !== null && a.PrecioGeneral !== undefined) ? a.PrecioGeneral : (a.PVL || a.Pvl || a.pvl || 0); %>
+                                            <% const referencia = (a.PrecioReferencia !== null && a.PrecioReferencia !== undefined) ? a.PrecioReferencia : 0; %>
                                             <% 
                                             // Para tarifas != 0: si no hay precio propio, dejar vacío (se aplicará General).
                                             // Para tarifa 0 (General): siempre mostrar un valor (fallback a General/PVL).
                                             const esGeneral = Number(tarifa.Id) === 0;
                                             const tienePrecioPropio = (a.PrecioTarifa !== null && a.PrecioTarifa !== undefined);
                                             const precioTarifaValue = esGeneral
-                                                ? (tienePrecioPropio ? a.PrecioTarifa : general)
+                                                ? (tienePrecioPropio ? a.PrecioTarifa : referencia)
                                                 : (tienePrecioPropio ? a.PrecioTarifa : '');
                                             %>
                                             <tr>
@@ -122,7 +137,7 @@
                                                     <div class="fw-semibold"><%= a.NombreArticulo || a.Nombre || a.nombre || '-' %></div>
                                                     <div class="text-muted small"><%= a.MarcaArticulo || a.Marca || '-' %></div>
                                                 </td>
-                                                <td class="text-end">€ <%= Number(general || 0).toFixed(2) %></td>
+                                                <td class="text-end">€ <%= Number(referencia || 0).toFixed(2) %></td>
                                                 <td class="text-end">
                                                     <input
                                                         class="form-control form-control-sm text-end precio-input"
@@ -131,7 +146,7 @@
                                                         min="0"
                                                         name="precios[<%= articuloId %>]"
                                                         value="<%= (precioTarifaValue === '' ? '' : Number(precioTarifaValue || 0).toFixed(2)) %>"
-                                                        placeholder="<%= Number(general || 0).toFixed(2) %>"
+                                                        placeholder="<%= Number(referencia || 0).toFixed(2) %>"
                                                     >
                                                 </td>
                                             </tr>

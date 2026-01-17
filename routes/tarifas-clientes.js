@@ -68,6 +68,16 @@ async function getTarifaById(id) {
   return rows && rows.length > 0 ? rows[0] : null;
 }
 
+async function getTarifasParaReferencia() {
+  // Listado para selector de referencia (incluye General e históricas)
+  const rows = await crm.query(
+    `SELECT Id, NombreTarifa
+     FROM tarifasClientes
+     ORDER BY (Id = 0) DESC, NombreTarifa ASC`
+  );
+  return rows || [];
+}
+
 async function getTarifasActivas() {
   // Consideramos activa si Activa=1 y (FechaFin IS NULL o 0000-00-00)
   const rows = await crm.query(
@@ -267,8 +277,13 @@ router.get('/:id/precios', async (req, res) => {
     }
 
     const marcas = await getMarcasCompat().catch(() => []);
+    const tarifasReferencia = await getTarifasParaReferencia().catch(() => []);
     const marcaId = req.query.marcaId ? Number(req.query.marcaId) : null;
     const marcaNombre = req.query.marcaNombre ? String(req.query.marcaNombre) : null;
+    const refTarifaId = req.query.refTarifaId !== undefined && req.query.refTarifaId !== ''
+      ? Number(req.query.refTarifaId)
+      : 0;
+    const refTarifa = await getTarifaById(Number.isFinite(refTarifaId) ? refTarifaId : 0).catch(() => null);
 
     const cols = await getArticulosColumns().catch(() => new Set());
     const hasMarcaText = cols.has('Marca') || cols.has('marca');
@@ -289,18 +304,18 @@ router.get('/:id/precios', async (req, res) => {
         ${nombreSelect} AS NombreArticulo,
         ${marcaSelect} AS MarcaArticulo,
         tp.Precio AS PrecioTarifa,
-        tg.Precio AS PrecioGeneral
+        tr.Precio AS PrecioReferencia
       FROM articulos a
       ${hasIdMarca && marcasTable ? `LEFT JOIN \`${marcasTable}\` m ON (m.id = a.Id_Marca OR m.Id = a.Id_Marca)` : ''}
       LEFT JOIN tarifasClientes_precios tp
         ON tp.Id_Tarifa = ?
        AND (tp.Id_Articulo = a.Id OR tp.Id_Articulo = a.id)
-      LEFT JOIN tarifasClientes_precios tg
-        ON tg.Id_Tarifa = 0
-       AND (tg.Id_Articulo = a.Id OR tg.Id_Articulo = a.id)
+      LEFT JOIN tarifasClientes_precios tr
+        ON tr.Id_Tarifa = ?
+       AND (tr.Id_Articulo = a.Id OR tr.Id_Articulo = a.id)
       WHERE 1=1
     `;
-    const params = [tarifaId];
+    const params = [tarifaId, Number.isFinite(refTarifaId) ? refTarifaId : 0];
 
     if (marcaId && Number.isFinite(marcaId)) {
       if (hasIdMarca) {
@@ -337,8 +352,11 @@ router.get('/:id/precios', async (req, res) => {
       esAdmin: true,
       tarifa,
       marcas,
+      tarifasReferencia,
       marcaId: marcaId || '',
       marcaNombre: marcaNombre || '',
+      refTarifaId: Number.isFinite(refTarifaId) ? refTarifaId : 0,
+      refTarifa: refTarifa || { Id: 0, NombreTarifa: 'General' },
       articulos: articulos || [],
       debugDb,
       error: req.query.error || null,
@@ -484,7 +502,11 @@ router.post('/:id/precios', async (req, res) => {
     }
 
     const marcaId = req.body?.marcaId ? String(req.body.marcaId) : '';
-    const redirect = `/dashboard/ajustes/tarifas-clientes/${tarifaId}/precios` + (marcaId ? `?marcaId=${encodeURIComponent(marcaId)}` : '');
+    const refTarifaId = req.body?.refTarifaId !== undefined ? String(req.body.refTarifaId) : '';
+    const qs = [];
+    if (marcaId) qs.push(`marcaId=${encodeURIComponent(marcaId)}`);
+    if (refTarifaId) qs.push(`refTarifaId=${encodeURIComponent(refTarifaId)}`);
+    const redirect = `/dashboard/ajustes/tarifas-clientes/${tarifaId}/precios` + (qs.length > 0 ? `?${qs.join('&')}` : '');
 
     if (totalProcesados === 0) {
       return res.redirect(redirect + (marcaId ? '&' : '?') + 'error=' + encodeURIComponent('No se recibió ningún precio válido para guardar (posible problema de envío/formato). Añade &debug=1 a la URL para ver la BD activa.'));
