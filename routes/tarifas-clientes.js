@@ -481,11 +481,13 @@ router.post('/:id/precios', async (req, res) => {
           paramsMap
         );
 
+        const existingArticuloIds = new Set();
         const skuToId = new Map();
         const anyIdToId = new Map();
         for (const r of rowsArt || []) {
           const resolvedId = Number(r.id ?? r.Id);
           if (!Number.isFinite(resolvedId)) continue;
+          existingArticuloIds.add(resolvedId);
           const skuVal = String(r.SKU || '').trim();
           if (skuVal) skuToId.set(skuVal, resolvedId);
           const idLower = Number(r.id);
@@ -504,6 +506,8 @@ router.post('/:id/precios', async (req, res) => {
           if (Number(before) !== Number(p.resolvedArticuloId)) {
             totalRemapeados++;
           }
+          // Marcar si el ID final existe realmente en articulos (para evitar fallo FK)
+          p._existsInArticulos = existingArticuloIds.has(Number(p.resolvedArticuloId));
         }
       }
     }
@@ -533,6 +537,11 @@ router.post('/:id/precios', async (req, res) => {
     const fallos = [];
     for (const item of preciosLimpios) {
       const articuloId = Number(item.resolvedArticuloId);
+      if (item._existsInArticulos === false) {
+        totalSaltados++;
+        fallos.push({ articuloId, sku: item.sku || null, error: 'Artículo no existe en articulos (ID no encontrado)' });
+        continue;
+      }
       const existente = existentesCents.has(articuloId) ? existentesCents.get(articuloId) : null;
       // Si viene vacío:
       // - Para tarifa 0 (General) NO se borra (es la base).
