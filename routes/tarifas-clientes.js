@@ -130,11 +130,14 @@ router.get('/matriz', async (req, res) => {
     const hasIdMarca = cols.has('Id_Marca') || cols.has('id_marca');
     const hasNombre = cols.has('Nombre') || cols.has('nombre');
     const hasSku = cols.has('SKU') || cols.has('sku');
+    const hasIdUpper = cols.has('Id');
+    const hasIdLower = cols.has('id');
 
     const marcasTable = hasIdMarca ? await getMarcasTableName().catch(() => null) : null;
     const marcaSelect = hasMarcaText ? 'a.Marca' : (hasIdMarca && marcasTable ? 'm.Nombre' : "''");
     const nombreSelect = hasNombre ? 'a.Nombre' : "''";
     const skuSelect = hasSku ? 'a.SKU' : "''";
+    const articuloPkOrder = hasIdUpper ? 'a.Id' : (hasIdLower ? 'a.id' : '1');
 
     let sqlArt = `
       SELECT
@@ -151,7 +154,7 @@ router.get('/matriz', async (req, res) => {
       sqlArt += ' AND (a.Id_Marca = ? OR a.id_marca = ?)';
       paramsArt.push(marcaId, marcaId);
     }
-    sqlArt += ' ORDER BY MarcaArticulo ASC, NombreArticulo ASC';
+    sqlArt += ` ORDER BY ${articuloPkOrder} ASC`;
     const articulos = await crm.query(sqlArt, paramsArt);
 
     // Precios de todas las tarifas activas para todos los artículos (mapeo en memoria)
