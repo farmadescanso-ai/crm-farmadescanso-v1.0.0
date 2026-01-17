@@ -68,6 +68,18 @@ async function getTarifaById(id) {
   return rows && rows.length > 0 ? rows[0] : null;
 }
 
+async function getTarifasActivas() {
+  // Consideramos activa si Activa=1 y (FechaFin IS NULL o 0000-00-00)
+  const rows = await crm.query(
+    `SELECT Id, NombreTarifa
+     FROM tarifasClientes
+     WHERE (Activa = 1 OR Activa = '1')
+       AND (FechaFin IS NULL OR FechaFin = '0000-00-00')
+     ORDER BY (Id = 0) DESC, NombreTarifa ASC`
+  );
+  return rows || [];
+}
+
 // Listado + formulario creación
 router.get('/', async (req, res) => {
   const user = req.comercial || req.session?.comercial || null;
@@ -90,6 +102,79 @@ router.get('/', async (req, res) => {
       error: error.message,
       success: null
     });
+  }
+});
+
+// Matriz de tarifas activas por artículo (una columna por tarifa activa)
+// IMPORTANTE: debe ir ANTES de '/:id' para que no lo capture como id="matriz"
+router.get('/matriz', async (req, res) => {
+  const user = req.comercial || req.session?.comercial || null;
+  try {
+    const tarifasActivas = await getTarifasActivas();
+    const marcas = await getMarcasCompat().catch(() => []);
+    const marcaId = req.query.marcaId ? Number(req.query.marcaId) : null;
+
+    const cols = await getArticulosColumns().catch(() => new Set());
+    const hasMarcaText = cols.has('Marca') || cols.has('marca');
+    const hasIdMarca = cols.has('Id_Marca') || cols.has('id_marca');
+    const hasNombre = cols.has('Nombre') || cols.has('nombre');
+    const hasSku = cols.has('SKU') || cols.has('sku');
+
+    const marcasTable = hasIdMarca ? await getMarcasTableName().catch(() => null) : null;
+    const marcaSelect = hasMarcaText ? 'a.Marca' : (hasIdMarca && marcasTable ? 'm.Nombre' : "''");
+    const nombreSelect = hasNombre ? 'a.Nombre' : "''";
+    const skuSelect = hasSku ? 'a.SKU' : "''";
+
+    let sqlArt = `
+      SELECT
+        a.*,
+        ${nombreSelect} AS NombreArticulo,
+        ${marcaSelect} AS MarcaArticulo,
+        ${skuSelect} AS SKUArticulo
+      FROM articulos a
+      ${hasIdMarca && marcasTable ? `LEFT JOIN \`${marcasTable}\` m ON (m.id = a.Id_Marca OR m.Id = a.Id_Marca)` : ''}
+      WHERE 1=1
+    `;
+    const paramsArt = [];
+    if (marcaId && Number.isFinite(marcaId) && hasIdMarca) {
+      sqlArt += ' AND (a.Id_Marca = ? OR a.id_marca = ?)';
+      paramsArt.push(marcaId, marcaId);
+    }
+    sqlArt += ' ORDER BY MarcaArticulo ASC, NombreArticulo ASC';
+    const articulos = await crm.query(sqlArt, paramsArt);
+
+    // Precios de todas las tarifas activas para todos los artículos (mapeo en memoria)
+    const tarifaIds = (tarifasActivas || []).map(t => Number(t.Id)).filter(Number.isFinite);
+    let preciosRows = [];
+    if (tarifaIds.length > 0) {
+      const placeholders = tarifaIds.map(() => '?').join(', ');
+      preciosRows = await crm.query(
+        `SELECT Id_Tarifa, Id_Articulo, Precio
+         FROM tarifasClientes_precios
+         WHERE Id_Tarifa IN (${placeholders})`,
+        tarifaIds
+      );
+    }
+    const preciosMap = new Map(); // key `${tarifaId}:${articuloId}` -> precio
+    for (const r of preciosRows || []) {
+      const k = `${Number(r.Id_Tarifa)}:${Number(r.Id_Articulo)}`;
+      preciosMap.set(k, Number(r.Precio));
+    }
+
+    res.render('dashboard/ajustes-tarifas-clientes-matriz', {
+      title: 'Tarifas activas por Artículo - Farmadescanso',
+      user,
+      esAdmin: true,
+      marcas,
+      marcaId: marcaId || '',
+      tarifasActivas: tarifasActivas || [],
+      articulos: articulos || [],
+      preciosMap,
+      error: req.query.error || null,
+      success: req.query.success || null
+    });
+  } catch (error) {
+    res.status(500).render('error', { error: 'Error', message: error.message });
   }
 });
 
