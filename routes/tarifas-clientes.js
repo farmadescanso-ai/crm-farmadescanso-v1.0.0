@@ -376,6 +376,7 @@ router.post('/:id/precios', async (req, res) => {
     // - precios: { [articuloId]: "12.34" }
     // - keys planas: "precios[123]": "12.34"
     let precios = req.body?.precios;
+    let skus = req.body?.skus;
     if (!precios || typeof precios !== 'object') {
       precios = {};
       const body = req.body || {};
@@ -383,6 +384,16 @@ router.post('/:id/precios', async (req, res) => {
         const m = /^precios\[(\d+)\]$/.exec(String(k));
         if (m) {
           precios[m[1]] = v;
+        }
+      }
+    }
+    if (!skus || typeof skus !== 'object') {
+      skus = {};
+      const body = req.body || {};
+      for (const [k, v] of Object.entries(body)) {
+        const m = /^skus\[(\d+)\]$/.exec(String(k));
+        if (m) {
+          skus[m[1]] = v;
         }
       }
     }
@@ -407,30 +418,99 @@ router.post('/:id/precios', async (req, res) => {
     let totalSinCambios = 0;
     let totalInsertados = 0;
     let totalActualizados = 0;
+    let totalRemapeados = 0;
 
     // 1) Limpiar/validar entradas y preparar IDs
     const preciosLimpios = [];
     for (const [articuloIdStr, precioStr] of entries) {
       const articuloId = Number(articuloIdStr);
       if (!Number.isFinite(articuloId) || articuloId <= 0) { totalSaltados++; continue; }
+      const sku = String((skus && skus[articuloIdStr]) ?? '').trim();
       const raw = String(precioStr ?? '').trim();
       // Vacío => significa "sin override" (no insertar) o "borrar override" si existía
       if (raw === '') {
-        preciosLimpios.push({ articuloId, precio: null, precioCents: null, empty: true });
+        preciosLimpios.push({ articuloId, sku, precio: null, precioCents: null, empty: true, resolvedArticuloId: articuloId });
         continue;
       }
       const precio = Number(raw.replace(',', '.'));
       if (!Number.isFinite(precio) || precio < 0) { totalSaltados++; continue; }
       // Comparación robusta a céntimos
       const precioCents = Math.round(precio * 100);
-      preciosLimpios.push({ articuloId, precio, precioCents, empty: false });
+      preciosLimpios.push({ articuloId, sku, precio, precioCents, empty: false, resolvedArticuloId: articuloId });
     }
 
     totalProcesados = preciosLimpios.length;
 
-    // 2) Cargar precios existentes para comparar y evitar updates innecesarios
+    // 2) Resolver/validar Id_Articulo usando SKU (código nacional) para evitar desajustes por IDs
+    // Si SKU existe en la tabla articulos y podemos resolverlo, preferimos ese ID.
+    const colsArt = await getArticulosColumns().catch(() => new Set());
+    const hasIdLower = colsArt.has('id');
+    const hasIdUpper = colsArt.has('Id');
+    const hasSkuCol = colsArt.has('SKU') || colsArt.has('sku');
+
+    if (hasSkuCol) {
+      const idsForm = Array.from(new Set(preciosLimpios.map(p => p.articuloId))).filter(Number.isFinite);
+      const skusForm = Array.from(new Set(preciosLimpios.map(p => p.sku).filter(Boolean)));
+
+      const clauses = [];
+      const paramsMap = [];
+
+      if (idsForm.length > 0 && (hasIdLower || hasIdUpper)) {
+        const phIds = idsForm.map(() => '?').join(', ');
+        if (hasIdLower) {
+          clauses.push(`id IN (${phIds})`);
+          paramsMap.push(...idsForm);
+        }
+        if (hasIdUpper) {
+          clauses.push(`Id IN (${phIds})`);
+          paramsMap.push(...idsForm);
+        }
+      }
+
+      if (skusForm.length > 0) {
+        const phSku = skusForm.map(() => '?').join(', ');
+        clauses.push(`SKU IN (${phSku})`);
+        paramsMap.push(...skusForm);
+      }
+
+      if (clauses.length > 0) {
+        const rowsArt = await crm.query(
+          `SELECT ${hasIdLower ? 'id' : 'NULL AS id'}, ${hasIdUpper ? 'Id' : 'NULL AS Id'}, SKU
+           FROM articulos
+           WHERE ${clauses.join(' OR ')}`,
+          paramsMap
+        );
+
+        const skuToId = new Map();
+        const anyIdToId = new Map();
+        for (const r of rowsArt || []) {
+          const resolvedId = Number(r.id ?? r.Id);
+          if (!Number.isFinite(resolvedId)) continue;
+          const skuVal = String(r.SKU || '').trim();
+          if (skuVal) skuToId.set(skuVal, resolvedId);
+          const idLower = Number(r.id);
+          const idUpper = Number(r.Id);
+          if (Number.isFinite(idLower)) anyIdToId.set(idLower, resolvedId);
+          if (Number.isFinite(idUpper)) anyIdToId.set(idUpper, resolvedId);
+        }
+
+        for (const p of preciosLimpios) {
+          const before = p.resolvedArticuloId;
+          if (p.sku && skuToId.has(p.sku)) {
+            p.resolvedArticuloId = skuToId.get(p.sku);
+          } else if (anyIdToId.has(p.articuloId)) {
+            p.resolvedArticuloId = anyIdToId.get(p.articuloId);
+          }
+          if (Number(before) !== Number(p.resolvedArticuloId)) {
+            totalRemapeados++;
+          }
+        }
+      }
+    }
+
+    // 3) Cargar precios existentes para comparar y evitar updates innecesarios
     const existentesCents = new Map(); // Id_Articulo -> cents
-    const ids = Array.from(new Set(preciosLimpios.map(p => p.articuloId)));
+    const ids = Array.from(new Set(preciosLimpios.map(p => Number(p.resolvedArticuloId)))).filter(Number.isFinite);
     const chunkSize = 500;
     for (let i = 0; i < ids.length; i += chunkSize) {
       const chunk = ids.slice(i, i + chunkSize);
@@ -449,10 +529,11 @@ router.post('/:id/precios', async (req, res) => {
       }
     }
 
-    // 3) Insertar/actualizar solo cambios
+    // 4) Insertar/actualizar solo cambios (usando resolvedArticuloId)
     const fallos = [];
     for (const item of preciosLimpios) {
-      const existente = existentesCents.has(item.articuloId) ? existentesCents.get(item.articuloId) : null;
+      const articuloId = Number(item.resolvedArticuloId);
+      const existente = existentesCents.has(articuloId) ? existentesCents.get(articuloId) : null;
       // Si viene vacío:
       // - Para tarifa 0 (General) NO se borra (es la base).
       // - Para tarifa != 0, si existía override -> borrar, si no existía -> sin cambios.
@@ -468,11 +549,11 @@ router.post('/:id/precios', async (req, res) => {
         try {
           await crm.query(
             'DELETE FROM tarifasClientes_precios WHERE Id_Tarifa = ? AND Id_Articulo = ?',
-            [tarifaId, item.articuloId]
+            [tarifaId, articuloId]
           );
           totalActualizados++; // cuenta como cambio (se elimina override)
         } catch (e) {
-          fallos.push({ articuloId: item.articuloId, error: e.message });
+          fallos.push({ articuloId, sku: item.sku || null, error: e.message });
         }
         continue;
       }
@@ -486,18 +567,18 @@ router.post('/:id/precios', async (req, res) => {
         if (existente === null) {
           await crm.query(
             'INSERT INTO tarifasClientes_precios (Id_Tarifa, Id_Articulo, Precio) VALUES (?, ?, ?)',
-            [tarifaId, item.articuloId, item.precio]
+            [tarifaId, articuloId, item.precio]
           );
           totalInsertados++;
         } else {
           await crm.query(
             'UPDATE tarifasClientes_precios SET Precio = ? WHERE Id_Tarifa = ? AND Id_Articulo = ?',
-            [item.precio, tarifaId, item.articuloId]
+            [item.precio, tarifaId, articuloId]
           );
           totalActualizados++;
         }
       } catch (e) {
-        fallos.push({ articuloId: item.articuloId, error: e.message });
+        fallos.push({ articuloId, sku: item.sku || null, error: e.message });
       }
     }
 
@@ -513,7 +594,7 @@ router.post('/:id/precios', async (req, res) => {
     }
 
     if (fallos.length > 0) {
-      const ejemplo = fallos.slice(0, 3).map(f => `Id_Articulo=${f.articuloId} (${f.error})`).join(' | ');
+      const ejemplo = fallos.slice(0, 3).map(f => `Id_Articulo=${f.articuloId}${f.sku ? ` SKU=${f.sku}` : ''} (${f.error})`).join(' | ');
       return res.redirect(
         redirect +
         (marcaId ? '&' : '?') +
@@ -530,7 +611,7 @@ router.post('/:id/precios', async (req, res) => {
     const cambios = totalInsertados + totalActualizados;
     const successMsg = cambios === 0
       ? `Sin cambios: no había precios modificados. (Omitidos: ${totalSaltados})`
-      : `Precios guardados. Cambios: ${cambios} (Nuevos: ${totalInsertados}, Actualizados: ${totalActualizados}). Sin cambios: ${totalSinCambios}. Omitidos: ${totalSaltados}.`;
+      : `Precios guardados. Cambios: ${cambios} (Nuevos: ${totalInsertados}, Actualizados: ${totalActualizados}). Sin cambios: ${totalSinCambios}. Omitidos: ${totalSaltados}.` + (totalRemapeados > 0 ? ` Remapeados por SKU: ${totalRemapeados}.` : '');
 
     return res.redirect(
       redirect +

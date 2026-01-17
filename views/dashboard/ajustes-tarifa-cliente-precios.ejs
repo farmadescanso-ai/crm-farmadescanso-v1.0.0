@@ -120,6 +120,7 @@
                                     <% if (articulos && articulos.length > 0) { %>
                                         <% articulos.forEach(function(a) { %>
                                             <% const articuloId = a.Id || a.id; %>
+                                            <% const skuArticulo = a.SKUArticulo || a.SKU || a.sku || ''; %>
                                             <% const referencia = (a.PrecioReferencia !== null && a.PrecioReferencia !== undefined) ? a.PrecioReferencia : 0; %>
                                             <% 
                                             // Para tarifas != 0: si no hay precio propio, dejar vacío (se aplicará General).
@@ -132,13 +133,14 @@
                                             %>
                                             <tr>
                                                 <td><%= articuloId %></td>
-                                                <td><%= a.SKU || '-' %></td>
+                                                <td><%= skuArticulo || '-' %></td>
                                                 <td>
                                                     <div class="fw-semibold"><%= a.NombreArticulo || a.Nombre || a.nombre || '-' %></div>
                                                     <div class="text-muted small"><%= a.MarcaArticulo || a.Marca || '-' %></div>
                                                 </td>
                                                 <td class="text-end">€ <%= Number(referencia || 0).toFixed(2) %></td>
                                                 <td class="text-end">
+                                                    <input type="hidden" name="skus[<%= articuloId %>]" value="<%= skuArticulo %>">
                                                     <input
                                                         class="form-control form-control-sm text-end precio-input"
                                                         type="number"
