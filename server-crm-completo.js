@@ -2666,6 +2666,29 @@ app.get('/api/debug/session', (req, res) => {
   }
 });
 
+// Debug: confirmar a qué BD está conectado el servidor (útil para Vercel)
+// Protegido: requiere estar logueado y ser Admin
+app.get('/api/debug/db', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const rows = await crm.query('SELECT DATABASE() AS db');
+    const db = rows && rows.length > 0 ? rows[0].db : null;
+    res.json({
+      success: true,
+      db,
+      env: {
+        VERCEL: !!process.env.VERCEL,
+        NODE_ENV: process.env.NODE_ENV || null,
+        DB_HOST: process.env.DB_HOST ? '[set]' : '[not set]',
+        DB_PORT: process.env.DB_PORT || null,
+        DB_USER: process.env.DB_USER ? '[set]' : '[not set]',
+        DB_NAME: process.env.DB_NAME || null
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Función helper para obtener estadísticas globales
 async function getEstadisticasGlobales() {
   try {

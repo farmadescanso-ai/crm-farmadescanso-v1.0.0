@@ -11,7 +11,9 @@ class MySQLCRM {
       port: process.env.DB_PORT || 3306,
       user: process.env.DB_USER || 'root',
       password: process.env.DB_PASSWORD || '',
-      database: process.env.DB_NAME || 'farmadescanso',
+      // En Vercel, si DB_NAME no está configurada, por defecto usamos la BD del CRM
+      // (evita que apunte a "farmadescanso" por error y no veas cambios en phpMyAdmin).
+      database: process.env.DB_NAME || (process.env.VERCEL ? 'crm_farmadescanso' : 'farmadescanso'),
       charset: 'utf8mb4',
       collation: 'utf8mb4_unicode_ci',
       waitForConnections: true,
