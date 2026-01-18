@@ -296,19 +296,29 @@
                                       const tarifaInicial = (initialValues.tarifa_id !== undefined && initialValues.tarifa_id !== null && String(initialValues.tarifa_id).trim() !== '')
                                         ? Number(initialValues.tarifa_id)
                                         : null;
+                                      const hoyIso = new Date().toISOString().slice(0, 10);
                                     %>
                                     <option value="0" <%= (tarifaInicial === 0 || tarifaInicial === null) ? 'selected' : '' %>>PVL (0)</option>
                                     <% tarifas.forEach(t => { %>
                                         <% const idT = Number(t.Id ?? t.id); %>
                                         <% if (!Number.isFinite(idT) || idT === 0) return; %>
                                         <% const nombre = (t.NombreTarifa || t.nombreTarifa || `Tarifa ${idT}`); %>
-                                        <option value="<%= idT %>" <%= tarifaInicial === idT ? 'selected' : '' %>><%= nombre %> (<%= idT %>)</option>
+                                        <%
+                                          const activa = (t.Activa === undefined || t.Activa === null) ? true : (Number(t.Activa) === 1);
+                                          const fechaFin = t.FechaFin ? String(t.FechaFin).slice(0, 10) : '';
+                                          const fechaFinVacia = !fechaFin || fechaFin === '0000-00-00';
+                                          const vigente = fechaFinVacia ? true : (fechaFin >= hoyIso);
+                                          const isActiva = activa && vigente;
+                                          const suffix = isActiva ? '' : ' (inactiva)';
+                                        %>
+                                        <option value="<%= idT %>" <%= tarifaInicial === idT ? 'selected' : '' %> <%= isActiva ? '' : 'disabled' %>><%= nombre %><%= suffix %> (<%= idT %>)</option>
                                     <% }) %>
                                 </select>
                                 <button type="button" class="btn btn-outline-secondary" id="recalcularTarifaBtn" title="Recalcular precios de las líneas con la tarifa seleccionada">
                                     Recalcular
                                 </button>
                             </div>
+                            <div class="form-text" id="tarifaAplicadaInfo"></div>
                             <small class="text-muted">Por defecto se usa la tarifa del cliente. Puedes cambiarla para dejarla fija en este pedido.</small>
                         </div>
                         <div class="col-md-4">
@@ -582,6 +592,22 @@
         let currentSelectedIndex = -1;
         let tarifaTocadaManualmente = false;
         let tarifaBloqueadaPorCliente = false;
+        const tarifaAplicadaInfo = document.getElementById('tarifaAplicadaInfo');
+
+        function actualizarInfoTarifa() {
+            if (!tarifaAplicadaInfo) return;
+            if (!tarifaPedidoSelect) {
+                tarifaAplicadaInfo.textContent = '';
+                return;
+            }
+            const opt = tarifaPedidoSelect.selectedOptions && tarifaPedidoSelect.selectedOptions.length > 0
+                ? tarifaPedidoSelect.selectedOptions[0]
+                : null;
+            const texto = opt ? String(opt.textContent || '').trim() : 'PVL (0)';
+            tarifaAplicadaInfo.textContent = tarifaBloqueadaPorCliente
+                ? `Aplicando: ${texto} · (inamovible por tarifa del cliente)`
+                : `Aplicando: ${texto}`;
+        }
 
         async function obtenerPrecioTarifa(articuloId) {
             try {
@@ -728,9 +754,22 @@
                 if (tarifaCliente > 0) {
                     tarifaBloqueadaPorCliente = true;
                     tarifaTocadaManualmente = true; // evita que se sobrescriba después
+                    
+                    // Si la tarifa del cliente no existe como opción (p.ej. inactiva), la añadimos para poder mostrarla
+                    const exists = Array.from(tarifaPedidoSelect.options).some(o => String(o.value) === String(tarifaCliente));
+                    if (!exists) {
+                        const opt = document.createElement('option');
+                        opt.value = String(tarifaCliente);
+                        opt.textContent = `Tarifa ${tarifaCliente} (asignada al cliente)`;
+                        tarifaPedidoSelect.appendChild(opt);
+                    }
+
                     tarifaPedidoSelect.value = String(tarifaCliente);
                     tarifaPedidoSelect.disabled = true;
                     if (recalcularTarifaBtn) recalcularTarifaBtn.disabled = true;
+                    actualizarInfoTarifa();
+                    // Recalcular líneas ya añadidas para aplicar precio correcto
+                    recalcularPreciosLineasPorTarifa();
                 } else {
                     tarifaBloqueadaPorCliente = false;
                     tarifaPedidoSelect.disabled = false;
@@ -739,6 +778,7 @@
                     if (!tarifaTocadaManualmente) {
                         tarifaPedidoSelect.value = '0';
                     }
+                    actualizarInfoTarifa();
                 }
             }
             
@@ -810,6 +850,7 @@
                     return;
                 }
                 tarifaTocadaManualmente = true;
+                actualizarInfoTarifa();
             });
         }
 
@@ -833,8 +874,12 @@
         if (recalcularTarifaBtn) {
             recalcularTarifaBtn.addEventListener('click', async () => {
                 await recalcularPreciosLineasPorTarifa();
+                actualizarInfoTarifa();
             });
         }
+
+        // Inicializar info
+        actualizarInfoTarifa();
 
         // Permitir editar la selección
         clienteSelectedDisplay.addEventListener('dblclick', () => {

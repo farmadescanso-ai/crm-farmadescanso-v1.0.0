@@ -7964,7 +7964,10 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
     // - Activa=1
     // - y (FechaFin es null/vacía/0000-00-00 o FechaFin >= hoy)
     let tarifaAplicada = tarifaCliente || 0;
-    if (tarifaAplicada !== 0) {
+    const vieneDeOverride = Number.isFinite(tarifaIdOverride) && tarifaIdOverride >= 0;
+    // Si viene un override explícito desde la UI (tarifaId), asumimos que es la tarifa que el usuario/cliente ha fijado
+    // y NO la invalidamos por Activa/FechaFin. Si no viene override, aplicamos validación como antes.
+    if (!vieneDeOverride && tarifaAplicada !== 0) {
       try {
         let rowsTarifa = [];
         try {
@@ -9800,15 +9803,13 @@ app.get('/dashboard/pedidos/informe', requireAuth, async (req, res) => {
 
 app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
   try {
-    const getTarifasClientesActivas = async () => {
-      // Queremos mostrar solo tarifas activas (excluyendo PVL=0, que se pinta fija en el select)
-      // Además, hacemos fallback por si el esquema usa otro nombre de columna para el nombre.
-      const baseWhere = `WHERE (Activa = 1 OR Activa IS NULL) AND (FechaFin IS NULL OR FechaFin = '0000-00-00' OR FechaFin = '' OR FechaFin >= CURDATE())`;
+    const getTarifasClientesForSelect = async () => {
+      // Para que SIEMPRE se muestre la tarifa aplicada (aunque esté inactiva),
+      // traemos todas las tarifas y en la vista deshabilitamos las no activas.
       try {
         return await crm.query(
           `SELECT Id, NombreTarifa, Activa, FechaInicio, FechaFin
            FROM tarifasClientes
-           ${baseWhere}
            ORDER BY CASE WHEN Id = 0 THEN 0 ELSE 1 END, NombreTarifa ASC`
         );
       } catch (err) {
@@ -9824,7 +9825,6 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
             return await crm.query(
               `SELECT Id, Nombre AS NombreTarifa, Activa, FechaInicio, FechaFin
                FROM tarifasClientes
-               ${baseWhere}
                ORDER BY CASE WHEN Id = 0 THEN 0 ELSE 1 END, NombreTarifa ASC`
             );
           } catch (err2) {
@@ -9852,7 +9852,7 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
       crm.getNextNumeroPedido(),
       crm.getComerciales(),
       crm.getFormasPago(),
-      getTarifasClientesActivas()
+      getTarifasClientesForSelect()
     ]);
 
     // Obtener el comercial logueado como valor por defecto
