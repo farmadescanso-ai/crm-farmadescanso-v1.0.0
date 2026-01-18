@@ -2247,17 +2247,36 @@ class MySQLCRM {
         }
       }
 
-      const fields = Object.keys(mysqlData).map(key => `\`${key}\``).join(', ');
-      const placeholders = Object.keys(mysqlData).map(() => '?').join(', ');
-      const values = Object.values(mysqlData);
-      
-      const sql = `INSERT INTO pedidos (${fields}) VALUES (${placeholders})`;
-      console.log('🔍 [CREATE PEDIDO] SQL:', sql);
-      console.log('🔍 [CREATE PEDIDO] Values:', values);
-      console.log('🔍 [CREATE PEDIDO] Fields count:', fields.split(',').length, 'Values count:', values.length);
-      
+      const buildInsert = (dataObj) => {
+        const fields = Object.keys(dataObj).map(key => `\`${key}\``).join(', ');
+        const placeholders = Object.keys(dataObj).map(() => '?').join(', ');
+        const values = Object.values(dataObj);
+        const sql = `INSERT INTO pedidos (${fields}) VALUES (${placeholders})`;
+        return { sql, values, fields };
+      };
+
+      let insert = buildInsert(mysqlData);
+      console.log('🔍 [CREATE PEDIDO] SQL:', insert.sql);
+      console.log('🔍 [CREATE PEDIDO] Values:', insert.values);
+      console.log('🔍 [CREATE PEDIDO] Fields count:', insert.fields.split(',').length, 'Values count:', insert.values.length);
+
       // Usar pool.execute directamente para obtener el ResultSetHeader con insertId
-      const [result] = await this.pool.execute(sql, values);
+      let result;
+      try {
+        [result] = await this.pool.execute(insert.sql, insert.values);
+      } catch (err) {
+        // Compatibilidad: si la BD aún no tiene la columna Id_Tarifa, reintentar sin ella
+        const msg = String(err?.sqlMessage || err?.message || '');
+        const isUnknownColumn = err?.code === 'ER_BAD_FIELD_ERROR' && /Unknown column/i.test(msg) && /Id_Tarifa/i.test(msg);
+        if (isUnknownColumn && Object.prototype.hasOwnProperty.call(mysqlData, 'Id_Tarifa')) {
+          console.warn('⚠️ [CREATE PEDIDO] La BD no tiene Id_Tarifa. Reintentando INSERT sin Id_Tarifa...');
+          delete mysqlData.Id_Tarifa;
+          insert = buildInsert(mysqlData);
+          [result] = await this.pool.execute(insert.sql, insert.values);
+        } else {
+          throw err;
+        }
+      }
       const insertId = result.insertId;
       
       if (!insertId) {

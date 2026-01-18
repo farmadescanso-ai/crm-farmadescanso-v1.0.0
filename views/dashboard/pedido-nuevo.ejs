@@ -288,6 +288,30 @@
                             <input type="date" name="fecha_entrega" class="form-control" value="<%= initialValues.fecha_entrega || '' %>">
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label fw-semibold">Tarifa del pedido</label>
+                            <div class="input-group">
+                                <select name="tarifa_id" id="tarifaPedidoSelect" class="form-select">
+                                    <%
+                                      const tarifas = Array.isArray(tarifasClientes) ? tarifasClientes : [];
+                                      const tarifaInicial = (initialValues.tarifa_id !== undefined && initialValues.tarifa_id !== null && String(initialValues.tarifa_id).trim() !== '')
+                                        ? Number(initialValues.tarifa_id)
+                                        : null;
+                                    %>
+                                    <option value="0" <%= (tarifaInicial === 0 || tarifaInicial === null) ? 'selected' : '' %>>PVL (0)</option>
+                                    <% tarifas.forEach(t => { %>
+                                        <% const idT = Number(t.Id ?? t.id); %>
+                                        <% if (!Number.isFinite(idT) || idT === 0) return; %>
+                                        <% const nombre = (t.NombreTarifa || t.nombreTarifa || `Tarifa ${idT}`); %>
+                                        <option value="<%= idT %>" <%= tarifaInicial === idT ? 'selected' : '' %>><%= nombre %> (<%= idT %>)</option>
+                                    <% }) %>
+                                </select>
+                                <button type="button" class="btn btn-outline-secondary" id="recalcularTarifaBtn" title="Recalcular precios de las líneas con la tarifa seleccionada">
+                                    Recalcular
+                                </button>
+                            </div>
+                            <small class="text-muted">Por defecto se usa la tarifa del cliente. Puedes cambiarla para dejarla fija en este pedido.</small>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label fw-semibold">Tipo de pedido</label>
                             <select name="tipo_pedido" class="form-select">
                                 <option value="">— Seleccionar —</option>
@@ -543,6 +567,8 @@
         const impuestosEl = document.getElementById('sumImpuestos');
         const totalEl = document.getElementById('sumTotal');
         const tipoPedidoSelect = document.querySelector('select[name="tipo_pedido"]');
+        const tarifaPedidoSelect = document.getElementById('tarifaPedidoSelect');
+        const recalcularTarifaBtn = document.getElementById('recalcularTarifaBtn');
         // Búsqueda inteligente de clientes
         const clienteSearchInput = document.getElementById('clienteSearchInput');
         const clienteDropdown = document.getElementById('clienteDropdown');
@@ -554,13 +580,17 @@
         let clienteSearchTimeout = null;
         let selectedCliente = null;
         let currentSelectedIndex = -1;
+        let tarifaTocadaManualmente = false;
+
         async function obtenerPrecioTarifa(articuloId) {
             try {
                 const clienteId = Number(clienteIdInput?.value || 0);
                 if (!clienteId || !articuloId) return null;
                 const fechaPedido = document.querySelector('input[name="fecha_pedido"]')?.value || '';
                 const fechaParam = fechaPedido ? `&fecha=${encodeURIComponent(fechaPedido)}` : '';
-                const response = await fetch(`/api/tarifas-clientes/precio?clienteId=${encodeURIComponent(clienteId)}&articuloId=${encodeURIComponent(articuloId)}${fechaParam}`, {
+                const tarifaId = tarifaPedidoSelect ? Number(tarifaPedidoSelect.value || 0) : 0;
+                const tarifaParam = Number.isFinite(tarifaId) ? `&tarifaId=${encodeURIComponent(String(tarifaId))}` : '';
+                const response = await fetch(`/api/tarifas-clientes/precio?clienteId=${encodeURIComponent(clienteId)}&articuloId=${encodeURIComponent(articuloId)}${fechaParam}${tarifaParam}`, {
                     headers: { 'Accept': 'application/json' }
                 });
                 const data = await response.json();
@@ -684,6 +714,14 @@
             clienteSelectedDisplay.classList.add('show');
             clienteSearchInput.style.display = 'none';
             clienteDropdown.classList.remove('show');
+
+            // Por defecto: aplicar la tarifa del cliente (si el usuario no la ha tocado)
+            if (tarifaPedidoSelect && !tarifaTocadaManualmente) {
+                const t = (cliente && cliente.Tarifa !== undefined && cliente.Tarifa !== null && String(cliente.Tarifa).trim() !== '')
+                    ? Number(cliente.Tarifa)
+                    : 0;
+                tarifaPedidoSelect.value = String(Number.isFinite(t) ? t : 0);
+            }
             
             // Actualizar cooperativa si existe
             if (typeof actualizarCooperativa === 'function') {
@@ -745,6 +783,35 @@
                 clienteDropdown.classList.remove('show');
             }
         });
+
+        if (tarifaPedidoSelect) {
+            tarifaPedidoSelect.addEventListener('change', () => {
+                tarifaTocadaManualmente = true;
+            });
+        }
+
+        async function recalcularPreciosLineasPorTarifa() {
+            try {
+                const rows = Array.from(lineasBody.querySelectorAll('.linea-row'));
+                for (const row of rows) {
+                    const articuloHidden = row.querySelector('.articulo-hidden-input');
+                    const precioInput = row.querySelector('.precio-input');
+                    if (!articuloHidden || !precioInput) continue;
+                    const articuloId = Number(articuloHidden.value || 0);
+                    if (!articuloId) continue;
+                    const precioTarifa = await obtenerPrecioTarifa(articuloId);
+                    if (precioTarifa === null) continue;
+                    precioInput.value = Number(precioTarifa || 0).toFixed(2);
+                    precioInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+            } catch (_) {}
+        }
+
+        if (recalcularTarifaBtn) {
+            recalcularTarifaBtn.addEventListener('click', async () => {
+                await recalcularPreciosLineasPorTarifa();
+            });
+        }
 
         // Permitir editar la selección
         clienteSelectedDisplay.addEventListener('dblclick', () => {

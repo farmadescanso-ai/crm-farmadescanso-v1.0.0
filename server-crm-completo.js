@@ -7921,6 +7921,9 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
   try {
     const clienteId = req.query.clienteId ? Number(req.query.clienteId) : null;
     const articuloId = req.query.articuloId ? Number(req.query.articuloId) : null;
+    const tarifaIdOverride = req.query.tarifaId !== undefined && req.query.tarifaId !== null && String(req.query.tarifaId).trim() !== ''
+      ? Number(req.query.tarifaId)
+      : null;
     const fechaParam = req.query.fecha ? String(req.query.fecha) : null;
     const yearParam = req.query.year ? Number(req.query.year) : null;
 
@@ -7938,17 +7941,21 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
       fechaReferencia = `${yearParam}-01-01`;
     }
 
-    // 1) Tarifa del cliente
+    // 1) Tarifa del cliente (o override desde UI)
     let tarifaCliente = 0;
-    try {
-      const rowsCliente = await crm.query('SELECT Tarifa FROM clientes WHERE Id = ? OR id = ? LIMIT 1', [clienteId, clienteId]);
-      if (rowsCliente && rowsCliente.length > 0) {
-        const raw = rowsCliente[0].Tarifa ?? rowsCliente[0].tarifa ?? 0;
-        const parsed = Number(raw);
-        tarifaCliente = Number.isFinite(parsed) ? parsed : 0;
+    if (Number.isFinite(tarifaIdOverride) && tarifaIdOverride >= 0) {
+      tarifaCliente = tarifaIdOverride;
+    } else {
+      try {
+        const rowsCliente = await crm.query('SELECT Tarifa FROM clientes WHERE Id = ? OR id = ? LIMIT 1', [clienteId, clienteId]);
+        if (rowsCliente && rowsCliente.length > 0) {
+          const raw = rowsCliente[0].Tarifa ?? rowsCliente[0].tarifa ?? 0;
+          const parsed = Number(raw);
+          tarifaCliente = Number.isFinite(parsed) ? parsed : 0;
+        }
+      } catch (_) {
+        tarifaCliente = 0;
       }
-    } catch (_) {
-      tarifaCliente = 0;
     }
 
     // 2) Validar si la tarifa está activa (si tiene FechaFin, se considera no activa)
@@ -9770,13 +9777,14 @@ app.get('/dashboard/pedidos/informe', requireAuth, async (req, res) => {
 
 app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
   try {
-    const [clientes, articulos, clientesCooperativa, nuevaReferencia, comerciales, formasPago] = await Promise.all([
+    const [clientes, articulos, clientesCooperativa, nuevaReferencia, comerciales, formasPago, tarifasClientes] = await Promise.all([
       crm.getClientes(),
       crm.getArticulos(),
       crm.getClientesCooperativa(),
       crm.getNextNumeroPedido(),
       crm.getComerciales(),
-      crm.getFormasPago()
+      crm.getFormasPago(),
+      crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => [])
     ]);
 
     // Obtener el comercial logueado como valor por defecto
@@ -9791,6 +9799,7 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
       clientesCooperativa: clientesCooperativa || [],
       comerciales: comerciales || [],
       formasPago: formasPago || [],
+      tarifasClientes: tarifasClientes || [],
       comercialLogueadoId: comercialLogueadoId,
       esAdmin: esAdmin,
       formValues: {},
@@ -9808,6 +9817,7 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
       clientesCooperativa: [],
       comerciales: [],
       formasPago: [],
+      tarifasClientes: [],
       comercialLogueadoId: req.comercialId || req.session.comercialId,
       esAdmin: isAdmin(req),
       formValues: {},
@@ -9891,7 +9901,8 @@ app.post('/dashboard/pedidos', requireAuth, async (req, res) => {
     observaciones,
     numero_cooperativa,
     cooperativa_nombre,
-    numero_pedido
+    numero_pedido,
+    tarifa_id
   } = req.body;
 
   const transferMap = {
@@ -10372,6 +10383,16 @@ app.post('/dashboard/pedidos', requireAuth, async (req, res) => {
     const clienteIdNumber = Number(cliente_id);
     if (!Number.isNaN(clienteIdNumber) && clienteIdNumber > 0) {
       pedidoPayload['Id_Cliente'] = clienteIdNumber; // Usar Id_Cliente directamente
+    }
+
+    // Tarifa aplicada al pedido (para congelar precios/comisiones)
+    const tarifaIdNumber = tarifa_id !== undefined && tarifa_id !== null && String(tarifa_id).trim() !== ''
+      ? Number(tarifa_id)
+      : 0;
+    if (Number.isFinite(tarifaIdNumber) && tarifaIdNumber >= 0) {
+      pedidoPayload['Id_Tarifa'] = tarifaIdNumber;
+    } else {
+      pedidoPayload['Id_Tarifa'] = 0;
     }
 
     // Determinar el comercial: si es admin y viene del formulario, usarlo; sino usar el logueado
