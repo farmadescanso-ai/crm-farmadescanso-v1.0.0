@@ -7959,7 +7959,10 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
       }
     }
 
-    // 2) Validar si la tarifa está activa (si tiene FechaFin, se considera no activa)
+    // 2) Validar si la tarifa está activa
+    // Regla correcta:
+    // - Activa=1
+    // - y (FechaFin es null/vacía/0000-00-00 o FechaFin >= hoy)
     let tarifaAplicada = tarifaCliente || 0;
     if (tarifaAplicada !== 0) {
       try {
@@ -7991,9 +7994,10 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
         const t = rowsTarifa && rowsTarifa.length > 0 ? rowsTarifa[0] : null;
         const activa = Number(t?.Activa ?? 0) === 1;
         const fechaFin = t?.FechaFin ? String(t.FechaFin).slice(0, 10) : null;
-        const fechaFinInvalida = !fechaFin || fechaFin === '0000-00-00';
-        // Si hay fecha fin válida, la tarifa deja de estar activa
-        if (!activa || !fechaFinInvalida) {
+        const hoy = new Date().toISOString().slice(0, 10);
+        const fechaFinVacia = !fechaFin || fechaFin === '0000-00-00' || fechaFin === '';
+        const sigueVigente = fechaFinVacia ? true : (fechaFin >= hoy);
+        if (!activa || !sigueVigente) {
           tarifaAplicada = 0;
         }
       } catch (_) {
@@ -9799,7 +9803,7 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
     const getTarifasClientesActivas = async () => {
       // Queremos mostrar solo tarifas activas (excluyendo PVL=0, que se pinta fija en el select)
       // Además, hacemos fallback por si el esquema usa otro nombre de columna para el nombre.
-      const baseWhere = `WHERE Activa = 1 AND (FechaFin IS NULL OR FechaFin = '0000-00-00' OR FechaFin >= CURDATE())`;
+      const baseWhere = `WHERE (Activa = 1 OR Activa IS NULL) AND (FechaFin IS NULL OR FechaFin = '0000-00-00' OR FechaFin = '' OR FechaFin >= CURDATE())`;
       try {
         return await crm.query(
           `SELECT Id, NombreTarifa, Activa, FechaInicio, FechaFin
@@ -10460,14 +10464,30 @@ app.post('/dashboard/pedidos', requireAuth, async (req, res) => {
     }
 
     // Tarifa aplicada al pedido (para congelar precios/comisiones)
-    const tarifaIdNumber = tarifa_id !== undefined && tarifa_id !== null && String(tarifa_id).trim() !== ''
+    // Regla de negocio:
+    // - Si el cliente tiene Tarifa > 0, esa se aplica de forma inamovible.
+    // - Si el cliente tiene Tarifa = 0, se permite elegir una tarifa activa para el pedido.
+    let tarifaClienteDb = 0;
+    try {
+      const rowsCliente = await crm.query('SELECT Tarifa FROM clientes WHERE Id = ? OR id = ? LIMIT 1', [clienteIdNumber, clienteIdNumber]);
+      if (rowsCliente && rowsCliente.length > 0) {
+        const raw = rowsCliente[0].Tarifa ?? rowsCliente[0].tarifa ?? 0;
+        const parsed = Number(raw);
+        tarifaClienteDb = Number.isFinite(parsed) ? parsed : 0;
+      }
+    } catch (_) {
+      tarifaClienteDb = 0;
+    }
+
+    const tarifaElegida = tarifa_id !== undefined && tarifa_id !== null && String(tarifa_id).trim() !== ''
       ? Number(tarifa_id)
       : 0;
-    if (Number.isFinite(tarifaIdNumber) && tarifaIdNumber >= 0) {
-      pedidoPayload['Id_Tarifa'] = tarifaIdNumber;
-    } else {
-      pedidoPayload['Id_Tarifa'] = 0;
-    }
+
+    const tarifaFinal = (Number.isFinite(tarifaClienteDb) && tarifaClienteDb > 0)
+      ? tarifaClienteDb
+      : (Number.isFinite(tarifaElegida) && tarifaElegida >= 0 ? tarifaElegida : 0);
+
+    pedidoPayload['Id_Tarifa'] = tarifaFinal;
 
     // Determinar el comercial: si es admin y viene del formulario, usarlo; sino usar el logueado
     const esAdmin = isAdmin(req);

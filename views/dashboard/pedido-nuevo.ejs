@@ -581,6 +581,7 @@
         let selectedCliente = null;
         let currentSelectedIndex = -1;
         let tarifaTocadaManualmente = false;
+        let tarifaBloqueadaPorCliente = false;
 
         async function obtenerPrecioTarifa(articuloId) {
             try {
@@ -715,12 +716,30 @@
             clienteSearchInput.style.display = 'none';
             clienteDropdown.classList.remove('show');
 
-            // Por defecto: aplicar la tarifa del cliente (si el usuario no la ha tocado)
-            if (tarifaPedidoSelect && !tarifaTocadaManualmente) {
-                const t = (cliente && cliente.Tarifa !== undefined && cliente.Tarifa !== null && String(cliente.Tarifa).trim() !== '')
+            // Regla:
+            // - Si cliente.Tarifa > 0 => inamovible (bloquear selector y recalcular)
+            // - Si cliente.Tarifa = 0 => permitir elegir otra tarifa activa para el pedido
+            if (tarifaPedidoSelect) {
+                const tCliente = (cliente && cliente.Tarifa !== undefined && cliente.Tarifa !== null && String(cliente.Tarifa).trim() !== '')
                     ? Number(cliente.Tarifa)
                     : 0;
-                tarifaPedidoSelect.value = String(Number.isFinite(t) ? t : 0);
+                const tarifaCliente = Number.isFinite(tCliente) ? tCliente : 0;
+
+                if (tarifaCliente > 0) {
+                    tarifaBloqueadaPorCliente = true;
+                    tarifaTocadaManualmente = true; // evita que se sobrescriba después
+                    tarifaPedidoSelect.value = String(tarifaCliente);
+                    tarifaPedidoSelect.disabled = true;
+                    if (recalcularTarifaBtn) recalcularTarifaBtn.disabled = true;
+                } else {
+                    tarifaBloqueadaPorCliente = false;
+                    tarifaPedidoSelect.disabled = false;
+                    if (recalcularTarifaBtn) recalcularTarifaBtn.disabled = false;
+                    // Solo aplicar automáticamente si el usuario no ha tocado el selector
+                    if (!tarifaTocadaManualmente) {
+                        tarifaPedidoSelect.value = '0';
+                    }
+                }
             }
             
             // Actualizar cooperativa si existe
@@ -786,6 +805,10 @@
 
         if (tarifaPedidoSelect) {
             tarifaPedidoSelect.addEventListener('change', () => {
+                // Si está bloqueada por tarifa del cliente, no permitir cambios.
+                if (tarifaBloqueadaPorCliente) {
+                    return;
+                }
                 tarifaTocadaManualmente = true;
             });
         }
