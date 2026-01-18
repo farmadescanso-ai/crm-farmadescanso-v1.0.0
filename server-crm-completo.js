@@ -7272,6 +7272,13 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
             value = 'Pendiente';
           }
         }
+
+        // NumeroFarmacia: en producción suele tener UNIQUE. Guardar NULL si viene vacío para permitir múltiples "sin número".
+        if (formField === 'NumeroFarmacia') {
+          if (typeof rawValue === 'string' && rawValue.trim() === '') {
+            value = null;
+          }
+        }
         
         // Convertir campos numéricos
         if (formField.startsWith('Id_') || formField === 'Dto' || formField === 'RE' || formField === 'CuentaContable') {
@@ -7543,6 +7550,11 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
         if (formField === 'DNI_CIF') {
           if (typeof rawValue === 'string' && (rawValue.trim() === '' || rawValue.trim().toLowerCase() === 'pendiente')) {
             value = 'Pendiente';
+          }
+        } else if (formField === 'NumeroFarmacia') {
+          // NumeroFarmacia: puede tener UNIQUE; usar NULL cuando está vacío para evitar ER_DUP_ENTRY con ''.
+          if (typeof rawValue === 'string' && rawValue.trim() === '') {
+            value = null;
           }
         } else if (typeof rawValue === 'string' && rawValue.trim() === '') {
           // Mantener string vacío (no NULL) para columnas VARCHAR potencialmente NOT NULL
