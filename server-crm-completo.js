@@ -7187,6 +7187,7 @@ app.post('/dashboard/clientes/verificar-duplicado', requireAuth, async (req, res
     for (const [formField, dbField] of Object.entries(fieldMapping)) {
       if (req.body[formField] !== undefined && req.body[formField] !== null && req.body[formField] !== '') {
         let value = typeof req.body[formField] === 'string' ? req.body[formField].trim() : req.body[formField];
+        // Para detectar duplicados, tratamos "Pendiente" como ausencia de DNI/CIF.
         if (formField === 'DNI_CIF' && (value === '' || value.toLowerCase() === 'pendiente')) {
           value = null;
         }
@@ -7265,10 +7266,10 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
         const rawValue = req.body[formField];
         let value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
         
-        // Especial para DNI_CIF: si viene vacío o "Pendiente", convertir a NULL
+        // Especial para DNI_CIF: si viene vacío o "Pendiente", guardar como "Pendiente"
         if (formField === 'DNI_CIF') {
           if (typeof rawValue === 'string' && (rawValue.trim() === '' || rawValue.trim().toLowerCase() === 'pendiente')) {
-            value = null;
+            value = 'Pendiente';
           }
         }
         
@@ -7536,14 +7537,16 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
       if (req.body[formField] !== undefined && req.body[formField] !== null) {
         const rawValue = req.body[formField];
         let value = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
-        // Permitir limpiar campos opcionales estableciendo null
-        // Especial para DNI_CIF: si viene vacío o "Pendiente", convertir a NULL
+        // Nota (producción): varios campos de texto pueden ser NOT NULL (p.ej. DNI_CIF en algunos esquemas).
+        // Para evitar ER_BAD_NULL_ERROR, en edición no usamos NULL para strings vacíos.
+        // Especial para DNI_CIF: si viene vacío o "Pendiente", guardar "Pendiente"
         if (formField === 'DNI_CIF') {
           if (typeof rawValue === 'string' && (rawValue.trim() === '' || rawValue.trim().toLowerCase() === 'pendiente')) {
-            value = null;
+            value = 'Pendiente';
           }
         } else if (typeof rawValue === 'string' && rawValue.trim() === '') {
-          value = null;
+          // Mantener string vacío (no NULL) para columnas VARCHAR potencialmente NOT NULL
+          value = '';
         }
         
         // Buscar el nombre correcto del campo en el cliente existente

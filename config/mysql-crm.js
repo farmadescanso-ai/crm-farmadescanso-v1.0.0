@@ -964,11 +964,11 @@ class MySQLCRM {
         payload.OK_KO = 1;
       }
       
-      // Normalizar DNI_CIF: si viene vacío o "Pendiente", convertir a NULL
+      // Normalizar DNI_CIF: si viene vacío, guardar como "Pendiente"
       if (payload.DNI_CIF !== undefined && payload.DNI_CIF !== null) {
         const dniValue = String(payload.DNI_CIF).trim();
         if (dniValue === '' || dniValue.toLowerCase() === 'pendiente') {
-          payload.DNI_CIF = null;
+          payload.DNI_CIF = 'Pendiente';
         }
       }
       
