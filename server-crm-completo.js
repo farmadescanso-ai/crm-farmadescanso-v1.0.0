@@ -6651,7 +6651,7 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       crm.getProvincias().catch(() => []),
       crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []),
       crm.getFormasPago().catch(() => []),
-      crm.query('SELECT id, Idioma FROM idiomas').catch(() => []),
+      crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []),
       crm.query('SELECT id, Moneda FROM monedas').catch(() => []),
       crm.getComerciales().catch(() => [])
     ]);
@@ -6770,7 +6770,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     
     const tiposClientes = await crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []);
     const formasPago = await crm.getFormasPago();
-    const idiomas = await crm.query('SELECT id, Idioma FROM idiomas').catch(() => []);
+    const idiomas = await crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []);
     const monedas = await crm.query('SELECT id, Moneda FROM monedas').catch(() => []);
     const comerciales = await crm.getComerciales().catch(() => []);
     const tarifasClientes = await crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => []);
@@ -6822,7 +6822,7 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
       crm.getCooperativasByClienteId(clienteId).catch(err => { console.error('Error obteniendo cooperativas:', err); return []; }),
       crm.query('SELECT id, Tipo FROM tipos_clientes').catch(err => { console.error('Error obteniendo tipos clientes:', err); return []; }),
       crm.getFormasPago().catch(err => { console.error('Error obteniendo formas de pago:', err); return []; }),
-      crm.query('SELECT id, Idioma FROM idiomas').catch(err => { console.error('Error obteniendo idiomas:', err); return []; }),
+      crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(err => { console.error('Error obteniendo idiomas:', err); return []; }),
       crm.query('SELECT id, Moneda FROM monedas').catch(err => { console.error('Error obteniendo monedas:', err); return []; }),
       crm.getComerciales().catch(err => { console.error('Error obteniendo comerciales:', err); return []; })
     ]);
@@ -7392,7 +7392,7 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       
       const tiposClientes = await crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []);
       const formasPago = await crm.getFormasPago();
-      const idiomas = await crm.query('SELECT id, Idioma FROM idiomas').catch(() => []);
+      const idiomas = await crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []);
       const monedas = await crm.query('SELECT id, Moneda FROM monedas').catch(() => []);
       const comerciales = await crm.getComerciales().catch(() => []);
       
@@ -7444,7 +7444,7 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       
       const tiposClientes = await crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []);
       const formasPago = await crm.getFormasPago();
-      const idiomas = await crm.query('SELECT id, Idioma FROM idiomas').catch(() => []);
+      const idiomas = await crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []);
       const monedas = await crm.query('SELECT id, Moneda FROM monedas').catch(() => []);
       const comerciales = await crm.getComerciales().catch(() => []);
       
