@@ -7561,6 +7561,45 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
         payload[fieldName] = value;
       }
     }
+
+    // Normalizar tipos (muy importante en producción):
+    // - IDs numéricos: a Number o null
+    // - Decimales (Dto/RE): aceptar "0,00" -> 0.00
+    const toNullableInt = (v) => {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+      const s = String(v).trim();
+      if (s === '') return null;
+      const n = Number.parseInt(s, 10);
+      return Number.isFinite(n) ? n : null;
+    };
+    const toNullableDecimal = (v) => {
+      if (v === null || v === undefined) return null;
+      if (typeof v === 'number') return Number.isFinite(v) ? v : null;
+      const s = String(v).trim();
+      if (s === '') return null;
+      // convertir coma decimal a punto: "0,00" -> "0.00"
+      const normalized = s.replace(',', '.');
+      const n = Number.parseFloat(normalized);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    for (const [key, value] of Object.entries(payload)) {
+      // Campos ID
+      if (key.startsWith('Id_') || key === 'id' || key === 'Id') {
+        payload[key] = toNullableInt(value);
+        continue;
+      }
+      // Campos numéricos conocidos
+      if (key === 'Dto' || key === 'RE') {
+        payload[key] = toNullableDecimal(value);
+        continue;
+      }
+      if (key === 'CuentaContable') {
+        payload[key] = toNullableInt(value);
+        continue;
+      }
+    }
     
     // Manejar OK_KO (Estado) - validar y convertir valor a 1 (Activo) o 0 (Inactivo)
     // OK_KO es el campo que determina si un cliente está activo o no
