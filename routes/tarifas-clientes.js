@@ -292,6 +292,8 @@ router.get('/:id/precios', async (req, res) => {
     const hasMarcaText = cols.has('Marca') || cols.has('marca');
     const hasIdMarca = cols.has('Id_Marca') || cols.has('id_marca');
     const hasNombre = cols.has('Nombre') || cols.has('nombre');
+    const hasIdUpper = cols.has('Id');
+    const hasIdLower = cols.has('id');
 
     const marcasTable = hasIdMarca ? await getMarcasTableName().catch(() => null) : null;
 
@@ -300,6 +302,7 @@ router.get('/:id/precios', async (req, res) => {
       : (hasIdMarca && marcasTable ? 'm.Nombre' : "''");
 
     const nombreSelect = hasNombre ? 'a.Nombre' : "''";
+    const articuloPkOrder = hasIdUpper ? 'a.Id' : (hasIdLower ? 'a.id' : '1');
 
     let sql = `
       SELECT
@@ -335,7 +338,7 @@ router.get('/:id/precios', async (req, res) => {
       }
     }
 
-    sql += ' ORDER BY MarcaArticulo ASC, NombreArticulo ASC';
+    sql += ` ORDER BY ${articuloPkOrder} ASC`;
 
     const articulos = await crm.query(sql, params);
 
