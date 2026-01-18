@@ -7069,12 +7069,31 @@ app.get('/dashboard/clientes/:id', requireAuth, async (req, res, next) => {
       }
     }
     
-    res.render('dashboard/cliente-detalle', {
+    const userForView =
+      req.comercial ||
+      req.session?.comercial ||
+      req.user ||
+      {};
+
+    const viewData = {
       title: `Cliente #${req.params.id} - Detalle`,
-      user: req.comercial || req.session.comercial,
+      user: userForView,
       cliente: normalizeObjectUTF8(cliente),
       error: null,
       query: req.query
+    };
+
+    // Importante: los errores de EJS/render pueden llegar por callback (no se capturan con try/catch).
+    res.render('dashboard/cliente-detalle', viewData, (renderErr, html) => {
+      if (renderErr) {
+        console.error('❌ [CLIENTE DETALLE] Error renderizando EJS:', renderErr.message);
+        console.error('❌ [CLIENTE DETALLE] Stack:', renderErr.stack);
+        return res.status(500).render('error', {
+          error: 'Error interno del servidor',
+          message: 'Algo salió mal. Por favor, contacta al administrador.'
+        });
+      }
+      return res.send(html);
     });
   } catch (error) {
     console.error('Error cargando detalle de cliente:', error);
