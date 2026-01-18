@@ -619,6 +619,153 @@ class MySQLCRM {
     }
   }
 
+  /**
+   * Clientes paginados (evita cargar miles de filas y bloquear el render).
+   * Devuelve solo la página solicitada.
+   *
+   * @param {Object} filters - { tipoCliente, provincia, comercial, conVentas, estado }
+   * @param {Object} options - { limit, offset }
+   */
+  async getClientesOptimizadoPaged(filters = {}, options = {}) {
+    let sql = '';
+    try {
+      const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Math.min(500, Number(options.limit))) : 50;
+      const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Number(options.offset)) : 0;
+
+      const whereConditions = [];
+      const params = [];
+
+      sql = `
+        SELECT 
+          c.*,
+          p.Nombre as ProvinciaNombre,
+          tc.Tipo as TipoClienteNombre,
+          cial.Nombre as ComercialNombre
+        FROM clientes c
+        LEFT JOIN provincias p ON c.Id_Provincia = p.id
+        LEFT JOIN tipos_clientes tc ON c.Id_TipoCliente = tc.id
+        LEFT JOIN comerciales cial ON c.Id_Cial = cial.id
+      `;
+
+      // Estado (activos por defecto a nivel UI, pero aquí solo aplicamos si viene)
+      if (filters.estado === 'activos') {
+        whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
+      } else if (filters.estado === 'inactivos') {
+        whereConditions.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+      }
+
+      if (filters.tipoCliente !== null && filters.tipoCliente !== undefined && filters.tipoCliente !== '' && !isNaN(filters.tipoCliente)) {
+        const tipoClienteId = typeof filters.tipoCliente === 'number' ? filters.tipoCliente : parseInt(filters.tipoCliente);
+        if (!isNaN(tipoClienteId) && tipoClienteId > 0) {
+          whereConditions.push('c.Id_TipoCliente = ?');
+          params.push(tipoClienteId);
+        }
+      }
+
+      if (filters.provincia !== null && filters.provincia !== undefined && filters.provincia !== '' && !isNaN(filters.provincia)) {
+        const provinciaId = typeof filters.provincia === 'number' ? filters.provincia : parseInt(filters.provincia);
+        if (!isNaN(provinciaId) && provinciaId > 0) {
+          whereConditions.push('c.Id_Provincia = ?');
+          params.push(provinciaId);
+        }
+      }
+
+      if (filters.comercial !== null && filters.comercial !== undefined && filters.comercial !== '' && !isNaN(filters.comercial)) {
+        const comercialId = typeof filters.comercial === 'number' ? filters.comercial : parseInt(filters.comercial);
+        if (!isNaN(comercialId) && comercialId > 0) {
+          whereConditions.push('c.Id_Cial = ?');
+          params.push(comercialId);
+        }
+      }
+
+      if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
+        if (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1') {
+          whereConditions.push('EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+        } else if (filters.conVentas === false || filters.conVentas === 'false' || filters.conVentas === '0') {
+          whereConditions.push('NOT EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+        }
+      }
+
+      if (whereConditions.length > 0) {
+        sql += ' WHERE ' + whereConditions.join(' AND ');
+      }
+
+      // Orden estable (evita saltos entre páginas)
+      sql += ' ORDER BY c.Id ASC LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      const rows = await this.query(sql, params);
+      return rows;
+    } catch (error) {
+      console.error('❌ Error obteniendo clientes paginados:', error.message);
+      console.error('❌ SQL (paged):', sql);
+      throw error;
+    }
+  }
+
+  /**
+   * Conteo para paginación con los mismos filtros que getClientesOptimizadoPaged.
+   */
+  async countClientesOptimizado(filters = {}) {
+    let sql = '';
+    try {
+      const whereConditions = [];
+
+      sql = 'SELECT COUNT(*) as total FROM clientes c';
+
+      if (filters.estado === 'activos') {
+        whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
+      } else if (filters.estado === 'inactivos') {
+        whereConditions.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+      }
+
+      const params = [];
+
+      if (filters.tipoCliente !== null && filters.tipoCliente !== undefined && filters.tipoCliente !== '' && !isNaN(filters.tipoCliente)) {
+        const tipoClienteId = typeof filters.tipoCliente === 'number' ? filters.tipoCliente : parseInt(filters.tipoCliente);
+        if (!isNaN(tipoClienteId) && tipoClienteId > 0) {
+          whereConditions.push('c.Id_TipoCliente = ?');
+          params.push(tipoClienteId);
+        }
+      }
+
+      if (filters.provincia !== null && filters.provincia !== undefined && filters.provincia !== '' && !isNaN(filters.provincia)) {
+        const provinciaId = typeof filters.provincia === 'number' ? filters.provincia : parseInt(filters.provincia);
+        if (!isNaN(provinciaId) && provinciaId > 0) {
+          whereConditions.push('c.Id_Provincia = ?');
+          params.push(provinciaId);
+        }
+      }
+
+      if (filters.comercial !== null && filters.comercial !== undefined && filters.comercial !== '' && !isNaN(filters.comercial)) {
+        const comercialId = typeof filters.comercial === 'number' ? filters.comercial : parseInt(filters.comercial);
+        if (!isNaN(comercialId) && comercialId > 0) {
+          whereConditions.push('c.Id_Cial = ?');
+          params.push(comercialId);
+        }
+      }
+
+      if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
+        if (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1') {
+          whereConditions.push('EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+        } else if (filters.conVentas === false || filters.conVentas === 'false' || filters.conVentas === '0') {
+          whereConditions.push('NOT EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+        }
+      }
+
+      if (whereConditions.length > 0) {
+        sql += ' WHERE ' + whereConditions.join(' AND ');
+      }
+
+      const rows = await this.query(sql, params);
+      return rows?.[0]?.total ? Number(rows[0].total) : 0;
+    } catch (error) {
+      console.error('❌ Error contando clientes (optimizado):', error.message);
+      console.error('❌ SQL (count):', sql);
+      return 0;
+    }
+  }
+
   async getClientesCount() {
     try {
       const sql = 'SELECT COUNT(*) as count FROM clientes';

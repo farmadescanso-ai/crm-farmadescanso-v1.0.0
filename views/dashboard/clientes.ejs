@@ -473,7 +473,10 @@
                         </div>
                         <div class="col-md-4">
                             <strong>Clientes Mostrados:</strong> <span id="clientesMostrados"><%= typeof clientes !== 'undefined' && Array.isArray(clientes) ? clientes.length : 0 %></span>
-                            <% if (typeof filters !== 'undefined' && filters && (filters.tipoCliente || filters.provincia || filters.comercial || filters.conVentas)) { %>
+                            <% if (typeof totalFiltrados !== 'undefined' && totalFiltrados !== null) { %>
+                            <span class="badge bg-secondary ms-2">Filtrados: <%= totalFiltrados %></span>
+                            <% } %>
+                            <% if (typeof filters !== 'undefined' && filters && (filters.tipoCliente || filters.provincia || filters.comercial || filters.conVentas || filters.estado)) { %>
                             <span class="badge bg-info ms-2">Filtrado</span>
                             <% } %>
                         </div>
@@ -483,10 +486,43 @@
                     </div>
                 </div>
 
+                <% if (typeof page !== 'undefined' && typeof pageSize !== 'undefined' && typeof totalFiltrados !== 'undefined') { %>
+                <div class="d-flex justify-content-end align-items-center mb-2">
+                    <%
+                        const totalPages = Math.max(1, Math.ceil((Number(totalFiltrados) || 0) / (Number(pageSize) || 50)));
+                        const prevPage = Math.max(1, Number(page) - 1);
+                        const nextPage = Math.min(totalPages, Number(page) + 1);
+                        const params = new URLSearchParams();
+                        const keepKeys = ['tipoCliente','provincia','comercial','conVentas','estado','pageSize'];
+                        keepKeys.forEach(k => {
+                            if (typeof filters !== 'undefined' && filters && filters[k] !== null && filters[k] !== undefined && String(filters[k]).trim() !== '') {
+                                params.set(k, String(filters[k]));
+                            }
+                        });
+                        params.set('pageSize', String(pageSize));
+                    %>
+                    <nav aria-label="Paginación clientes">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item <%= Number(page) <= 1 ? 'disabled' : '' %>">
+                                <a class="page-link" href="/dashboard/clientes?<%= (new URLSearchParams(params.toString() + '&page=' + prevPage)).toString() %>">Anterior</a>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link">Página <%= page %> / <%= totalPages %></span>
+                            </li>
+                            <li class="page-item <%= Number(page) >= totalPages ? 'disabled' : '' %>">
+                                <a class="page-link" href="/dashboard/clientes?<%= (new URLSearchParams(params.toString() + '&page=' + nextPage)).toString() %>">Siguiente</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+                <% } %>
+
                 <!-- Filtros -->
                 <div class="search-box mb-3">
                     <form method="GET" action="/dashboard/clientes" id="filtersForm">
                         <div class="row g-2">
+                            <input type="hidden" name="page" value="1">
+                            <input type="hidden" name="pageSize" value="<%= typeof pageSize !== 'undefined' ? pageSize : 50 %>">
                             <div class="col-md-3">
                                 <label class="form-label small">Tipo de Cliente</label>
                                 <select name="tipoCliente" class="form-select form-select-sm" id="filterTipoCliente">
@@ -503,6 +539,15 @@
                                             </option>
                                         <% }); %>
                                     <% } %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label small">Estado</label>
+                                <% const estadoSel = (typeof filters !== 'undefined' && filters && filters.estado) ? String(filters.estado) : 'activos'; %>
+                                <select name="estado" class="form-select form-select-sm" id="filterEstado">
+                                    <option value="activos" <%= estadoSel === 'activos' ? 'selected' : '' %>>Activos</option>
+                                    <option value="inactivos" <%= estadoSel === 'inactivos' ? 'selected' : '' %>>Inactivos</option>
+                                    <option value="todos" <%= estadoSel === 'todos' ? 'selected' : '' %>>Todos</option>
                                 </select>
                             </div>
                             <div class="col-md-3">
