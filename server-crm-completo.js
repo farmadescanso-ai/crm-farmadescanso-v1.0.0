@@ -7826,13 +7826,13 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
     try {
       precio = await obtenerPrecioDesdeTarifa(tarifaAplicada);
       if (precio === null) {
-        // Si estamos consultando un año histórico, preferir una tarifa "General 2025" (si existe)
+        // Si estamos consultando un año histórico, preferir una tarifa "PVL 2025" (si existe)
         if (fechaReferencia && /^2025-/.test(fechaReferencia)) {
           try {
             const tRows = await crm.query(
               `SELECT Id
                FROM tarifasClientes
-               WHERE NombreTarifa = 'General 2025'
+               WHERE NombreTarifa = 'PVL 2025'
                  AND FechaInicio <= ?
                  AND FechaFin >= ?
                LIMIT 1`,

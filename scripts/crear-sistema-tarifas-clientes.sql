@@ -5,7 +5,7 @@
 -- Objetivo:
 -- - Crear tabla de tarifas (`tarifasClientes`)
 -- - Crear tabla de precios por tarifa y artículo (`tarifasClientes_precios`)
--- - Crear tarifa General (Id=0) y poblarla con los PVL actuales de `articulos`
+-- - Crear tarifa PVL (Id=0) y poblarla con los PVL actuales de `articulos`
 -- - Convertir `clientes.Tarifa` (actualmente varchar) a INT y relacionarla por FK
 --
 -- Notas:
@@ -66,13 +66,13 @@ SET @__sql_create_precios := CONCAT(
 );
 PREPARE stmt FROM @__sql_create_precios; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
--- 3) Crear Tarifa General (Id=0)
+-- 3) Crear Tarifa PVL (Id=0)
 INSERT INTO `tarifasClientes` (`Id`, `NombreTarifa`, `Activa`, `FechaInicio`, `FechaFin`, `Observaciones`)
-VALUES (0, 'General', 1, CURDATE(), NULL, 'Tarifa por defecto. Precios iniciales copiados desde PVL de Artículos.')
+VALUES (0, 'PVL', 1, CURDATE(), NULL, 'Tarifa base (PVL). Precios iniciales copiados desde PVL de Artículos.')
 ON DUPLICATE KEY UPDATE
   `NombreTarifa` = VALUES(`NombreTarifa`);
 
--- 4) Poblar precios "General" con el PVL actual de cada artículo
+-- 4) Poblar precios "PVL" con el PVL actual de cada artículo
 -- Si ya existe un precio para el artículo en General, lo actualiza.
 SET @__sql_insert_general_precios := CONCAT(
   'INSERT INTO `tarifasClientes_precios` (`Id_Tarifa`, `Id_Articulo`, `Precio`) ',
@@ -90,12 +90,12 @@ PREPARE stmt FROM @__sql_insert_general_precios; EXECUTE stmt; DEALLOCATE PREPAR
 -- - Asignamos el ID creado a los clientes que tenían el nombre
 -- - Lo que no se pueda mapear, se fuerza a 0 (General)
 
--- 5.1) Normalizar vacíos y "General" (cualquier casing) a 0
+-- 5.1) Normalizar vacíos y "General"/"PVL" (cualquier casing) a 0
 UPDATE `clientes`
 SET `Tarifa` = '0'
 WHERE `Tarifa` IS NULL
    OR TRIM(`Tarifa`) = ''
-   OR LOWER(TRIM(`Tarifa`)) = 'general';
+   OR LOWER(TRIM(`Tarifa`)) IN ('general', 'pvl');
 
 -- 5.2) Crear tarifas desde valores legacy (texto) que existan en clientes.Tarifa
 INSERT IGNORE INTO `tarifasClientes` (`NombreTarifa`, `Activa`, `FechaInicio`, `FechaFin`, `Observaciones`)
@@ -108,7 +108,7 @@ SELECT DISTINCT
 FROM `clientes` c
 WHERE c.`Tarifa` IS NOT NULL
   AND TRIM(c.`Tarifa`) <> ''
-  AND LOWER(TRIM(c.`Tarifa`)) <> 'general'
+  AND LOWER(TRIM(c.`Tarifa`)) NOT IN ('general', 'pvl')
   AND TRIM(c.`Tarifa`) NOT REGEXP '^[0-9]+$';
 
 -- 5.3) Reasignar clientes: nombre legacy -> Id de tarifasClientes

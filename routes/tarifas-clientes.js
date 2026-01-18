@@ -69,7 +69,7 @@ async function getTarifaById(id) {
 }
 
 async function getTarifasParaReferencia() {
-  // Listado para selector de referencia (incluye General e históricas)
+  // Listado para selector de referencia (incluye PVL e históricas)
   const rows = await crm.query(
     `SELECT Id, NombreTarifa
      FROM tarifasClientes
@@ -362,7 +362,7 @@ router.get('/:id/precios', async (req, res) => {
       marcaId: marcaId || '',
       marcaNombre: marcaNombre || '',
       refTarifaId: Number.isFinite(refTarifaId) ? refTarifaId : 0,
-      refTarifa: refTarifa || { Id: 0, NombreTarifa: 'General' },
+      refTarifa: refTarifa || { Id: 0, NombreTarifa: 'PVL' },
       articulos: articulos || [],
       debugDb,
       error: req.query.error || null,

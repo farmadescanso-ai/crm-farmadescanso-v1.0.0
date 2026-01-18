@@ -52,7 +52,7 @@
                                 <div class="col-md-12">
                                     <label class="form-label fw-semibold">FechaFin</label>
                                     <input type="date" name="FechaFin" class="form-control">
-                                    <small class="text-muted">Si se establece FechaFin, la tarifa se considerará inactiva y se aplicará General.</small>
+                                    <small class="text-muted">Si se establece FechaFin, la tarifa se considerará inactiva y se aplicará PVL (tarifa base).</small>
                                 </div>
                                 <div class="col-md-12">
                                     <label class="form-label fw-semibold">Observaciones</label>
@@ -61,7 +61,7 @@
                             </div>
                             <div class="mt-3 d-flex gap-2">
                                 <button class="btn btn-primary" type="submit"><i class="fas fa-plus me-1"></i>Crear</button>
-                                <a class="btn btn-outline-primary" href="/dashboard/ajustes/tarifas-clientes/0"><i class="fas fa-star me-1"></i>Ver General</a>
+                                <a class="btn btn-outline-primary" href="/dashboard/ajustes/tarifas-clientes/0"><i class="fas fa-star me-1"></i>Ver PVL</a>
                             </div>
                         </form>
                     </div>
@@ -113,7 +113,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <small class="text-muted">Nota: la tarifa <strong>General (Id=0)</strong> es la base por defecto.</small>
+                        <small class="text-muted">Nota: la tarifa <strong>PVL (Id=0)</strong> es la base por defecto.</small>
                     </div>
                 </div>
             </div>

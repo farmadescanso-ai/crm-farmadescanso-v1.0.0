@@ -305,10 +305,10 @@
                                 </option>
                             <% }); %>
                         </select>
-                        <small class="text-muted">Tarifa aplicada por defecto a este cliente (si la tarifa termina, se usará la General)</small>
+                        <small class="text-muted">Tarifa aplicada por defecto a este cliente (si la tarifa termina, se usará la PVL/base)</small>
                         <% } else { %>
                         <input type="number" name="Tarifa" class="form-control" value="<%= tarifaSeleccionada %>">
-                        <small class="text-muted">No se pudieron cargar las tarifas; introduzca el ID manualmente (0 = General)</small>
+                        <small class="text-muted">No se pudieron cargar las tarifas; introduzca el ID manualmente (0 = PVL)</small>
                         <% } %>
                     </div>
                     <div class="col-md-3">

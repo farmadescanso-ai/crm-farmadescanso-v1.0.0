@@ -172,7 +172,7 @@ router.post('/presupuestos', async (req, res) => {
               const tRows = await crm.query(
                 `SELECT Id
                  FROM tarifasClientes
-                 WHERE NombreTarifa = 'General 2025'
+                 WHERE NombreTarifa = 'PVL 2025'
                    AND FechaInicio <= '2025-01-01'
                    AND FechaFin >= '2025-01-01'
                  LIMIT 1`

@@ -82,7 +82,7 @@
                                         <option value="<%= t.Id %>" <%= String(refId) === String(t.Id) ? 'selected' : '' %>><%= t.NombreTarifa %></option>
                                     <% }); %>
                                 <% } else { %>
-                                    <option value="0" selected>General</option>
+                                    <option value="0" selected>PVL</option>
                                 <% } %>
                             </select>
                             <small class="text-muted">Se muestra como columna de referencia; si no hay precio, se muestra 0,00.</small>
@@ -112,7 +112,7 @@
                                         <th style="width:90px;">Id</th>
                                         <th style="width:140px;">SKU</th>
                                         <th>Artículo</th>
-                                        <th style="width:140px;" class="text-end">Ref: <%= (refTarifa && refTarifa.NombreTarifa) ? refTarifa.NombreTarifa : 'General' %></th>
+                                        <th style="width:140px;" class="text-end">Ref: <%= (refTarifa && refTarifa.NombreTarifa) ? refTarifa.NombreTarifa : 'PVL' %></th>
                                         <th style="width:150px;" class="text-end">Precio Tarifa</th>
                                     </tr>
                                 </thead>
@@ -123,8 +123,8 @@
                                             <% const skuArticulo = a.SKUArticulo || a.SKU || a.sku || ''; %>
                                             <% const referencia = (a.PrecioReferencia !== null && a.PrecioReferencia !== undefined) ? a.PrecioReferencia : 0; %>
                                             <% 
-                                            // Para tarifas != 0: si no hay precio propio, dejar vacío (se aplicará General).
-                                            // Para tarifa 0 (General): siempre mostrar un valor (fallback a General/PVL).
+                                            // Para tarifas != 0: si no hay precio propio, dejar vacío (se aplicará PVL/base).
+                                            // Para tarifa 0 (PVL): siempre mostrar un valor (fallback a referencia/PVL).
                                             const esGeneral = Number(tarifa.Id) === 0;
                                             const tienePrecioPropio = (a.PrecioTarifa !== null && a.PrecioTarifa !== undefined);
                                             const precioTarifaValue = esGeneral
