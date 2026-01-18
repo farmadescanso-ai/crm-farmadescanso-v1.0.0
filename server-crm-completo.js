@@ -7710,10 +7710,19 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
       // Normalizar nombres de países antes de pasarlos a la vista
       const paisesNormalizados = paises ? paises.map(p => ({ ...p, Nombre_pais: normalizeUTF8(p.Nombre_pais || '') })) : [];
       
-      // Mostrar error detallado (siempre en localhost, en producción solo mensaje genérico)
+      // Mostrar error detallado:
+      // - siempre en localhost/dev
+      // - en producción SOLO si el usuario es admin (para depurar sin depender de logs de Vercel)
       const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
-      const errorMessage = (process.env.NODE_ENV === 'development' || isLocalhost)
-        ? `Error al guardar: ${error.message}` 
+      const esAdmin = getUserIsAdmin(req);
+      const shouldShowDetails = (process.env.NODE_ENV === 'development' || isLocalhost || esAdmin);
+      const detailParts = [
+        error?.message,
+        error?.code ? `code=${error.code}` : null,
+        error?.sqlMessage ? `sqlMessage=${error.sqlMessage}` : null
+      ].filter(Boolean);
+      const errorMessage = shouldShowDetails
+        ? `Error al guardar: ${detailParts.join(' | ')}`
         : 'No se pudo guardar el cliente. Por favor, verifica los datos e intenta nuevamente.';
       
       const userForView =
