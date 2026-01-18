@@ -510,11 +510,9 @@
                 
                 // Actualizar la URL y recargar
                 const url = new URL(window.location.href);
-                if (year === 'todos') {
-                    url.searchParams.delete('year');
-                } else {
-                    url.searchParams.set('year', year);
-                }
+                // Importante: ahora el backend usa el año actual por defecto cuando NO hay ?year.
+                // Para permitir "Todos", enviamos explícitamente year=todos.
+                url.searchParams.set('year', year);
                 window.location.href = url.toString();
             };
             
@@ -522,7 +520,8 @@
             const savedYear = localStorage.getItem('dashboardSelectedYear');
             const urlParams = new URLSearchParams(window.location.search);
             const yearFromUrl = urlParams.get('year');
-            const yearToUse = yearFromUrl || savedYear || 'todos';
+            const currentYear = String(new Date().getFullYear());
+            const yearToUse = yearFromUrl || savedYear || currentYear;
             
             if (yearToUse && yearToUse !== 'todos') {
                 const currentYearValue = document.getElementById('currentYearValue');
@@ -534,14 +533,10 @@
             // Función refreshData para actualizar todos los datos
             window.refreshData = function() {
                 const urlParams = new URLSearchParams(window.location.search);
-                const year = urlParams.get('year') || localStorage.getItem('dashboardSelectedYear') || 'todos';
+                const year = urlParams.get('year') || localStorage.getItem('dashboardSelectedYear') || String(new Date().getFullYear());
                 
                 const url = new URL(window.location.href);
-                if (year && year !== 'todos') {
-                    url.searchParams.set('year', year);
-                } else {
-                    url.searchParams.delete('year');
-                }
+                url.searchParams.set('year', year);
                 window.location.href = url.toString();
             };
         });

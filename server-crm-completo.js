@@ -2767,13 +2767,17 @@ app.get('/dashboard', requireAuth, async (req, res) => {
   console.log('🚀 [DASHBOARD] Iniciando carga del dashboard...');
   try {
     // Usar JWT primero, luego sesión como fallback
-    const comercialId = req.comercialId || req.session.comercialId;
-    const comercial = req.comercial || req.session.comercial;
+    const comercialId = req.comercialId || req.session?.comercialId;
+    const comercial = req.comercial || req.session?.comercial;
     console.log(`🔍 [DASHBOARD] Comercial ID: ${comercialId}`);
     
     // Obtener el año seleccionado de la query string
-    const selectedYear = req.query.year && req.query.year !== 'todos' ? parseInt(req.query.year) : null;
-    console.log(`📅 [DASHBOARD] Año seleccionado: ${selectedYear || 'Todos'}`);
+    const currentYear = new Date().getFullYear();
+    const yearParamRaw = req.query.year;
+    const selectedYear = yearParamRaw
+      ? (yearParamRaw !== 'todos' ? parseInt(yearParamRaw) : null)
+      : currentYear; // Por defecto: año actual
+    console.log(`📅 [DASHBOARD] Año seleccionado: ${selectedYear || 'Todos'} (default=${currentYear})`);
     
     // Obtener datos según el rol del usuario
     console.log('📊 [DASHBOARD] Obteniendo pedidos, productos y estadísticas...');
@@ -6445,12 +6449,17 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     const esAdmin = getUserIsAdmin(req);
     console.log('✅ [CLIENTES] Usuario obtenido:', { comercialId: comercialIdAutenticado, isAdmin: esAdmin });
     
+    // Paginación (evitar cargar miles de filas)
+    const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
+    const pageSize = Math.min(200, Math.max(10, parseInt(req.query.pageSize || '50', 10) || 50));
+
     // Obtener filtros de la query string
     const filters = {
       tipoCliente: req.query.tipoCliente || null,
       provincia: req.query.provincia || null,
       comercial: req.query.comercial || null,
-      conVentas: req.query.conVentas !== undefined && req.query.conVentas !== '' ? req.query.conVentas : undefined
+      conVentas: req.query.conVentas !== undefined && req.query.conVentas !== '' ? req.query.conVentas : undefined,
+      estado: req.query.estado || 'activos' // default: activos (escalable para 6.000+)
     };
     console.log('✅ [CLIENTES] Filtros obtenidos:', filters);
     
@@ -6510,19 +6519,25 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
       filtersForQuery.conVentas = filters.conVentas;
     }
+    if (filters.estado) {
+      filtersForQuery.estado = filters.estado;
+    }
 
     console.log('🔍 [CLIENTES] Filtros recibidos del query:', req.query);
     console.log('🔍 [CLIENTES] Filtros procesados para vista:', filters);
     console.log('🔍 [CLIENTES] Filtros procesados para consulta:', filtersForQuery);
 
-    // Obtener clientes - primero intentar optimizado, si falla usar método original
+    // Obtener clientes - paginado (primero optimizado, si falla usar fallback)
     let clientes;
+    let totalFiltrados = 0;
     try {
       // Usar filtersForQuery para la consulta (valores convertidos a números)
       console.log(`🔐 [CLIENTES] Usuario: ${esAdmin ? 'Admin' : 'Comercial'} (ID: ${comercialIdAutenticado})`);
       console.log(`🔐 [CLIENTES] Filtros que se aplicarán:`, filtersForQuery);
-      clientes = await crm.getClientesOptimizado(filtersForQuery);
-      console.log(`✅ [CLIENTES] Obtenidos ${clientes.length} clientes con método optimizado`);
+      const offset = (page - 1) * pageSize;
+      clientes = await crm.getClientesOptimizadoPaged(filtersForQuery, { limit: pageSize, offset });
+      totalFiltrados = await crm.countClientesOptimizado(filtersForQuery);
+      console.log(`✅ [CLIENTES] Obtenidos ${clientes.length} clientes paginados (page=${page}, pageSize=${pageSize}, totalFiltrados=${totalFiltrados})`);
       if (Object.keys(filtersForQuery).length > 0) {
         console.log(`✅ [CLIENTES] Filtros aplicados:`, filtersForQuery);
       } else {
@@ -6537,10 +6552,10 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       try {
         // IMPORTANTE: Si no es admin, pasar el comercialId al método fallback también
         const comercialIdFiltro = (!esAdmin && comercialIdAutenticado) ? comercialIdAutenticado : null;
-        clientes = await crm.getClientes(comercialIdFiltro);
-        console.log(`✅ [CLIENTES] Obtenidos ${clientes.length} clientes con método original${comercialIdFiltro ? ` (filtrado por comercial ${comercialIdFiltro})` : ' (sin filtros)'}`);
-        // Normalizar codificación UTF-8 de todos los clientes
-        clientes = clientes.map(cliente => normalizeObjectUTF8(cliente));
+        let todos = await crm.getClientes(comercialIdFiltro);
+        console.log(`✅ [CLIENTES] Obtenidos ${todos.length} clientes con método original${comercialIdFiltro ? ` (filtrado por comercial ${comercialIdFiltro})` : ' (sin filtros)'}`);
+        // Normalizar codificación UTF-8 de todos los clientes (fallback: aún puede ser grande)
+        todos = todos.map(cliente => normalizeObjectUTF8(cliente));
         // IMPORTANTE: Si no es admin, SIEMPRE aplicar filtro por comercial, incluso en fallback
         if (!esAdmin && comercialIdAutenticado) {
           const comId = parseInt(comercialIdAutenticado);
@@ -6557,7 +6572,7 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
         // Si hay otros filtros pero falló el método optimizado, aplicar filtros manualmente
         if (Object.keys(filtersForQuery).length > 0) {
           console.log('⚠️ [CLIENTES] Aplicando filtros manualmente después del fallback...');
-          let clientesFiltrados = clientes;
+          let clientesFiltrados = todos;
           
           if (filtersForQuery.tipoCliente) {
             clientesFiltrados = clientesFiltrados.filter(c => (c.Id_TipoCliente || c.id_TipoCliente) == filtersForQuery.tipoCliente);
@@ -6574,8 +6589,28 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
             console.log('⚠️ [CLIENTES] Filtro con/sin ventas no disponible en fallback manual');
           }
           
-          clientes = clientesFiltrados;
-          console.log(`✅ [CLIENTES] Filtrados manualmente: ${clientes.length} clientes`);
+          // Estado (solo en fallback manual)
+          if (filtersForQuery.estado === 'activos') {
+            clientesFiltrados = clientesFiltrados.filter(c => {
+              const ok = c.OK_KO;
+              return ok === 1 || ok === true || ok === '1' || (typeof ok === 'string' && ok.toUpperCase().trim() === 'OK');
+            });
+          } else if (filtersForQuery.estado === 'inactivos') {
+            clientesFiltrados = clientesFiltrados.filter(c => {
+              const ok = c.OK_KO;
+              return ok === 0 || ok === false || ok === '0' || (typeof ok === 'string' && ok.toUpperCase().trim() === 'KO');
+            });
+          }
+
+          totalFiltrados = clientesFiltrados.length;
+          const start = (page - 1) * pageSize;
+          clientes = clientesFiltrados.slice(start, start + pageSize);
+          console.log(`✅ [CLIENTES] Filtrados manualmente: totalFiltrados=${totalFiltrados}, page=${page}, pageSize=${pageSize}, rows=${clientes.length}`);
+        } else {
+          totalFiltrados = todos.length;
+          const start = (page - 1) * pageSize;
+          clientes = todos.slice(start, start + pageSize);
+          console.log(`✅ [CLIENTES] Fallback sin filtros: totalFiltrados=${totalFiltrados}, rows=${clientes.length}`);
         }
       } catch (originalError) {
         console.error('❌ [CLIENTES] Error también en método original:', originalError.message);
@@ -6583,10 +6618,13 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       }
     }
     
-    // Obtener el total real usando COUNT para asegurar precisión
+    // Totales
     const totalClientes = await crm.getClientesCount().catch(() => {
       return Array.isArray(clientes) ? clientes.length : 0;
     });
+    if (!totalFiltrados) {
+      totalFiltrados = Array.isArray(clientes) ? clientes.length : 0;
+    }
     
     // Cargar cooperativas para cada cliente (si no están ya cargadas)
     if (clientes && clientes.length > 0) {
@@ -6684,6 +6722,9 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       comercialIdAutenticado: comercialIdAutenticado || null, // Pasar el ID del comercial autenticado
       clientes: clientes || [], // Ya normalizados arriba con normalizeObjectUTF8
       totalClientes: totalClientes || (Array.isArray(clientes) ? clientes.length : 0),
+      totalFiltrados: totalFiltrados,
+      page,
+      pageSize,
       provincias: provincias || [],
       tiposClientes: tiposClientes || [],
       formasPago: formasPago || [],
@@ -7281,8 +7322,13 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
         }
         
         // Convertir campos numéricos
-        if (formField.startsWith('Id_') || formField === 'Dto' || formField === 'RE' || formField === 'CuentaContable') {
-          value = value ? Number(value) : null;
+        // Nota: Tarifa en producción suele ser INT (0 = PVL/base). Si viene vacío, usar 0.
+        if (formField.startsWith('Id_') || formField === 'Dto' || formField === 'RE' || formField === 'CuentaContable' || formField === 'Tarifa') {
+          if (formField === 'Tarifa' && (value === null || value === undefined || value === '')) {
+            value = 0;
+          } else {
+            value = value !== null && value !== undefined && value !== '' ? Number(String(value).replace(',', '.')) : null;
+          }
         }
         
         payload[dbField] = value;
@@ -7605,6 +7651,12 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
         payload[key] = toNullableInt(value);
         continue;
       }
+      // Tarifa: en producción suele ser INT; si viene vacío, usar 0 (PVL/base)
+      if (key === 'Tarifa') {
+        const tarifaInt = toNullableInt(value);
+        payload[key] = tarifaInt === null ? 0 : tarifaInt;
+        continue;
+      }
       // Campos numéricos conocidos
       if (key === 'Dto' || key === 'RE') {
         payload[key] = toNullableDecimal(value);
@@ -7779,85 +7831,78 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     }
 
     console.log(`🔍 [BUSCAR CLIENTES] Iniciando búsqueda: "${query}"`);
+    
+    // Búsqueda en BD (evita cargar miles de clientes en memoria)
+    const q = String(req.query.q || '').trim();
+    const qLike = `%${q}%`;
+    const qPrefix = `${q}%`;
 
-    // Obtener todos los clientes y filtrar en JavaScript para mayor compatibilidad
-    const todosClientes = await crm.getClientes();
-    console.log(`📊 [BUSCAR CLIENTES] Total clientes en BD: ${todosClientes ? todosClientes.length : 0}`);
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
 
-    if (!todosClientes || todosClientes.length === 0) {
-      return res.json({ clientes: [] });
+    const where = [];
+    const params = [];
+
+    if (!esAdmin && comercialIdAutenticado) {
+      where.push('c.Id_Cial = ?');
+      params.push(Number(comercialIdAutenticado));
     }
 
-    // Función helper para obtener valor de campo con múltiples variantes
-    const getField = (cliente, variants) => {
-      for (const variant of variants) {
-        const value = cliente[variant];
-        if (value !== null && value !== undefined && String(value).trim() !== '') {
-          return String(value).trim();
-        }
-      }
-      return '';
-    };
+    where.push(`(
+      c.Nombre_Razon_Social LIKE ?
+      OR c.Nombre_Cial LIKE ?
+      OR c.DNI_CIF LIKE ?
+      OR c.Email LIKE ?
+      OR c.Telefono LIKE ?
+      OR c.Movil LIKE ?
+      OR c.NumeroFarmacia LIKE ?
+      OR c.Direccion LIKE ?
+      OR c.Poblacion LIKE ?
+    )`);
+    params.push(qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike);
 
-    // Filtrar clientes que coincidan con la búsqueda
-    const clientesFiltrados = todosClientes
-      .filter(cliente => {
-        const nombre = getField(cliente, ['Nombre_Razon_Social', 'Nombre_RazonSocial', 'Nombre', 'nombre', 'Name', 'name']).toLowerCase();
-        const nombreCial = getField(cliente, ['Nombre_Cial', 'NombreCial', 'nombre_cial', 'nombreCial']).toLowerCase();
-        const dniCif = getField(cliente, ['DNI_CIF', 'DNI/CIF', 'dni_cif', 'DniCif', 'DNI', 'dni']).toLowerCase();
-        const email = getField(cliente, ['Email', 'email', 'E-mail', 'e-mail']).toLowerCase();
-        const telefono = getField(cliente, ['Telefono', 'Teléfono', 'telefono', 'teléfono', 'Phone', 'phone']).toLowerCase();
-        const movil = getField(cliente, ['Movil', 'Móvil', 'movil', 'móvil', 'Mobile', 'mobile']).toLowerCase();
-        const direccion = getField(cliente, ['Direccion', 'Dirección', 'direccion', 'dirección', 'CALLE', 'calle', 'Address', 'address']).toLowerCase();
-        const poblacion = getField(cliente, ['Poblacion', 'Población', 'poblacion', 'población', 'Ciudad', 'ciudad', 'City', 'city']).toLowerCase();
-        const contacto = getField(cliente, ['NomContacto', 'Nom Contacto', 'nomContacto', 'nom_contacto', 'Contacto', 'contacto']).toLowerCase();
+    const sql = `
+      SELECT
+        c.Id,
+        c.Nombre_Razon_Social,
+        c.Nombre_Cial,
+        c.DNI_CIF,
+        c.Email,
+        c.Telefono,
+        c.Movil,
+        c.Direccion,
+        c.Poblacion,
+        c.CodigoPostal,
+        c.Tarifa
+      FROM clientes c
+      WHERE ${where.join(' AND ')}
+      ORDER BY
+        CASE
+          WHEN c.Nombre_Razon_Social LIKE ? THEN 0
+          WHEN c.DNI_CIF LIKE ? THEN 1
+          WHEN c.Email LIKE ? THEN 2
+          ELSE 3
+        END,
+        c.Nombre_Razon_Social ASC
+      LIMIT 20
+    `;
 
-        return nombre.includes(query) ||
-               nombreCial.includes(query) ||
-               dniCif.includes(query) ||
-               email.includes(query) ||
-               telefono.includes(query) ||
-               movil.includes(query) ||
-               direccion.includes(query) ||
-               poblacion.includes(query) ||
-               contacto.includes(query);
-      })
-      .map(cliente => {
-        // Normalizar campos para el frontend
-        return {
-          Id: cliente.Id || cliente.id,
-          Nombre_Razon_Social: getField(cliente, ['Nombre_Razon_Social', 'Nombre_RazonSocial', 'Nombre', 'nombre', 'Name', 'name']),
-          Nombre_Cial: getField(cliente, ['Nombre_Cial', 'NombreCial', 'nombre_cial', 'nombreCial']),
-          DNI_CIF: getField(cliente, ['DNI_CIF', 'DNI/CIF', 'dni_cif', 'DniCif', 'DNI', 'dni']),
-          Email: getField(cliente, ['Email', 'email', 'E-mail', 'e-mail']),
-          Telefono: getField(cliente, ['Telefono', 'Teléfono', 'telefono', 'teléfono', 'Phone', 'phone']),
-          Movil: getField(cliente, ['Movil', 'Móvil', 'movil', 'móvil', 'Mobile', 'mobile']),
-          Direccion: getField(cliente, ['Direccion', 'Dirección', 'direccion', 'dirección', 'CALLE', 'calle', 'Address', 'address']),
-          Poblacion: getField(cliente, ['Poblacion', 'Población', 'poblacion', 'población', 'Ciudad', 'ciudad', 'City', 'city']),
-          Provincia: getField(cliente, ['Provincia', 'provincia']),
-          CodigoPostal: getField(cliente, ['CodigoPostal', 'Código Postal', 'codigoPostal', 'codigo_postal', 'PostalCode', 'postal_code', 'CP', 'cp']),
-          NomContacto: getField(cliente, ['NomContacto', 'Nom Contacto', 'nomContacto', 'nom_contacto', 'Contacto', 'contacto']),
-          Tarifa: cliente.Tarifa ?? cliente.tarifa ?? 0
-        };
-      })
-      .sort((a, b) => {
-        // Ordenar por relevancia: nombre exacto primero, luego DNI, luego email
-        const aNombre = a.Nombre_Razon_Social.toLowerCase();
-        const bNombre = b.Nombre_Razon_Social.toLowerCase();
-        const aDni = a.DNI_CIF.toLowerCase();
-        const bDni = b.DNI_CIF.toLowerCase();
-        const aEmail = a.Email.toLowerCase();
-        const bEmail = b.Email.toLowerCase();
-
-        if (aNombre.startsWith(query) && !bNombre.startsWith(query)) return -1;
-        if (!aNombre.startsWith(query) && bNombre.startsWith(query)) return 1;
-        if (aDni.includes(query) && !bDni.includes(query)) return -1;
-        if (!aDni.includes(query) && bDni.includes(query)) return 1;
-        if (aEmail.includes(query) && !bEmail.includes(query)) return -1;
-        if (!aEmail.includes(query) && bEmail.includes(query)) return 1;
-        return aNombre.localeCompare(bNombre);
-      })
-      .slice(0, 20); // Limitar a 20 resultados
+    const rows = await crm.query(sql, [...params, qPrefix, qPrefix, qPrefix]);
+    const clientesFiltrados = (rows || []).map(r => ({
+      Id: r.Id,
+      Nombre_Razon_Social: r.Nombre_Razon_Social,
+      Nombre_Cial: r.Nombre_Cial,
+      DNI_CIF: r.DNI_CIF,
+      Email: r.Email,
+      Telefono: r.Telefono,
+      Movil: r.Movil,
+      Direccion: r.Direccion,
+      Poblacion: r.Poblacion,
+      Provincia: null,
+      CodigoPostal: r.CodigoPostal,
+      NomContacto: null,
+      Tarifa: r.Tarifa ?? 0
+    }));
 
     console.log(`✅ [BUSCAR CLIENTES] Resultados encontrados: ${clientesFiltrados.length}`);
     res.json({ clientes: clientesFiltrados });
