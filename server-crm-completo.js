@@ -7963,13 +7963,31 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
     let tarifaAplicada = tarifaCliente || 0;
     if (tarifaAplicada !== 0) {
       try {
-        const rowsTarifa = await crm.query(
-          `SELECT Activa, FechaFin
-           FROM tarifasClientes
-           WHERE Id = ?
-           LIMIT 1`,
-          [tarifaAplicada]
-        );
+        let rowsTarifa = [];
+        try {
+          rowsTarifa = await crm.query(
+            `SELECT Activa, FechaFin
+             FROM tarifasClientes
+             WHERE Id = ?
+             LIMIT 1`,
+            [tarifaAplicada]
+          );
+        } catch (err) {
+          // Fallback por si hay esquemas antiguos con otras columnas
+          const msg = String(err?.sqlMessage || err?.message || '');
+          const isBadField = err?.code === 'ER_BAD_FIELD_ERROR' && /Unknown column/i.test(msg);
+          if (isBadField) {
+            rowsTarifa = await crm.query(
+              `SELECT Activa, FechaFin
+               FROM tarifasClientes
+               WHERE Id = ?
+               LIMIT 1`,
+              [tarifaAplicada]
+            ).catch(() => []);
+          } else {
+            throw err;
+          }
+        }
         const t = rowsTarifa && rowsTarifa.length > 0 ? rowsTarifa[0] : null;
         const activa = Number(t?.Activa ?? 0) === 1;
         const fechaFin = t?.FechaFin ? String(t.FechaFin).slice(0, 10) : null;
@@ -9778,6 +9796,51 @@ app.get('/dashboard/pedidos/informe', requireAuth, async (req, res) => {
 
 app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
   try {
+    const getTarifasClientesActivas = async () => {
+      // Queremos mostrar solo tarifas activas (excluyendo PVL=0, que se pinta fija en el select)
+      // Además, hacemos fallback por si el esquema usa otro nombre de columna para el nombre.
+      const baseWhere = `WHERE Activa = 1 AND (FechaFin IS NULL OR FechaFin = '0000-00-00' OR FechaFin >= CURDATE())`;
+      try {
+        return await crm.query(
+          `SELECT Id, NombreTarifa, Activa, FechaInicio, FechaFin
+           FROM tarifasClientes
+           ${baseWhere}
+           ORDER BY CASE WHEN Id = 0 THEN 0 ELSE 1 END, NombreTarifa ASC`
+        );
+      } catch (err) {
+        // Fallback: algunas BD podrían tener "Nombre" en vez de "NombreTarifa"
+        const msg = String(err?.sqlMessage || err?.message || '');
+        const isBadField = err?.code === 'ER_BAD_FIELD_ERROR' && /Unknown column/i.test(msg);
+        if (isBadField) {
+          console.warn('⚠️ [PEDIDO NUEVO] Columnas inesperadas en tarifasClientes. Reintentando con fallback Nombre AS NombreTarifa...', {
+            code: err?.code,
+            sqlMessage: err?.sqlMessage
+          });
+          try {
+            return await crm.query(
+              `SELECT Id, Nombre AS NombreTarifa, Activa, FechaInicio, FechaFin
+               FROM tarifasClientes
+               ${baseWhere}
+               ORDER BY CASE WHEN Id = 0 THEN 0 ELSE 1 END, NombreTarifa ASC`
+            );
+          } catch (err2) {
+            console.error('❌ [PEDIDO NUEVO] Error obteniendo tarifas (fallback):', {
+              code: err2?.code,
+              sqlMessage: err2?.sqlMessage,
+              message: err2?.message
+            });
+            return [];
+          }
+        }
+        console.error('❌ [PEDIDO NUEVO] Error obteniendo tarifas:', {
+          code: err?.code,
+          sqlMessage: err?.sqlMessage,
+          message: err?.message
+        });
+        return [];
+      }
+    };
+
     const [clientes, articulos, clientesCooperativa, nuevaReferencia, comerciales, formasPago, tarifasClientes] = await Promise.all([
       crm.getClientes(),
       crm.getArticulos(),
@@ -9785,12 +9848,22 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
       crm.getNextNumeroPedido(),
       crm.getComerciales(),
       crm.getFormasPago(),
-      crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => [])
+      getTarifasClientesActivas()
     ]);
 
     // Obtener el comercial logueado como valor por defecto
     const comercialLogueadoId = req.comercialId || req.session.comercialId;
     const esAdmin = isAdmin(req);
+
+    console.log('🧾 [PEDIDO NUEVO] Carga de datos:', {
+      comercialLogueadoId: comercialLogueadoId || null,
+      rol: getUsuarioRol(req),
+      esAdmin,
+      clientes: clientes?.length || 0,
+      articulos: articulos?.length || 0,
+      comerciales: comerciales?.length || 0,
+      tarifasActivas: tarifasClientes?.length || 0
+    });
  
     res.render('dashboard/pedido-nuevo', {
       title: 'Nuevo Pedido - Farmadescaso',
