@@ -1034,7 +1034,8 @@ const requireAuth = (req, res, next) => {
 // Middlewares de roles
 const getUsuarioRol = (req) => {
   try {
-    const comercial = req.comercial || req.session?.comercial;
+    // Compatibilidad: en JWT el usuario suele venir en req.user, no en req.session.comercial
+    const comercial = req.comercial || req.session?.comercial || req.user;
     if (!comercial) return null;
     
     // Manejar rol/roles con distintos nombres/casing (según BD/entorno)
@@ -9793,7 +9794,7 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
  
     res.render('dashboard/pedido-nuevo', {
       title: 'Nuevo Pedido - Farmadescaso',
-      user: req.comercial || req.session.comercial,
+      user: req.comercial || req.session?.comercial || req.user || {},
       clientes: clientes || [],
       articulos: articulos || [],
       clientesCooperativa: clientesCooperativa || [],
@@ -9811,7 +9812,7 @@ app.get('/dashboard/pedidos/nuevo', requireAuth, async (req, res) => {
     console.error('Error cargando formulario de nuevo pedido:', error);
     res.render('dashboard/pedido-nuevo', {
       title: 'Nuevo Pedido - Farmadescaso',
-      user: req.comercial || req.session.comercial,
+      user: req.comercial || req.session?.comercial || req.user || {},
       clientes: [],
       articulos: [],
       clientesCooperativa: [],
