@@ -818,7 +818,13 @@
                                     <td><%= idiomaNombre %></td>
                                     <td><%= monedaNombre %></td>
                                     <td><%= cliente.NomContacto || '-' %></td>
-                                    <td><%= cliente.Tarifa || '-' %></td>
+                                    <td>
+                                        <%
+                                          const tarifaVal = (cliente.Tarifa ?? cliente.tarifa);
+                                          const tarifaNum = (tarifaVal === null || tarifaVal === undefined || String(tarifaVal).trim() === '') ? null : Number(tarifaVal);
+                                        %>
+                                        <%= (tarifaNum === null || tarifaNum === 0) ? 'PVL' : tarifaVal %>
+                                    </td>
                                     <td><%= formaPagoNombre %></td>
                                     <td><%= cliente.Dto !== null && cliente.Dto !== undefined ? cliente.Dto : '-' %></td>
                                     <td><%= cliente.CuentaContable || '-' %></td>

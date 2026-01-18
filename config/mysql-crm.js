@@ -829,6 +829,17 @@ class MySQLCRM {
 
   async updateCliente(id, payload) {
     try {
+      // Tarifa: si no viene o viene vacía, aplicar PVL (Id=0)
+      if (payload.Tarifa !== undefined) {
+        const raw = payload.Tarifa;
+        if (raw === null || raw === undefined || (typeof raw === 'string' && raw.trim() === '')) {
+          payload.Tarifa = 0;
+        } else {
+          const n = Number.parseInt(String(raw).trim(), 10);
+          payload.Tarifa = Number.isFinite(n) ? n : 0;
+        }
+      }
+
       // Validar y normalizar OK_KO (Estado) - debe ser 1 (Activo) o 0 (Inactivo)
       // OK_KO es el campo que determina si un cliente está activo o no
       if (payload.OK_KO !== undefined && payload.OK_KO !== null) {
@@ -939,6 +950,14 @@ class MySQLCRM {
 
   async createCliente(payload) {
     try {
+      // Tarifa: si no viene o viene vacía, aplicar PVL (Id=0)
+      if (payload.Tarifa === undefined || payload.Tarifa === null || (typeof payload.Tarifa === 'string' && payload.Tarifa.trim() === '')) {
+        payload.Tarifa = 0;
+      } else {
+        const n = Number.parseInt(String(payload.Tarifa).trim(), 10);
+        payload.Tarifa = Number.isFinite(n) ? n : 0;
+      }
+
       // Validar y normalizar OK_KO (Estado) - debe ser 1 (Activo) o 0 (Inactivo)
       // OK_KO es el campo que determina si un cliente está activo o no
       if (payload.OK_KO !== undefined && payload.OK_KO !== null) {
