@@ -6777,7 +6777,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     
     res.render('dashboard/cliente-editar', {
       title: 'Nuevo Cliente - Farmadescaso',
-      user: req.comercial || req.session.comercial,
+      user: req.comercial || req.session?.comercial || req.user || {},
       cliente: null, // No hay cliente porque es nuevo
       provincias: provincias || [],
       paises: paisesNormalizados,
@@ -6835,7 +6835,7 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
     
     res.render('dashboard/cliente-editar', {
       title: `Cliente #${clienteId} - Editar`,
-      user: req.comercial || req.session.comercial,
+      user: req.comercial || req.session?.comercial || req.user || {},
       cliente: normalizeObjectUTF8(cliente),
       provincias: provincias || [],
       paises: paisesNormalizados,
@@ -7455,7 +7455,7 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       
       res.render('dashboard/cliente-editar', {
         title: 'Nuevo Cliente - Farmadescaso',
-        user: req.comercial || req.session.comercial,
+        user: req.comercial || req.session?.comercial || req.user || {},
         cliente: null,
         provincias: provincias || [],
         paises: paisesNormalizados,
@@ -7618,9 +7618,10 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
       console.warn('⚠️ [GUARDAR CLIENTE] Payload vacío, no hay campos para actualizar');
       return res.render('dashboard/cliente-editar', {
         title: `Cliente #${id} - Editar`,
-        user: req.comercial || req.session.comercial,
+        user: req.comercial || req.session?.comercial || req.user || {},
         cliente: clienteExistente,
-        error: 'No hay cambios para guardar'
+        error: 'No hay cambios para guardar',
+        isNew: false
       });
     }
     
@@ -7628,11 +7629,16 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
     console.log('✅ [GUARDAR CLIENTE] Cliente actualizado exitosamente:', result);
     res.redirect(`/dashboard/clientes/${id}?success=cliente_actualizado`);
   } catch (error) {
-    console.error('❌ [GUARDAR CLIENTE] Error completo:', {
-      message: error.message,
-      stack: error.stack,
+    // Log compacto y útil para Vercel (incluye info SQL si aplica)
+    console.error('❌ [GUARDAR CLIENTE] Error:', {
       id: req.params.id,
-      body: req.body
+      message: error?.message,
+      code: error?.code,
+      errno: error?.errno,
+      sqlState: error?.sqlState,
+      sqlMessage: error?.sqlMessage,
+      sql: error?.sql,
+      stack: error?.stack
     });
     
     // Intentar obtener el cliente para mostrar el formulario con error
@@ -7651,11 +7657,18 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
         ? `Error al guardar: ${error.message}` 
         : 'No se pudo guardar el cliente. Por favor, verifica los datos e intenta nuevamente.';
       
+      const userForView =
+        req.comercial ||
+        req.session?.comercial ||
+        req.user ||
+        {};
+
       res.render('dashboard/cliente-editar', {
         title: `Cliente #${req.params.id} - Editar`,
-        user: req.comercial || req.session.comercial,
+        user: userForView,
         cliente,
-        error: errorMessage
+        error: errorMessage,
+        isNew: false
       });
     } catch (loadError) {
       console.error('❌ [GUARDAR CLIENTE] Error cargando cliente para mostrar formulario:', loadError);
