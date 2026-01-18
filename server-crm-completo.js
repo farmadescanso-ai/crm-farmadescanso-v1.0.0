@@ -7650,6 +7650,23 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
           message: 'El cliente no existe o no se pudo cargar' 
         });
       }
+
+      // Cargar datos necesarios para que la vista de edición no falle en producción
+      const clienteId = req.params.id;
+      const [provincias, paises, cooperativasCliente, tiposClientes, formasPago, idiomas, monedas, comerciales] = await Promise.all([
+        crm.getProvincias().catch(err => { console.error('Error obteniendo provincias:', err); return []; }),
+        crm.getPaises().catch(err => { console.error('Error obteniendo países:', err); return []; }),
+        crm.getCooperativasByClienteId(clienteId).catch(err => { console.error('Error obteniendo cooperativas:', err); return []; }),
+        crm.query('SELECT id, Tipo FROM tipos_clientes').catch(err => { console.error('Error obteniendo tipos clientes:', err); return []; }),
+        crm.getFormasPago().catch(err => { console.error('Error obteniendo formas de pago:', err); return []; }),
+        crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(err => { console.error('Error obteniendo idiomas:', err); return []; }),
+        crm.query('SELECT id, Moneda FROM monedas').catch(err => { console.error('Error obteniendo monedas:', err); return []; }),
+        crm.getComerciales().catch(err => { console.error('Error obteniendo comerciales:', err); return []; })
+      ]);
+      const tarifasClientes = await crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => []);
+
+      // Normalizar nombres de países antes de pasarlos a la vista
+      const paisesNormalizados = paises ? paises.map(p => ({ ...p, Nombre_pais: normalizeUTF8(p.Nombre_pais || '') })) : [];
       
       // Mostrar error detallado (siempre en localhost, en producción solo mensaje genérico)
       const isLocalhost = req.hostname === 'localhost' || req.hostname === '127.0.0.1';
@@ -7666,7 +7683,16 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
       res.render('dashboard/cliente-editar', {
         title: `Cliente #${req.params.id} - Editar`,
         user: userForView,
-        cliente,
+        cliente: normalizeObjectUTF8(cliente),
+        provincias: provincias || [],
+        paises: paisesNormalizados,
+        cooperativasCliente: cooperativasCliente ? cooperativasCliente.map(c => normalizeObjectUTF8(c)) : [],
+        tiposClientes: tiposClientes || [],
+        formasPago: formasPago || [],
+        idiomas: idiomas || [],
+        monedas: monedas || [],
+        comerciales: comerciales || [],
+        tarifasClientes: tarifasClientes || [],
         error: errorMessage,
         isNew: false
       });
