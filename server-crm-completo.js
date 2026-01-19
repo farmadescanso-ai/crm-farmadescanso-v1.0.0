@@ -8868,7 +8868,8 @@ app.post('/dashboard/comerciales/:id', requireAuth, requireAdmin, async (req, re
     if (req.body.plataforma_reunion_preferida !== undefined) payload.plataforma_reunion_preferida = String(req.body.plataforma_reunion_preferida).trim() || 'meet';
     
     await crm.updateComercial(id, payload);
-    res.redirect(`/dashboard/comerciales/${id}?success=comercial_actualizado`);
+    // UX: tras guardar, volver al listado de comerciales (evita quedarse “atrapado” en el detalle).
+    res.redirect(`/dashboard/comerciales?success=comercial_actualizado`);
   } catch (error) {
     console.error('Error actualizando comercial:', error);
     const comercial = await crm.getComercialById(req.params.id);
