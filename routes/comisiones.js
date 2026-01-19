@@ -1346,7 +1346,9 @@ router.put('/fijos-mensuales/:comercialId', async (req, res) => {
 router.get('/config-comisiones-tipo-pedido', async (req, res) => {
   try {
     const filters = {
-      marca: req.query.marca !== undefined ? (req.query.marca === 'null' ? null : req.query.marca) : undefined,
+      marca: req.query.marca !== undefined
+        ? (req.query.marca === 'null' ? null : (String(req.query.marca).trim() !== '' ? String(req.query.marca).trim().toUpperCase() : ''))
+        : undefined,
       nombre_tipo_pedido: req.query.nombre_tipo_pedido || undefined,
       año_aplicable: req.query.año_aplicable ? parseInt(req.query.año_aplicable) : undefined,
       activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined
@@ -1355,12 +1357,31 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
     // Obtener marcas desde tabla Marcas (no desde artículos)
     let marcas = [];
     try {
-      const marcasResult = await crm.query('SELECT id, Nombre FROM Marcas ORDER BY Nombre');
-      marcas = marcasResult.map(m => m.Nombre || m.nombre).filter(m => m);
+      // En Linux/MySQL el nombre de tabla puede ser case-sensitive: probar primero `marcas` y luego `Marcas`
+      let marcasResult = [];
+      try {
+        marcasResult = await crm.query('SELECT id, Nombre FROM marcas ORDER BY Nombre');
+      } catch (e1) {
+        marcasResult = await crm.query('SELECT id, Nombre FROM Marcas ORDER BY Nombre');
+      }
+      marcas = (marcasResult || [])
+        .map(m => (m?.Nombre || m?.nombre || '').toString().trim())
+        .filter(Boolean)
+        .map(m => m.toUpperCase());
+      marcas = [...new Set(marcas)].sort();
     } catch (error) {
       console.warn('⚠️ Error obteniendo marcas, usando desde artículos:', error.message);
       const articulos = await crm.getArticulos();
-      marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
+      marcas = [...new Set((articulos || [])
+        .map(a => (a?.Marca || a?.marca || '').toString().trim())
+        .filter(Boolean)
+        .map(m => m.toUpperCase())
+      )].sort();
+    }
+    
+    // Si por cualquier motivo sigue vacío, meter fallback mínimo para no bloquear el formulario
+    if (!Array.isArray(marcas) || marcas.length === 0) {
+      marcas = ['IALOZON', 'YOUBELLE'];
     }
 
     // Filtrar solo configuraciones con marca específica (NO mostrar NULL)
@@ -1374,7 +1395,7 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
     const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
     res.render('dashboard/comisiones/config-comisiones-tipo-pedido', {
       title: 'Configuración Comisiones por Tipo Pedido - Farmadescaso',
-      user: req.comercial || req.session.comercial,
+      user: req.comercial || req.session?.comercial || req.user || {},
       configuraciones: configuraciones,
       marcas: marcas,
       filters: filters,
