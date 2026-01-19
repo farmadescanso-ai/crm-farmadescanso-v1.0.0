@@ -28,38 +28,10 @@
                         <% if (error) { %>
                         <div class="alert alert-danger"><%= error %></div>
                         <% } %>
-                        <% if (typeof req !== 'undefined' && req.query && req.query.success === 'google_connected') { %>
-                        <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <i class="fas fa-check-circle me-2"></i>
-                            <strong>¡Éxito!</strong> Tu cuenta de Google ha sido conectada correctamente. Ya puedes generar reuniones de Google Meet automáticamente.
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                        <% } %>
                         <% if (typeof req !== 'undefined' && req.query && req.query.error) { %>
                         <div class="alert alert-danger alert-dismissible fade show" role="alert">
                             <i class="fas fa-exclamation-circle me-2"></i>
-                            <strong>Error:</strong> 
-                            <% if (req.query.error === 'oauth_no_code') { %>
-                                No se recibió el código de autorización de Google. Por favor, intenta de nuevo.
-                            <% } else if (req.query.error === 'oauth_callback_error') { %>
-                                <% if (req.query.message === 'Acceso denegado' || (req.query.detail && req.query.detail.includes('usuarios de prueba'))) { %>
-                                    <strong>Error 403: Acceso denegado</strong><br>
-                                    Tu email no está en la lista de usuarios de prueba en Google Cloud Console.<br>
-                                    <strong>Email que intentaste conectar:</strong> <code><%= comercial && comercial.Email ? comercial.Email : 'N/A' %></code><br><br>
-                                    <strong>Para solucionarlo:</strong><br>
-                                    1. Contacta al administrador del sistema<br>
-                                    2. El administrador debe ejecutar: <code>node scripts/obtener-emails-comerciales.js</code><br>
-                                    3. El administrador debe agregar tu email en Google Cloud Console > OAuth consent screen > Test users<br>
-                                    4. Espera 1-2 minutos y vuelve a intentar<br><br>
-                                    <small>Ver documentación: <code>documentacion/solucionar-error-403-access-denied.md</code></small>
-                                <% } else { %>
-                                    Hubo un error al procesar la autorización de Google: <%= req.query.message || req.query.detail || 'Error desconocido' %>. Por favor, intenta de nuevo.
-                                <% } %>
-                            <% } else if (req.query.error === 'oauth_error') { %>
-                                Error al iniciar la conexión con Google. Verifica la configuración de OAuth2.
-                            <% } else { %>
-                                <%= req.query.error %>
-                            <% } %>
+                            <strong>Error:</strong> <%= req.query.error %>
                             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
                         <% } %>
@@ -131,110 +103,6 @@
                                         <% } %>
                                     </select>
                                     <small class="text-muted">Se establece automáticamente por código postal</small>
-                                </div>
-                            </div>
-
-                            <!-- Sección de Credenciales de Reuniones -->
-                            <div class="card mt-4 border-secondary">
-                                <div class="card-header bg-light">
-                                    <h6 class="mb-0">
-                                        <button class="btn btn-link text-decoration-none p-0 w-100 text-start" type="button" data-bs-toggle="collapse" data-bs-target="#credencialesReuniones" aria-expanded="false" aria-controls="credencialesReuniones">
-                                            <i class="fas fa-video me-2"></i>Credenciales de Reuniones
-                                            <i class="fas fa-chevron-down float-end"></i>
-                                        </button>
-                                    </h6>
-                                </div>
-                                <div class="collapse" id="credencialesReuniones">
-                                    <div class="card-body">
-                                        <p class="text-muted small mb-3">Configura las credenciales para generar reuniones automáticamente en Teams y Meet.</p>
-                                        
-                                        <!-- Google Meet -->
-                                        <div class="mb-4">
-                                            <h6 class="text-primary">
-                                                <i class="fab fa-google me-2"></i>Google Meet
-                                                <% if (comercial && comercial.meet_access_token) { %>
-                                                    <span class="badge bg-success ms-2">Conectado</span>
-                                                <% } else if (comercial && comercial.meet_email) { %>
-                                                    <span class="badge bg-warning ms-2">Email configurado</span>
-                                                <% } else { %>
-                                                    <span class="badge bg-secondary ms-2">No configurado</span>
-                                                <% } %>
-                                            </h6>
-                                            <div class="row">
-                                                <div class="col-md-12 mb-2">
-                                                    <label class="form-label small">Email de Google</label>
-                                                    <div class="input-group">
-                                                        <input type="email" name="meet_email" class="form-control form-control-sm" 
-                                                               value="<%= comercial ? (comercial.meet_email || '') : '' %>" 
-                                                               placeholder="usuario@gmail.com" id="meet_email_input">
-                                                <% if (comercial && comercial.meet_access_token) { %>
-                                                    <button type="button" class="btn btn-sm btn-success" disabled>
-                                                        <i class="fas fa-check me-1"></i>Conectado
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="if(confirm('¿Desconectar cuenta de Google?')) { window.location.href='/auth/google/disconnect?comercial_id=<%= comercial.id || comercial.Id %>'; }">
-                                                        <i class="fas fa-unlink me-1"></i>Desconectar
-                                                    </button>
-                                                <% } else { %>
-                                                    <a href="/auth/google" class="btn btn-sm btn-primary">
-                                                        <i class="fab fa-google me-1"></i>Conectar con Google
-                                                    </a>
-                                                <% } %>
-                                                    </div>
-                                                    <small class="text-muted">Email de la cuenta de Google para generar reuniones de Meet</small>
-                                                </div>
-                                            </div>
-                                            <div class="alert alert-info small mb-0">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                <strong>Configuración OAuth2:</strong> 
-                                                <% if (comercial && comercial.meet_access_token) { %>
-                                                    Tu cuenta de Google está conectada. Puedes generar reuniones automáticamente. 
-                                                    Los tokens se renuevan automáticamente cuando sea necesario.
-                                                <% } else { %>
-                                                    Haz clic en "Conectar con Google" para autorizar el acceso a tu cuenta. 
-                                                    Serás redirigido a Google donde deberás aceptar los permisos para acceder a tu calendario y crear reuniones.
-                                                    <br><br>
-                                                    <strong>⚠️ Si recibes un error 403:</strong> Tu email debe estar agregado como usuario de prueba en Google Cloud Console. 
-                                                    Contacta al administrador para que agregue tu email: <code><%= comercial && comercial.Email ? comercial.Email : 'tu-email@ejemplo.com' %></code>
-                                                <% } %>
-                                            </div>
-                                        </div>
-
-                                        <!-- Microsoft Teams -->
-                                        <div class="mb-3">
-                                            <h6 class="text-primary">
-                                                <i class="fab fa-microsoft me-2"></i>Microsoft Teams
-                                                <% if (comercial && comercial.teams_email) { %>
-                                                    <span class="badge bg-success ms-2">Configurado</span>
-                                                <% } else { %>
-                                                    <span class="badge bg-secondary ms-2">No configurado</span>
-                                                <% } %>
-                                            </h6>
-                                            <div class="row">
-                                                <div class="col-md-12 mb-2">
-                                                    <label class="form-label small">Email de Microsoft</label>
-                                                    <input type="email" name="teams_email" class="form-control form-control-sm" 
-                                                           value="<%= comercial ? (comercial.teams_email || '') : '' %>" 
-                                                           placeholder="usuario@outlook.com">
-                                                    <small class="text-muted">Email de la cuenta de Microsoft para generar reuniones de Teams</small>
-                                                </div>
-                                            </div>
-                                            <div class="alert alert-info small mb-0">
-                                                <i class="fas fa-info-circle me-1"></i>
-                                                <strong>Nota:</strong> Para configurar Microsoft Teams completamente, se requiere autenticación OAuth2. 
-                                                Por ahora, puedes ingresar el email. El token de acceso se configurará automáticamente cuando se use por primera vez.
-                                            </div>
-                                        </div>
-
-                                        <!-- Plataforma Preferida -->
-                                        <div class="mb-2">
-                                            <label class="form-label small fw-semibold">Plataforma Preferida</label>
-                                            <select name="plataforma_reunion_preferida" class="form-select form-select-sm">
-                                                <option value="meet" <%= comercial && comercial.plataforma_reunion_preferida === 'meet' ? 'selected' : '' %>>Google Meet</option>
-                                                <option value="teams" <%= comercial && comercial.plataforma_reunion_preferida === 'teams' ? 'selected' : '' %>>Microsoft Teams</option>
-                                            </select>
-                                            <small class="text-muted">Plataforma que se usará por defecto al generar reuniones</small>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 

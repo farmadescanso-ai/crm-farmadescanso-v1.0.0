@@ -36,6 +36,59 @@ class MySQLCRM {
 
     this.pool = null;
     this.connected = false;
+    this._schemaEnsured = false;
+  }
+
+  async ensureComercialesReunionesNullable() {
+    // Ejecutar solo una vez por ciclo de vida (importante en serverless).
+    if (this._schemaEnsured) return;
+    this._schemaEnsured = true;
+
+    try {
+      if (!this.pool) return;
+      const dbName = this.config.database;
+      const columnas = [
+        'teams_access_token',
+        'teams_refresh_token',
+        'teams_email',
+        'teams_token_expires_at',
+        'meet_access_token',
+        'meet_refresh_token',
+        'meet_email',
+        'meet_token_expires_at'
+      ];
+
+      const placeholders = columnas.map(() => '?').join(', ');
+      const [rows] = await this.pool.query(
+        `
+          SELECT COLUMN_NAME, IS_NULLABLE, COLUMN_TYPE
+          FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = ?
+            AND TABLE_NAME = 'comerciales'
+            AND COLUMN_NAME IN (${placeholders})
+        `,
+        [dbName, ...columnas]
+      );
+
+      if (!rows || rows.length === 0) return;
+
+      const cambios = [];
+      for (const r of rows) {
+        if (r && r.IS_NULLABLE === 'NO' && r.COLUMN_NAME && r.COLUMN_TYPE) {
+          // Mantener el tipo existente y solo cambiar a NULL.
+          cambios.push(`MODIFY \`${r.COLUMN_NAME}\` ${r.COLUMN_TYPE} NULL`);
+        }
+      }
+
+      if (cambios.length === 0) return;
+
+      const sql = `ALTER TABLE \`comerciales\` ${cambios.join(', ')}`;
+      await this.pool.query(sql);
+      console.log(`✅ [SCHEMA] Columnas de reuniones en 'comerciales' ahora permiten NULL: ${cambios.length}`);
+    } catch (error) {
+      // No romper la app si no hay permisos de ALTER en producción.
+      console.warn('⚠️ [SCHEMA] No se pudo asegurar NULL en campos de reuniones:', error.message);
+    }
   }
 
   async connect() {
@@ -76,6 +129,9 @@ class MySQLCRM {
       console.log(`📊 Base de datos: ${this.config.database}`);
       console.log(`🌐 Host: ${this.config.host}:${this.config.port}`);
       console.log('✅ UTF-8 configurado: utf8mb4_unicode_ci');
+
+      // Asegurar compatibilidad de esquema (evita errores tipo "Column 'meet_email' cannot be null").
+      await this.ensureComercialesReunionesNullable();
       return true;
     } catch (error) {
       console.error('❌ Error conectando a MySQL:', error.message);
@@ -278,11 +334,12 @@ class MySQLCRM {
       // Campos de credenciales de reuniones
       if (payload.meet_email !== undefined) {
         updates.push('meet_email = ?');
-        params.push(payload.meet_email || null);
+        // No convertir '' a NULL automáticamente (puede romper si la columna está NOT NULL).
+        params.push(payload.meet_email === '' ? '' : payload.meet_email);
       }
       if (payload.teams_email !== undefined) {
         updates.push('teams_email = ?');
-        params.push(payload.teams_email || null);
+        params.push(payload.teams_email === '' ? '' : payload.teams_email);
       }
       if (payload.plataforma_reunion_preferida !== undefined) {
         updates.push('plataforma_reunion_preferida = ?');

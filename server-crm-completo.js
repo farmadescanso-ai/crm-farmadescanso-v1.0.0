@@ -1848,9 +1848,22 @@ app.post('/auth/login', async (req, res) => {
   }
 });
 
+// ============================================
+// INTEGRACIONES DE REUNIONES (GOOGLE MEET / TEAMS)
+// Desactivadas: no deben aparecer ni ser accesibles.
+// Para reactivarlas explícitamente: MEETING_INTEGRATIONS_ENABLED=true
+// ============================================
+const MEETING_INTEGRATIONS_ENABLED = String(process.env.MEETING_INTEGRATIONS_ENABLED || '').toLowerCase() === 'true';
+
+function reunionesIntegracionDesactivada(req, res) {
+  // 404 intencional para “cerrar” las rutas y que no sean accesibles por URL directa.
+  return res.status(404).send('Integración de reuniones (Meet/Teams) desactivada.');
+}
+
 // Rutas OAuth de Google para Google Meet (accesible para todos los comerciales autenticados)
 app.get('/auth/google', requireAuth, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) return reunionesIntegracionDesactivada(req, res);
     const comercialId = req.comercialId || req.session.comercialId;
     if (!comercialId) {
       return res.redirect('/auth/login');
@@ -1898,6 +1911,7 @@ app.get('/auth/google', requireAuth, async (req, res) => {
 // Callback de OAuth de Google (accesible para todos los comerciales autenticados)
 app.get('/auth/google/callback', requireAuth, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) return reunionesIntegracionDesactivada(req, res);
     const { code, state, error } = req.query;
     const comercialId = parseInt(state) || req.comercialId || req.session.comercialId;
 
@@ -2017,6 +2031,7 @@ app.get('/auth/google/callback', requireAuth, async (req, res) => {
 // Desconectar cuenta de Google
 app.get('/auth/google/disconnect', requireAuth, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) return reunionesIntegracionDesactivada(req, res);
     const comercialId = parseInt(req.query.comercial_id) || req.comercialId || req.session.comercialId;
     
     if (!comercialId) {
@@ -4871,6 +4886,7 @@ app.get('/dashboard/ajustes/prestashop', requireAuth, requireAdmin, async (req, 
 // Página de ajustes Google OAuth2 - GET (solo administradores)
 app.get('/dashboard/ajustes/google-oauth', requireAuth, requireAdmin, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) return reunionesIntegracionDesactivada(req, res);
     const googleClientId = await crm.getConfiguracionValor('google_oauth_client_id', '');
     const googleClientSecret = await crm.getConfiguracionValor('google_oauth_client_secret', '');
     const googleRedirectUri = await crm.getConfiguracionValor('google_oauth_redirect_uri', 'http://localhost:3000/auth/google/callback');
@@ -4911,6 +4927,7 @@ app.get('/dashboard/ajustes/google-oauth', requireAuth, requireAdmin, async (req
 // Página de ajustes Google OAuth2 - POST (solo administradores)
 app.post('/dashboard/ajustes/google-oauth', requireAuth, requireAdmin, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) return reunionesIntegracionDesactivada(req, res);
     const { google_oauth_client_id, google_oauth_client_secret, google_oauth_redirect_uri } = req.body;
 
     if (!google_oauth_client_id || !google_oauth_client_secret || !google_oauth_redirect_uri) {
@@ -8843,10 +8860,12 @@ app.post('/dashboard/comerciales/:id', requireAuth, requireAdmin, async (req, re
       }
     }
     
-    // Campos de credenciales de reuniones
-    if (req.body.meet_email !== undefined) payload.meet_email = req.body.meet_email || null;
-    if (req.body.teams_email !== undefined) payload.teams_email = req.body.teams_email || null;
-    if (req.body.plataforma_reunion_preferida !== undefined) payload.plataforma_reunion_preferida = req.body.plataforma_reunion_preferida || 'meet';
+    // Campos de credenciales de reuniones (desactivado en UI).
+    // Importante: NO convertir '' a NULL automáticamente, ya que en algunos entornos
+    // las columnas pueden estar definidas como NOT NULL y bloquear la edición.
+    if (req.body.meet_email !== undefined) payload.meet_email = String(req.body.meet_email).trim();
+    if (req.body.teams_email !== undefined) payload.teams_email = String(req.body.teams_email).trim();
+    if (req.body.plataforma_reunion_preferida !== undefined) payload.plataforma_reunion_preferida = String(req.body.plataforma_reunion_preferida).trim() || 'meet';
     
     await crm.updateComercial(id, payload);
     res.redirect(`/dashboard/comerciales/${id}?success=comercial_actualizado`);
@@ -16561,6 +16580,15 @@ app.post('/dashboard/agenda/:id/eliminar', requireAuth, async (req, res) => {
 // Endpoint para generar reunión de Google Meet
 app.post('/api/visitas/generar-meet', requireAuth, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) {
+      return res.status(410).json({
+        success: false,
+        disabled: true,
+        error: 'Integración de reuniones desactivada',
+        meetUrl: 'https://meet.google.com/new',
+        message: 'La generación automática está desactivada. Puedes crear una reunión manualmente en meet.google.com.'
+      });
+    }
     const { fecha, hora, titulo, duracionMinutos, emailsInvitados } = req.body;
     const comercialId = req.comercialId || req.session.comercialId;
     
@@ -16651,6 +16679,15 @@ app.post('/api/visitas/generar-meet', requireAuth, async (req, res) => {
 // Endpoint para generar reunión de Microsoft Teams
 app.post('/api/visitas/generar-teams', requireAuth, async (req, res) => {
   try {
+    if (!MEETING_INTEGRATIONS_ENABLED) {
+      return res.status(410).json({
+        success: false,
+        disabled: true,
+        error: 'Integración de reuniones desactivada',
+        teamsUrl: null,
+        message: 'La generación automática está desactivada. Crea la reunión manualmente en Microsoft Teams.'
+      });
+    }
     const { fecha, hora, titulo, duracionMinutos, emailsInvitados } = req.body;
     const comercialId = req.comercialId || req.session.comercialId;
     
