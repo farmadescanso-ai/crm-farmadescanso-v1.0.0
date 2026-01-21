@@ -7865,6 +7865,47 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       where.push('c.Id_Cial = ?');
       params.push(Number(comercialIdAutenticado));
     }
+    
+    // Filtros opcionales (siempre deben aplicarse sobre TODA la BD, no sobre 50 filas)
+    const estado = (req.query.estado || '').toString().trim().toLowerCase();
+    const tipoCliente = req.query.tipoCliente !== undefined && req.query.tipoCliente !== null && String(req.query.tipoCliente).trim() !== ''
+      ? Number(req.query.tipoCliente)
+      : null;
+    const provincia = req.query.provincia !== undefined && req.query.provincia !== null && String(req.query.provincia).trim() !== ''
+      ? Number(req.query.provincia)
+      : null;
+    const conVentas = req.query.conVentas !== undefined && req.query.conVentas !== null && String(req.query.conVentas).trim() !== ''
+      ? String(req.query.conVentas).trim().toLowerCase()
+      : null;
+    const comercialFiltro = req.query.comercial !== undefined && req.query.comercial !== null && String(req.query.comercial).trim() !== ''
+      ? Number(req.query.comercial)
+      : null;
+    
+    // Admin puede filtrar por comercial; no-admin siempre queda forzado arriba
+    if (esAdmin && Number.isFinite(comercialFiltro) && comercialFiltro > 0) {
+      where.push('c.Id_Cial = ?');
+      params.push(comercialFiltro);
+    }
+    
+    if (estado === 'activos') {
+      where.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
+    } else if (estado === 'inactivos') {
+      where.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+    }
+    
+    if (Number.isFinite(tipoCliente) && tipoCliente > 0) {
+      where.push('c.Id_TipoCliente = ?');
+      params.push(tipoCliente);
+    }
+    if (Number.isFinite(provincia) && provincia > 0) {
+      where.push('c.Id_Provincia = ?');
+      params.push(provincia);
+    }
+    if (conVentas === 'true' || conVentas === '1') {
+      where.push('EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.Id)');
+    } else if (conVentas === 'false' || conVentas === '0') {
+      where.push('NOT EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.Id)');
+    }
 
     where.push(`(
       c.Nombre_Razon_Social LIKE ?
@@ -7878,6 +7919,8 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       OR c.Poblacion LIKE ?
     )`);
     params.push(qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike);
+    
+    const limit = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
 
     const sql = `
       SELECT
@@ -7902,7 +7945,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
           ELSE 3
         END,
         c.Nombre_Razon_Social ASC
-      LIMIT 20
+      LIMIT ${limit}
     `;
 
     const rows = await crm.query(sql, [...params, qPrefix, qPrefix, qPrefix]);
@@ -16833,6 +16876,62 @@ app.get('/api/clientes/codigo-postal/:idCodigoPostal', requireAuth, async (req, 
       error: error.message,
       clientes: []
     });
+  }
+});
+
+// API: Clientes paginados para "cargar más" en /dashboard/clientes (scroll/botón)
+// Nota: debe ir ANTES de GET /api/clientes (legacy) para no entrar en conflictos futuros.
+app.get('/api/clientes/paged', requireAuth, async (req, res) => {
+  try {
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    
+    const limit = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
+    const offset = Math.max(0, parseInt(req.query.offset || '0', 10) || 0);
+    
+    // Filtros en query (mismos que /dashboard/clientes)
+    const filtersForQuery = {};
+    const tipoCliente = req.query.tipoCliente !== undefined && req.query.tipoCliente !== null && String(req.query.tipoCliente).trim() !== ''
+      ? Number(req.query.tipoCliente)
+      : null;
+    const provincia = req.query.provincia !== undefined && req.query.provincia !== null && String(req.query.provincia).trim() !== ''
+      ? Number(req.query.provincia)
+      : null;
+    const conVentas = req.query.conVentas !== undefined && req.query.conVentas !== null && String(req.query.conVentas).trim() !== ''
+      ? req.query.conVentas
+      : undefined;
+    const estado = req.query.estado ? String(req.query.estado) : 'activos';
+    const comercialFiltro = req.query.comercial !== undefined && req.query.comercial !== null && String(req.query.comercial).trim() !== ''
+      ? Number(req.query.comercial)
+      : null;
+    
+    if (Number.isFinite(tipoCliente) && tipoCliente > 0) filtersForQuery.tipoCliente = tipoCliente;
+    if (Number.isFinite(provincia) && provincia > 0) filtersForQuery.provincia = provincia;
+    if (conVentas !== undefined) filtersForQuery.conVentas = conVentas;
+    if (estado) filtersForQuery.estado = estado;
+    
+    // No-admin: siempre restringir al comercial autenticado
+    if (!esAdmin && comercialIdAutenticado) {
+      const comId = Number(comercialIdAutenticado);
+      if (Number.isFinite(comId) && comId > 0) filtersForQuery.comercial = comId;
+    } else if (esAdmin && Number.isFinite(comercialFiltro) && comercialFiltro > 0) {
+      filtersForQuery.comercial = comercialFiltro;
+    }
+    
+    const clientes = await crm.getClientesOptimizadoPaged(filtersForQuery, { limit, offset });
+    const totalFiltrados = await crm.countClientesOptimizado(filtersForQuery);
+    
+    res.json({
+      success: true,
+      clientes: (clientes || []).map(c => normalizeObjectUTF8(c)),
+      totalFiltrados,
+      offset,
+      limit,
+      hasMore: offset + (clientes?.length || 0) < (totalFiltrados || 0)
+    });
+  } catch (error) {
+    console.error('❌ [API CLIENTES PAGED] Error:', error);
+    res.status(500).json({ success: false, error: error.message, clientes: [] });
   }
 });
 

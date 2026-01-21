@@ -908,6 +908,16 @@
                         </table>
                     </div>
                 </div>
+
+                <!-- Load more (paginación incremental) -->
+                <% if (typeof totalFiltrados !== 'undefined' && totalFiltrados !== null) { %>
+                <div class="d-flex justify-content-center align-items-center gap-2 my-3">
+                    <button class="btn btn-outline-primary btn-sm" type="button" id="loadMoreBtn">
+                        <i class="fas fa-plus"></i> Cargar 50 más
+                    </button>
+                    <span class="text-muted small" id="loadMoreInfo"></span>
+                </div>
+                <% } %>
                 <!-- Scroll to Top Button Container -->
                 <div class="scroll-to-top-container">
                     <button class="scroll-to-top" id="scrollToTop" title="Volver al inicio de la tabla">
@@ -924,6 +934,20 @@
         let rows = [];
         let originalContent = {};
         let currentSort = { column: null, direction: null }; // 'asc' o 'desc'
+        let isSearchRemoteActive = false;
+        let isLoadingMore = false;
+        let loadedCount = <%= (typeof clientes !== 'undefined' && Array.isArray(clientes)) ? clientes.length : 0 %>;
+        const pageSize = <%= (typeof pageSize !== 'undefined' && pageSize) ? Number(pageSize) : 50 %>;
+        const totalFiltrados = <%= (typeof totalFiltrados !== 'undefined' && totalFiltrados !== null) ? Number(totalFiltrados) : 0 %>;
+        
+        // Filtros actuales (para /api/clientes/paged y /api/clientes/buscar)
+        const currentFilters = {
+            tipoCliente: <%= (typeof filters !== 'undefined' && filters && filters.tipoCliente) ? JSON.stringify(String(filters.tipoCliente)) : 'null' %>,
+            provincia: <%= (typeof filters !== 'undefined' && filters && filters.provincia) ? JSON.stringify(String(filters.provincia)) : 'null' %>,
+            comercial: <%= (typeof filters !== 'undefined' && filters && filters.comercial) ? JSON.stringify(String(filters.comercial)) : 'null' %>,
+            conVentas: <%= (typeof filters !== 'undefined' && filters && filters.conVentas !== undefined && filters.conVentas !== null && String(filters.conVentas).trim() !== '') ? JSON.stringify(String(filters.conVentas)) : 'null' %>,
+            estado: <%= (typeof filters !== 'undefined' && filters && filters.estado) ? JSON.stringify(String(filters.estado)) : JSON.stringify('activos') %>
+        };
         
         // Asegurar que el filtro de comercial esté fijado para no-admins
         (function() {
@@ -998,6 +1022,139 @@
                     .trim();
             } catch (e) {
                 return String(text).toLowerCase().trim();
+            }
+        }
+
+        function updateLoadMoreUI() {
+            const btn = document.getElementById('loadMoreBtn');
+            const info = document.getElementById('loadMoreInfo');
+            if (!btn || !info) return;
+            if (isSearchRemoteActive) {
+                btn.disabled = true;
+                info.textContent = 'Búsqueda activa: desactiva para cargar más.';
+                return;
+            }
+            const total = Number.isFinite(totalFiltrados) ? totalFiltrados : 0;
+            const hasMore = total > 0 ? loadedCount < total : true;
+            btn.style.display = hasMore ? '' : 'none';
+            btn.disabled = isLoadingMore;
+            info.textContent = total > 0 ? `Mostrados ${loadedCount} de ${total}` : `Mostrados ${loadedCount}`;
+        }
+
+        function buildQueryParams(extra = {}) {
+            const p = new URLSearchParams();
+            Object.entries(currentFilters).forEach(([k, v]) => {
+                if (v !== null && v !== undefined && String(v).trim() !== '' && v !== 'null') {
+                    p.set(k, String(v));
+                }
+            });
+            Object.entries(extra).forEach(([k, v]) => {
+                if (v !== null && v !== undefined) p.set(k, String(v));
+            });
+            return p.toString();
+        }
+
+        function escapeHtml(s) {
+            const str = String(s ?? '');
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/\"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function renderClienteRow(cliente) {
+            const id = cliente.Id || cliente.id;
+            const nombre = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
+            const nombreCial = cliente.Nombre_Cial || '-';
+            const provinciaNombre = cliente.ProvinciaNombre || '-';
+            const tipoClienteNombre = cliente.TipoClienteNombre || cliente.TipoCliente || '-';
+            const comercialNombre = cliente.ComercialNombre || '-';
+            const okKo = cliente.OK_KO;
+            let estadoActivo = true;
+            if (okKo === null || okKo === undefined) estadoActivo = true;
+            else if (typeof okKo === 'string') {
+                const u = okKo.toUpperCase().trim();
+                estadoActivo = (u === 'OK' || u === '1' || u === 'TRUE');
+            } else if (typeof okKo === 'number') estadoActivo = (okKo === 1);
+            else if (typeof okKo === 'boolean') estadoActivo = okKo;
+            
+            const encoded = encodeURIComponent(JSON.stringify(cliente));
+            
+            return `
+              <tr class="client-row" data-cliente-encoded="${encoded}">
+                <td class="text-center">
+                  <a class="btn btn-sm btn-outline-primary me-1 view-client" title="Ver" href="/dashboard/clientes/${id}" role="button">
+                    <i class="fas fa-eye"></i>
+                  </a>
+                  <a class="btn btn-sm btn-outline-warning me-1 edit-client" title="Editar" href="/dashboard/clientes/${id}/editar" role="button">
+                    <i class="fas fa-edit"></i>
+                  </a>
+                  <button class="btn btn-sm ${estadoActivo ? 'btn-success' : 'btn-danger'} toggle-estado" title="${estadoActivo ? 'Desactivar' : 'Activar'}" data-id="${id}" data-estado="${estadoActivo ? 'OK' : 'KO'}">
+                    <i class="fas fa-toggle-${estadoActivo ? 'on' : 'off'}"></i>
+                  </button>
+                  <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+                  <button class="btn btn-sm btn-outline-danger ms-1 delete-client" title="Borrar Registro" data-id="${id}" data-nombre="${escapeHtml(nombre)}">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                  <% } %>
+                </td>
+                <td>${escapeHtml(tipoClienteNombre)}</td>
+                <td>${escapeHtml(cliente.DNI_CIF || 'Pendiente')}</td>
+                <td class="col-nombre-razon-social">${escapeHtml(nombre)}</td>
+                <td>${escapeHtml(nombreCial)}</td>
+                <td class="col-direccion">${escapeHtml(cliente.Direccion || '-')}</td>
+                <td class="col-poblacion">${escapeHtml(cliente.Poblacion || '-')}</td>
+                <td>${escapeHtml(provinciaNombre)}</td>
+                <td>${escapeHtml(cliente.CodigoPostal || '-')}</td>
+                <td>${escapeHtml(cliente.Movil || cliente['Móvil'] || '-')}</td>
+                <td>${escapeHtml(cliente.Telefono || cliente['Teléfono'] || '-')}</td>
+                <td>${escapeHtml(cliente.Email || '-')}</td>
+                <td>${escapeHtml(cliente.CodPais || '-')}</td>
+                <td>${escapeHtml(cliente.Pais || '-')}</td>
+                <td>${escapeHtml(cliente.Idioma || '-')}</td>
+                <td>${escapeHtml(cliente.Moneda || '-')}</td>
+                <td>${escapeHtml(cliente.NomContacto || '-')}</td>
+                <td>${escapeHtml((cliente.Tarifa ?? 0) === 0 ? 'PVL' : (cliente.Tarifa ?? '-'))}</td>
+                <td>${escapeHtml(cliente.FormaPagoNombre || '-')}</td>
+                <td>${escapeHtml(cliente.Dto ?? '-')}</td>
+                <td>${escapeHtml(cliente.CuentaContable || '-')}</td>
+                <td>${escapeHtml(cliente.RE ?? '-')}</td>
+                <td>${escapeHtml(cliente.Banco || '-')}</td>
+                <td>${escapeHtml(cliente.Swift || '-')}</td>
+                <td>${escapeHtml(cliente.IBAN || '-')}</td>
+                <td>${escapeHtml((cliente.cooperativas && cliente.cooperativas.length) ? cliente.cooperativas.map(c => c.Nombre).join(', ') : 'Sin Asignar')}</td>
+                <td>${escapeHtml(cliente.NumeroFarmacia || '-')}</td>
+                <td>${escapeHtml(comercialNombre)}</td>
+                <td><span class="badge ${estadoActivo ? 'bg-success' : 'bg-secondary'}" id="badge-estado-${id}">${estadoActivo ? 'Activo' : 'Inactivo'}</span></td>
+              </tr>
+            `;
+        }
+
+        async function loadMore() {
+            if (isLoadingMore || isSearchRemoteActive) return;
+            if (totalFiltrados && loadedCount >= totalFiltrados) return;
+            isLoadingMore = true;
+            updateLoadMoreUI();
+            try {
+                const qs = buildQueryParams({ offset: loadedCount, limit: pageSize });
+                const res = await fetch(`/api/clientes/paged?${qs}`, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                const list = data && data.clientes ? data.clientes : [];
+                const tbody = document.getElementById('clientesTableBody');
+                if (tbody && list.length > 0) {
+                    const html = list.map(renderClienteRow).join('');
+                    tbody.insertAdjacentHTML('beforeend', html);
+                    loadedCount += list.length;
+                    const clientesMostrados = document.getElementById('clientesMostrados');
+                    if (clientesMostrados) clientesMostrados.textContent = String(loadedCount);
+                }
+            } catch (e) {
+                console.error('❌ Error cargando más clientes:', e);
+            } finally {
+                isLoadingMore = false;
+                updateLoadMoreUI();
             }
         }
         
@@ -1225,59 +1382,67 @@
             
             console.log('✅ Inicializando búsqueda...');
             
-            // Obtener todas las filas
-            rows = Array.from(document.querySelectorAll('#clientesTableBody tr'));
-            console.log('📊 Filas encontradas:', rows.length);
-            
-            // Guardar contenido original de cada celda
-            rows.forEach((row, rowIndex) => {
-                const cells = row.querySelectorAll('td');
-                const cellContent = [];
-                cells.forEach(cell => {
-                    cellContent.push(cell.innerHTML);
-                });
-                originalContent[rowIndex] = cellContent;
-            });
+            // (Legacy) La búsqueda local solo aplica a filas cargadas y NO es válida cuando hay paginación.
+            // Ahora la búsqueda se hace contra la BD via /api/clientes/buscar.
             
             // Event listeners para búsqueda inteligente optimizada
             let searchTimeout;
             let isSearching = false;
             let searchAbortController = null;
             
-            // Función optimizada de búsqueda con procesamiento asíncrono
-            function performSearchOptimized() {
-                if (isSearching) {
-                    // Si ya hay una búsqueda en curso, cancelarla
-                    if (searchAbortController) {
-                        searchAbortController.abort();
-                    }
+            async function performSearchRemote() {
+                const term = searchInput.value.trim();
+                const clientesMostrados = document.getElementById('clientesMostrados');
+                const busquedaActiva = document.getElementById('busquedaActiva');
+                const tbody = document.getElementById('clientesTableBody');
+                if (!tbody) return;
+                
+                if (!term || term.length < 2) {
+                    // Para volver al listado paginado, recargar manteniendo filtros (sin perder coherencia)
+                    isSearchRemoteActive = false;
+                    updateLoadMoreUI();
+                    if (busquedaActiva) busquedaActiva.textContent = 'Inactiva';
+                    return;
                 }
                 
-                isSearching = true;
+                isSearchRemoteActive = true;
+                updateLoadMoreUI();
+                if (busquedaActiva) busquedaActiva.textContent = 'Activa...';
+                
+                // Cancelar búsqueda en curso si existe
+                if (searchAbortController) searchAbortController.abort();
                 searchAbortController = new AbortController();
                 
-                // Usar requestAnimationFrame para no bloquear el UI
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        if (!searchAbortController.signal.aborted) {
-                            performSearch();
-                            isSearching = false;
-                        }
-                    }, 0);
-                });
+                try {
+                    const qs = buildQueryParams({ q: term, limit: 100 });
+                    const res = await fetch(`/api/clientes/buscar?${qs}`, { signal: searchAbortController.signal });
+                    const data = await res.json();
+                    const list = data && data.clientes ? data.clientes : [];
+                    
+                    // Reemplazar tabla por resultados (siempre desde BD)
+                    tbody.innerHTML = list.length
+                        ? list.map(renderClienteRow).join('')
+                        : `<tr><td colspan="30" class="text-center">Sin resultados</td></tr>`;
+                    
+                    if (clientesMostrados) clientesMostrados.textContent = String(list.length);
+                    if (busquedaActiva) busquedaActiva.textContent = `Activa (${list.length} resultados)`;
+                } catch (e) {
+                    if (e.name === 'AbortError') return;
+                    console.error('❌ Error búsqueda remota:', e);
+                    if (busquedaActiva) busquedaActiva.textContent = 'Error';
+                }
             }
             
             searchInput.addEventListener('input', function() {
-                // Debounce aumentado: esperar 500ms después de que el usuario deje de escribir
                 clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(performSearchOptimized, 500);
+                searchTimeout = setTimeout(performSearchRemote, 350);
             });
             
             searchInput.addEventListener('keyup', function(e) {
                 // Si presiona Enter, buscar inmediatamente
                 if (e.key === 'Enter') {
                     clearTimeout(searchTimeout);
-                    performSearchOptimized();
+                    performSearchRemote();
                 }
             });
             
@@ -1285,13 +1450,33 @@
                 clearSearch.addEventListener('click', function() {
                     console.log('🧹 Limpiando búsqueda');
                     searchInput.value = '';
-                    performSearch();
-                    searchInput.focus();
+                    // Volver al listado paginado recargando (mantiene filtros)
+                    const params = buildQueryParams({ page: 1, pageSize: pageSize });
+                    window.location.href = `/dashboard/clientes?${params}`;
                 });
             }
             
             // Scroll to top dentro de la tabla - aparece después de 10 registros y se mueve con el scroll
             const tableContainer = document.querySelector('.table-container');
+            // Load more: botón + scroll
+            const loadMoreBtn = document.getElementById('loadMoreBtn');
+            if (loadMoreBtn) {
+                loadMoreBtn.addEventListener('click', loadMore);
+            }
+            if (tableContainer) {
+                updateLoadMoreUI();
+                let lastAutoLoad = 0;
+                tableContainer.addEventListener('scroll', function() {
+                    if (isSearchRemoteActive) return;
+                    const now = Date.now();
+                    if (now - lastAutoLoad < 800) return;
+                    const nearBottom = (tableContainer.scrollTop + tableContainer.clientHeight) >= (tableContainer.scrollHeight - 200);
+                    if (nearBottom) {
+                        lastAutoLoad = now;
+                        loadMore();
+                    }
+                }, { passive: true });
+            }
             if (scrollToTopBtn && tableContainer) {
                 const tbody = document.getElementById('clientesTableBody');
                 let rowHeight = null;

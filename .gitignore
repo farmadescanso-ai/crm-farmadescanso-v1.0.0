@@ -110,3 +110,9 @@ comerciales-local-*.csv
 comerciales-local-para-comparar-*.csv
 comerciales-local-para-comparar-*.json
 *.xlsx
+
+# Salidas generadas (preimport/enriched, CSV/JSON temporales, etc.)
+output/
+
+# Credenciales / SQL sensibles (NO subir)
+scripts/configurar-usuario-mysql-remoto.sql
