@@ -7843,17 +7843,18 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
 // API para búsqueda inteligente de clientes
 app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
   try {
-    const query = (req.query.q || '').trim().toLowerCase();
-    if (!query || query.length < 2) {
+    // Normalizar para búsquedas case-insensitive (independiente del collation de MySQL)
+    const qRaw = (req.query.q || '').toString().trim();
+    const qLower = qRaw.toLowerCase();
+    if (!qLower || qLower.length < 2) {
       return res.json({ clientes: [] });
     }
 
-    console.log(`🔍 [BUSCAR CLIENTES] Iniciando búsqueda: "${query}"`);
+    console.log(`🔍 [BUSCAR CLIENTES] Iniciando búsqueda: "${qRaw}"`);
     
     // Búsqueda en BD (evita cargar miles de clientes en memoria)
-    const q = String(req.query.q || '').trim();
-    const qLike = `%${q}%`;
-    const qPrefix = `${q}%`;
+    const qLike = `%${qLower}%`;
+    const qPrefix = `${qLower}%`;
 
     const comercialIdAutenticado = getComercialId(req);
     const esAdmin = getUserIsAdmin(req);
@@ -7908,15 +7909,15 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     }
 
     where.push(`(
-      c.Nombre_Razon_Social LIKE ?
-      OR c.Nombre_Cial LIKE ?
-      OR c.DNI_CIF LIKE ?
-      OR c.Email LIKE ?
-      OR c.Telefono LIKE ?
-      OR c.Movil LIKE ?
-      OR c.NumeroFarmacia LIKE ?
-      OR c.Direccion LIKE ?
-      OR c.Poblacion LIKE ?
+      LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ?
+      OR LOWER(IFNULL(c.Nombre_Cial,'')) LIKE ?
+      OR LOWER(IFNULL(c.DNI_CIF,'')) LIKE ?
+      OR LOWER(IFNULL(c.Email,'')) LIKE ?
+      OR LOWER(IFNULL(c.Telefono,'')) LIKE ?
+      OR LOWER(IFNULL(c.Movil,'')) LIKE ?
+      OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
+      OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
+      OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
     )`);
     params.push(qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike);
     
@@ -7939,9 +7940,9 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       WHERE ${where.join(' AND ')}
       ORDER BY
         CASE
-          WHEN c.Nombre_Razon_Social LIKE ? THEN 0
-          WHEN c.DNI_CIF LIKE ? THEN 1
-          WHEN c.Email LIKE ? THEN 2
+          WHEN LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ? THEN 0
+          WHEN LOWER(IFNULL(c.DNI_CIF,'')) LIKE ? THEN 1
+          WHEN LOWER(IFNULL(c.Email,'')) LIKE ? THEN 2
           ELSE 3
         END,
         c.Nombre_Razon_Social ASC
