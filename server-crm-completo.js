@@ -7918,8 +7918,11 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
       OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
       OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
+      OR LOWER(IFNULL(c.CodigoPostal,'')) LIKE ?
+      OR LOWER(IFNULL(c.NomContacto,'')) LIKE ?
+      OR LOWER(IFNULL(c.Observaciones,'')) LIKE ?
     )`);
-    params.push(qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike);
+    params.push(qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike);
     
     const limit = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
 
@@ -7935,6 +7938,8 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         c.Direccion,
         c.Poblacion,
         c.CodigoPostal,
+        c.NomContacto,
+        c.Observaciones,
         c.Tarifa
       FROM clientes c
       WHERE ${where.join(' AND ')}
@@ -7962,7 +7967,8 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       Poblacion: r.Poblacion,
       Provincia: null,
       CodigoPostal: r.CodigoPostal,
-      NomContacto: null,
+      NomContacto: r.NomContacto || null,
+      Observaciones: r.Observaciones || null,
       Tarifa: r.Tarifa ?? 0
     }));
 

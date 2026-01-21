@@ -1137,10 +1137,22 @@
             if (totalFiltrados && loadedCount >= totalFiltrados) return;
             isLoadingMore = true;
             updateLoadMoreUI();
+            const info = document.getElementById('loadMoreInfo');
             try {
+                if (info) info.textContent = 'Cargando...';
+                const ac = new AbortController();
+                const t = setTimeout(() => ac.abort(), 20000);
                 const qs = buildQueryParams({ offset: loadedCount, limit: pageSize });
-                const res = await fetch(`/api/clientes/paged?${qs}`, { headers: { 'Accept': 'application/json' } });
+                const res = await fetch(`/api/clientes/paged?${qs}`, { headers: { 'Accept': 'application/json' }, signal: ac.signal });
+                clearTimeout(t);
+                if (!res.ok) {
+                    const txt = await res.text().catch(() => '');
+                    throw new Error(`HTTP ${res.status}${txt ? `: ${txt.slice(0, 200)}` : ''}`);
+                }
                 const data = await res.json();
+                if (data && data.success === false) {
+                    throw new Error(data.error || 'Respuesta no válida del servidor');
+                }
                 const list = data && data.clientes ? data.clientes : [];
                 const tbody = document.getElementById('clientesTableBody');
                 if (tbody && list.length > 0) {
@@ -1149,9 +1161,13 @@
                     loadedCount += list.length;
                     const clientesMostrados = document.getElementById('clientesMostrados');
                     if (clientesMostrados) clientesMostrados.textContent = String(loadedCount);
+                } else if (tbody && list.length === 0) {
+                    // Nada más que cargar
+                    if (info) info.textContent = 'No hay más clientes para cargar.';
                 }
             } catch (e) {
                 console.error('❌ Error cargando más clientes:', e);
+                if (info) info.textContent = `Error: ${e && e.name === 'AbortError' ? 'Timeout (20s)' : (e.message || 'desconocido')}`;
             } finally {
                 isLoadingMore = false;
                 updateLoadMoreUI();
