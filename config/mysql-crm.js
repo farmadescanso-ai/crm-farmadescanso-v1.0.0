@@ -748,8 +748,9 @@ class MySQLCRM {
       }
 
       // Orden estable (evita saltos entre páginas)
-      sql += ' ORDER BY c.Id ASC LIMIT ? OFFSET ?';
-      params.push(limit, offset);
+      // Nota: algunos drivers/entornos dan problemas con placeholders en LIMIT/OFFSET.
+      // Como limit/offset ya están saneados a números, los interpolamos directamente.
+      sql += ` ORDER BY c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
 
       const rows = await this.query(sql, params);
       return rows;

@@ -1395,6 +1395,7 @@
                 const clientesMostrados = document.getElementById('clientesMostrados');
                 const busquedaActiva = document.getElementById('busquedaActiva');
                 const tbody = document.getElementById('clientesTableBody');
+                const searchInfo = document.getElementById('searchInfo');
                 if (!tbody) return;
                 
                 if (!term || term.length < 2) {
@@ -1402,12 +1403,25 @@
                     isSearchRemoteActive = false;
                     updateLoadMoreUI();
                     if (busquedaActiva) busquedaActiva.textContent = 'Inactiva';
+                    if (searchInfo) {
+                        searchInfo.innerHTML = '<i class="fas fa-brain text-primary"></i>';
+                        searchInfo.title = 'Búsqueda inteligente activa - Busca en todos los campos';
+                    }
                     return;
                 }
                 
                 isSearchRemoteActive = true;
                 updateLoadMoreUI();
-                if (busquedaActiva) busquedaActiva.textContent = 'Activa...';
+                if (busquedaActiva) busquedaActiva.textContent = 'Buscando...';
+                if (searchInfo) {
+                    searchInfo.innerHTML = '<span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>';
+                    searchInfo.title = 'Buscando en toda la base de datos...';
+                }
+                // Feedback inmediato en tabla (evita sensación de “se quedó colgado”)
+                tbody.innerHTML = `<tr><td colspan="30" class="text-center text-muted">
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Buscando en toda la base de datos...
+                </td></tr>`;
                 
                 // Cancelar búsqueda en curso si existe
                 if (searchAbortController) searchAbortController.abort();
@@ -1416,6 +1430,10 @@
                 try {
                     const qs = buildQueryParams({ q: term, limit: 100 });
                     const res = await fetch(`/api/clientes/buscar?${qs}`, { signal: searchAbortController.signal });
+                    if (!res.ok) {
+                        const txt = await res.text().catch(() => '');
+                        throw new Error(`HTTP ${res.status}${txt ? `: ${txt.slice(0, 200)}` : ''}`);
+                    }
                     const data = await res.json();
                     const list = data && data.clientes ? data.clientes : [];
                     
@@ -1426,10 +1444,21 @@
                     
                     if (clientesMostrados) clientesMostrados.textContent = String(list.length);
                     if (busquedaActiva) busquedaActiva.textContent = `Activa (${list.length} resultados)`;
+                    if (searchInfo) {
+                        searchInfo.innerHTML = '<i class="fas fa-brain text-primary"></i>';
+                        searchInfo.title = 'Búsqueda inteligente activa - Busca en todos los campos';
+                    }
                 } catch (e) {
                     if (e.name === 'AbortError') return;
                     console.error('❌ Error búsqueda remota:', e);
                     if (busquedaActiva) busquedaActiva.textContent = 'Error';
+                    tbody.innerHTML = `<tr><td colspan="30" class="text-center text-danger">
+                        Error en búsqueda: ${escapeHtml(e && e.message ? e.message : 'Error desconocido')}
+                    </td></tr>`;
+                    if (searchInfo) {
+                        searchInfo.innerHTML = '<i class="fas fa-exclamation-triangle text-danger"></i>';
+                        searchInfo.title = 'Error realizando la búsqueda';
+                    }
                 }
             }
             
