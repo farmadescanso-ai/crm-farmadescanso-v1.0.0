@@ -116,3 +116,18 @@ output/
 
 # Credenciales / SQL sensibles (NO subir)
 scripts/configurar-usuario-mysql-remoto.sql
+
+# ============================================
+# Archivos locales en raíz (utilidades puntuales)
+# ============================================
+/*.sql
+/*.bat
+/corregir-archivo-export.js
+/exportar-bd-local-phpmyadmin.js
+
+# ============================================
+# Scripts auxiliares locales (si se quieren versionar en el futuro, quitar estas líneas)
+# ============================================
+/scripts/*.js
+/scripts/*.bat
+/scripts/*.sql
