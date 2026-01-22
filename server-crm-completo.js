@@ -8897,7 +8897,8 @@ app.post('/dashboard/comerciales', requireAuth, requireAdmin, async (req, res) =
 
     const result = await crm.createComercial(payload);
     const comercialId = result.insertId;
-    res.redirect(`/dashboard/comerciales/${comercialId}?success=comercial_creado`);
+    // UX: tras crear, volver al listado de comerciales
+    res.redirect(`/dashboard/comerciales?success=comercial_creado`);
   } catch (error) {
     console.error('Error creando comercial:', error);
     // Obtener provincias para el select
