@@ -3171,6 +3171,17 @@ class MySQLCRM {
 
   async createAsignacion(data) {
     try {
+      // Validación defensiva (evita errores SQL tipo "Field 'Id_CodigoPostal' doesn't have a default value")
+      if (!data || !data.Id_Comercial) {
+        throw new Error('Id_Comercial es obligatorio');
+      }
+      if (!data.Id_CodigoPostal) {
+        throw new Error('Id_CodigoPostal es obligatorio');
+      }
+      if (!data.Id_Marca) {
+        throw new Error('Id_Marca es obligatorio');
+      }
+
       // Verificar si la tabla existe
       const tableExists = await this.query(`
         SELECT COUNT(*) as count 

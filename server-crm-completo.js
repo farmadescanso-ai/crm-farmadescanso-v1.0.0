@@ -5714,10 +5714,24 @@ console.log('✅ [RUTAS] Registrando POST /dashboard/ajustes/asignaciones-comerc
 app.post('/dashboard/ajustes/asignaciones-comerciales', requireAuth, requireAdmin, async (req, res) => {
   try {
     const user = req.comercial || req.session.comercial;
+    const Id_Comercial = req.body.Id_Comercial ? Number(req.body.Id_Comercial) : null;
+    const Id_CodigoPostal = req.body.Id_CodigoPostal ? Number(req.body.Id_CodigoPostal) : null;
+    const Id_Marca = req.body.Id_Marca ? Number(req.body.Id_Marca) : null;
+
+    if (!Number.isFinite(Id_Comercial) || Id_Comercial <= 0) {
+      return res.redirect('/dashboard/ajustes/asignaciones-comerciales?error=' + encodeURIComponent('El comercial es obligatorio'));
+    }
+    if (!Number.isFinite(Id_CodigoPostal) || Id_CodigoPostal <= 0) {
+      return res.redirect('/dashboard/ajustes/asignaciones-comerciales?error=' + encodeURIComponent('El código postal es obligatorio'));
+    }
+    if (!Number.isFinite(Id_Marca) || Id_Marca <= 0) {
+      return res.redirect('/dashboard/ajustes/asignaciones-comerciales?error=' + encodeURIComponent('La marca es obligatoria'));
+    }
+
     const data = {
-      Id_Comercial: req.body.Id_Comercial,
-      Id_CodigoPostal: req.body.Id_CodigoPostal,
-      Id_Marca: req.body.Id_Marca,
+      Id_Comercial,
+      Id_CodigoPostal,
+      Id_Marca,
       FechaInicio: req.body.FechaInicio || null,
       FechaFin: req.body.FechaFin || null,
       Activo: req.body.Activo !== undefined ? req.body.Activo === '1' : true,
@@ -5741,14 +5755,25 @@ app.post('/dashboard/ajustes/asignaciones-comerciales/:id', requireAuth, require
     const id = req.params.id;
     const data = {};
     
-    if (req.body.Id_Comercial !== undefined) data.Id_Comercial = req.body.Id_Comercial;
-    if (req.body.Id_CodigoPostal !== undefined) data.Id_CodigoPostal = req.body.Id_CodigoPostal;
-    if (req.body.Id_Marca !== undefined) data.Id_Marca = req.body.Id_Marca;
+    if (req.body.Id_Comercial !== undefined) data.Id_Comercial = req.body.Id_Comercial ? Number(req.body.Id_Comercial) : null;
+    if (req.body.Id_CodigoPostal !== undefined) data.Id_CodigoPostal = req.body.Id_CodigoPostal ? Number(req.body.Id_CodigoPostal) : null;
+    if (req.body.Id_Marca !== undefined) data.Id_Marca = req.body.Id_Marca ? Number(req.body.Id_Marca) : null;
     if (req.body.FechaInicio !== undefined) data.FechaInicio = req.body.FechaInicio || null;
     if (req.body.FechaFin !== undefined) data.FechaFin = req.body.FechaFin || null;
     if (req.body.Activo !== undefined) data.Activo = req.body.Activo === '1';
     if (req.body.Prioridad !== undefined) data.Prioridad = req.body.Prioridad || 0;
     if (req.body.Observaciones !== undefined) data.Observaciones = req.body.Observaciones || null;
+    
+    // Validar si vienen estos campos (evita INSERT/UPDATE con NULL en campos NOT NULL)
+    if (data.Id_Comercial !== undefined && (!Number.isFinite(data.Id_Comercial) || data.Id_Comercial <= 0)) {
+      return res.redirect('/dashboard/ajustes/asignaciones-comerciales?error=' + encodeURIComponent('El comercial es obligatorio'));
+    }
+    if (data.Id_CodigoPostal !== undefined && (!Number.isFinite(data.Id_CodigoPostal) || data.Id_CodigoPostal <= 0)) {
+      return res.redirect('/dashboard/ajustes/asignaciones-comerciales?error=' + encodeURIComponent('El código postal es obligatorio'));
+    }
+    if (data.Id_Marca !== undefined && (!Number.isFinite(data.Id_Marca) || data.Id_Marca <= 0)) {
+      return res.redirect('/dashboard/ajustes/asignaciones-comerciales?error=' + encodeURIComponent('La marca es obligatoria'));
+    }
     
     await crm.updateAsignacion(id, data);
     res.redirect('/dashboard/ajustes/asignaciones-comerciales?success=' + encodeURIComponent('Asignación actualizada correctamente'));
