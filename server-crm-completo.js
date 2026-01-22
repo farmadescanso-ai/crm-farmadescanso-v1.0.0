@@ -8813,6 +8813,12 @@ app.get('/dashboard/comerciales/:id', requireAuth, requireAdmin, async (req, res
 
 app.post('/dashboard/comerciales', requireAuth, requireAdmin, async (req, res) => {
   try {
+    const fijoMensualRaw = req.body.fijo_mensual ?? req.body.fijoMensual ?? req.body.FijoMensual ?? req.body.FIJO_MENSUAL;
+    let fijo_mensual = 0;
+    if (fijoMensualRaw !== undefined && fijoMensualRaw !== null && String(fijoMensualRaw).trim() !== '') {
+      const n = Number(String(fijoMensualRaw).replace(',', '.'));
+      fijo_mensual = Number.isFinite(n) ? n : 0;
+    }
     const payload = {
       Nombre: req.body.Nombre,
       Email: req.body.Email,
@@ -8823,7 +8829,8 @@ app.post('/dashboard/comerciales', requireAuth, requireAdmin, async (req, res) =
       Direccion: req.body.Direccion || null,
       CodigoPostal: req.body.CodigoPostal || null,
       Poblacion: req.body.Poblacion || null,
-      Id_Provincia: req.body.Id_Provincia || null
+      Id_Provincia: req.body.Id_Provincia || null,
+      fijo_mensual
     };
     
     // Si hay código postal pero no provincia, intentar establecerla automáticamente
@@ -8842,10 +8849,9 @@ app.post('/dashboard/comerciales', requireAuth, requireAdmin, async (req, res) =
     }
     
     if (!payload.Nombre || !payload.Email) {
-      return       // Obtener provincias para el select
+      // Obtener provincias para el select
       const provincias = await crm.getProvincias('ES').catch(() => []);
-      
-      res.render('dashboard/comercial-editar', {
+      return res.render('dashboard/comercial-editar', {
         title: 'Nuevo Comercial - Farmadescaso',
         user: req.comercial || req.session.comercial,
         comercial: req.body,
@@ -8894,6 +8900,16 @@ app.post('/dashboard/comerciales/:id', requireAuth, requireAdmin, async (req, re
     if (req.body.CodigoPostal !== undefined) payload.CodigoPostal = req.body.CodigoPostal || null;
     if (req.body.Poblacion !== undefined) payload.Poblacion = req.body.Poblacion || null;
     if (req.body.Id_Provincia !== undefined) payload.Id_Provincia = req.body.Id_Provincia || null;
+
+    if (req.body.fijo_mensual !== undefined || req.body.fijoMensual !== undefined || req.body.FijoMensual !== undefined || req.body.FIJO_MENSUAL !== undefined) {
+      const fijoMensualRaw = req.body.fijo_mensual ?? req.body.fijoMensual ?? req.body.FijoMensual ?? req.body.FIJO_MENSUAL;
+      let fijo_mensual = 0;
+      if (fijoMensualRaw !== undefined && fijoMensualRaw !== null && String(fijoMensualRaw).trim() !== '') {
+        const n = Number(String(fijoMensualRaw).replace(',', '.'));
+        fijo_mensual = Number.isFinite(n) ? n : 0;
+      }
+      payload.fijo_mensual = fijo_mensual;
+    }
     
     // Si hay código postal pero no provincia, intentar establecerla automáticamente
     if (payload.CodigoPostal && !payload.Id_Provincia) {

@@ -258,8 +258,15 @@ class MySQLCRM {
         await this.connect();
       }
       
-      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      // fijo_mensual es NOT NULL en algunos entornos; siempre insertar un valor (por defecto 0)
+      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, fijo_mensual) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const fijoMensualRaw = payload.fijo_mensual ?? payload.fijoMensual ?? payload.FijoMensual;
+      let fijoMensual = 0;
+      if (fijoMensualRaw !== undefined && fijoMensualRaw !== null && String(fijoMensualRaw).trim() !== '') {
+        const n = Number(String(fijoMensualRaw).replace(',', '.'));
+        fijoMensual = Number.isFinite(n) ? n : 0;
+      }
       const params = [
         payload.Nombre || payload.nombre || '',
         payload.Email || payload.email || '',
@@ -270,7 +277,8 @@ class MySQLCRM {
         payload.Direccion || payload.direccion || null,
         payload.CodigoPostal || payload.codigoPostal || null,
         payload.Poblacion || payload.poblacion || null,
-        payload.Id_Provincia || payload.id_Provincia || null
+        payload.Id_Provincia || payload.id_Provincia || null,
+        fijoMensual
       ];
       const [result] = await this.pool.execute(sql, params);
       return { insertId: result.insertId, ...result };

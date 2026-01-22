@@ -68,6 +68,18 @@
                                 </select>
                                 <small class="text-muted">Selecciona el rol del comercial en el sistema</small>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Fijo mensual (€)</label>
+                                <input
+                                    type="number"
+                                    name="fijo_mensual"
+                                    class="form-control"
+                                    min="0"
+                                    step="0.01"
+                                    value="<%= comercial ? ( (comercial.fijo_mensual !== undefined && comercial.fijo_mensual !== null && String(comercial.fijo_mensual) !== '') ? comercial.fijo_mensual : (comercial.FijoMensual || 0) ) : 0 %>"
+                                >
+                                <small class="text-muted">Si lo dejas vacío, se guardará como 0.</small>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-semibold">Móvil</label>
