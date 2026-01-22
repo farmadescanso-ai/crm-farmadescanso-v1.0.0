@@ -269,6 +269,40 @@ class MySQLCRM {
             const rows = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
             if (rows && rows.length > 0 && rows[0].id) {
               idCodigoPostal = rows[0].id;
+            } else {
+              // Si no existe, crearlo automáticamente (evita error NOT NULL en Id_CodigoPostal)
+              let provinciaNombre = payload.Provincia || payload.provincia || null;
+              const idProvincia = payload.Id_Provincia || payload.id_Provincia || null;
+              if (!provinciaNombre && idProvincia) {
+                try {
+                  const provRows = await this.query('SELECT Nombre FROM provincias WHERE id = ? LIMIT 1', [idProvincia]);
+                  provinciaNombre = provRows?.[0]?.Nombre || null;
+                } catch (e) {
+                  // opcional
+                }
+              }
+              const localidad = payload.Poblacion || payload.poblacion || null;
+              try {
+                const creado = await this.createCodigoPostal({
+                  CodigoPostal: cpLimpio,
+                  Localidad: localidad,
+                  Provincia: provinciaNombre,
+                  Id_Provincia: idProvincia || null,
+                  ComunidadAutonoma: null,
+                  Latitud: null,
+                  Longitud: null,
+                  Activo: true
+                });
+                if (creado && creado.insertId) {
+                  idCodigoPostal = creado.insertId;
+                }
+              } catch (e) {
+                // Si falló por duplicado o carrera, re-intentar select
+                const retry = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+                if (retry && retry.length > 0 && retry[0].id) {
+                  idCodigoPostal = retry[0].id;
+                }
+              }
             }
           } catch (e) {
             // No bloquear aquí: se manejará con error claro abajo si sigue faltando.
@@ -277,7 +311,7 @@ class MySQLCRM {
         }
       }
       if (!idCodigoPostal) {
-        throw new Error('No se pudo resolver Id_CodigoPostal para el comercial. Revisa el Código Postal (debe existir en Codigos_Postales).');
+        throw new Error('No se pudo resolver/crear Id_CodigoPostal para el comercial. Revisa el Código Postal.');
       }
 
       const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual) 
@@ -324,6 +358,41 @@ class MySQLCRM {
             const rows = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
             if (rows && rows.length > 0 && rows[0].id) {
               payload.Id_CodigoPostal = rows[0].id;
+            } else {
+              // Crear el CP si no existe (usar Id_Provincia si viene; si no, inferir por prefijo 2 dígitos)
+              let idProvincia = payload.Id_Provincia || payload.id_Provincia || null;
+              if (!idProvincia && cpLimpio.length >= 2) {
+                const pref = Number(cpLimpio.slice(0, 2));
+                if (Number.isFinite(pref) && pref >= 1 && pref <= 52) idProvincia = pref;
+              }
+              let provinciaNombre = payload.Provincia || payload.provincia || null;
+              if (!provinciaNombre && idProvincia) {
+                try {
+                  const provRows = await this.query('SELECT Nombre FROM provincias WHERE id = ? LIMIT 1', [idProvincia]);
+                  provinciaNombre = provRows?.[0]?.Nombre || null;
+                } catch (e) {
+                  // opcional
+                }
+              }
+              const localidad = payload.Poblacion || payload.poblacion || null;
+              try {
+                const creado = await this.createCodigoPostal({
+                  CodigoPostal: cpLimpio,
+                  Localidad: localidad,
+                  Provincia: provinciaNombre,
+                  Id_Provincia: idProvincia || null,
+                  ComunidadAutonoma: null,
+                  Latitud: null,
+                  Longitud: null,
+                  Activo: true
+                });
+                if (creado && creado.insertId) payload.Id_CodigoPostal = creado.insertId;
+              } catch (e) {
+                const retry = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+                if (retry && retry.length > 0 && retry[0].id) {
+                  payload.Id_CodigoPostal = retry[0].id;
+                }
+              }
             }
           } catch (e) {
             console.warn('⚠️ No se pudo resolver Id_CodigoPostal en updateComercial:', e.message);
