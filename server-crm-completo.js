@@ -8855,7 +8855,11 @@ app.post('/dashboard/comerciales', requireAuth, requireAdmin, async (req, res) =
       CodigoPostal: req.body.CodigoPostal || null,
       Poblacion: req.body.Poblacion || null,
       Id_Provincia: req.body.Id_Provincia || null,
-      fijo_mensual
+      fijo_mensual,
+      // Evita error MySQL "Field 'plataforma_reunion_preferida' doesn't have a default value"
+      plataforma_reunion_preferida: (req.body.plataforma_reunion_preferida !== undefined)
+        ? (String(req.body.plataforma_reunion_preferida).trim() || 'meet')
+        : 'meet'
     };
     
     // Si hay código postal pero no provincia, intentar establecerla automáticamente

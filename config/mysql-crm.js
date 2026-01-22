@@ -327,8 +327,14 @@ class MySQLCRM {
         throw new Error('No se pudo resolver/crear Id_CodigoPostal para el comercial. Revisa el Código Postal.');
       }
 
-      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      // plataforma_reunion_preferida es NOT NULL en algunos entornos; siempre insertar un valor (por defecto 'meet')
+      const plataformaPreferidaRaw = payload.plataforma_reunion_preferida ?? payload.PlataformaReunionPreferida ?? null;
+      const plataformaPreferida = (plataformaPreferidaRaw !== undefined && plataformaPreferidaRaw !== null && String(plataformaPreferidaRaw).trim() !== '')
+        ? String(plataformaPreferidaRaw).trim()
+        : 'meet';
+
+      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual, plataforma_reunion_preferida) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const fijoMensualRaw = payload.fijo_mensual ?? payload.fijoMensual ?? payload.FijoMensual;
       let fijoMensual = 0;
       if (fijoMensualRaw !== undefined && fijoMensualRaw !== null && String(fijoMensualRaw).trim() !== '') {
@@ -347,7 +353,8 @@ class MySQLCRM {
         payload.Poblacion || payload.poblacion || null,
         payload.Id_Provincia || payload.id_Provincia || null,
         idCodigoPostal,
-        fijoMensual
+        fijoMensual,
+        plataformaPreferida
       ];
       const [result] = await this.pool.execute(sql, params);
       return { insertId: result.insertId, ...result };
