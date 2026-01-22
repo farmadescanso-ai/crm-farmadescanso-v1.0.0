@@ -259,8 +259,29 @@ class MySQLCRM {
       }
       
       // fijo_mensual es NOT NULL en algunos entornos; siempre insertar un valor (por defecto 0)
-      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, fijo_mensual) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const codigoPostalTexto = (payload.CodigoPostal || payload.codigoPostal || '').toString().trim();
+      // Resolver Id_CodigoPostal (NOT NULL en algunos entornos)
+      let idCodigoPostal = payload.Id_CodigoPostal || payload.id_CodigoPostal || payload.IdCodigoPostal || null;
+      if (!idCodigoPostal && codigoPostalTexto) {
+        const cpLimpio = codigoPostalTexto.replace(/[^0-9]/g, '').slice(0, 5);
+        if (cpLimpio.length >= 4) {
+          try {
+            const rows = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+            if (rows && rows.length > 0 && rows[0].id) {
+              idCodigoPostal = rows[0].id;
+            }
+          } catch (e) {
+            // No bloquear aquí: se manejará con error claro abajo si sigue faltando.
+            console.warn('⚠️ No se pudo resolver Id_CodigoPostal:', e.message);
+          }
+        }
+      }
+      if (!idCodigoPostal) {
+        throw new Error('No se pudo resolver Id_CodigoPostal para el comercial. Revisa el Código Postal (debe existir en Codigos_Postales).');
+      }
+
+      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const fijoMensualRaw = payload.fijo_mensual ?? payload.fijoMensual ?? payload.FijoMensual;
       let fijoMensual = 0;
       if (fijoMensualRaw !== undefined && fijoMensualRaw !== null && String(fijoMensualRaw).trim() !== '') {
@@ -275,9 +296,10 @@ class MySQLCRM {
         payload.Roll ? (Array.isArray(payload.Roll) ? JSON.stringify(payload.Roll) : payload.Roll) : '["Comercial"]',
         payload.Movil || payload.movil || null,
         payload.Direccion || payload.direccion || null,
-        payload.CodigoPostal || payload.codigoPostal || null,
+        codigoPostalTexto || null,
         payload.Poblacion || payload.poblacion || null,
         payload.Id_Provincia || payload.id_Provincia || null,
+        idCodigoPostal,
         fijoMensual
       ];
       const [result] = await this.pool.execute(sql, params);
@@ -292,6 +314,22 @@ class MySQLCRM {
     try {
       const updates = [];
       const params = [];
+      
+      // Si se actualiza el CódigoPostal y no viene Id_CodigoPostal, resolverlo
+      if (payload.CodigoPostal !== undefined && payload.Id_CodigoPostal === undefined) {
+        const codigoPostalTexto = (payload.CodigoPostal || '').toString().trim();
+        const cpLimpio = codigoPostalTexto.replace(/[^0-9]/g, '').slice(0, 5);
+        if (cpLimpio) {
+          try {
+            const rows = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+            if (rows && rows.length > 0 && rows[0].id) {
+              payload.Id_CodigoPostal = rows[0].id;
+            }
+          } catch (e) {
+            console.warn('⚠️ No se pudo resolver Id_CodigoPostal en updateComercial:', e.message);
+          }
+        }
+      }
       
       if (payload.Nombre !== undefined) {
         updates.push('Nombre = ?');
@@ -325,6 +363,10 @@ class MySQLCRM {
       if (payload.CodigoPostal !== undefined) {
         updates.push('CodigoPostal = ?');
         params.push(payload.CodigoPostal);
+      }
+      if (payload.Id_CodigoPostal !== undefined) {
+        updates.push('Id_CodigoPostal = ?');
+        params.push(payload.Id_CodigoPostal || null);
       }
       if (payload.Poblacion !== undefined) {
         updates.push('Poblacion = ?');
