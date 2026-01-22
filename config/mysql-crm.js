@@ -258,6 +258,19 @@ class MySQLCRM {
         await this.connect();
       }
       
+      // Resolver nombre real de la tabla de códigos postales (en algunos servidores MySQL es case-sensitive)
+      const cpTableRows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'codigos_postales'
+         LIMIT 1`
+      );
+      const codigosPostalesTable = cpTableRows?.[0]?.name;
+      if (!codigosPostalesTable) {
+        throw new Error('No existe la tabla de códigos postales (Codigos_Postales/codigos_postales) en la BD.');
+      }
+
       // fijo_mensual es NOT NULL en algunos entornos; siempre insertar un valor (por defecto 0)
       const codigoPostalTexto = (payload.CodigoPostal || payload.codigoPostal || '').toString().trim();
       // Resolver Id_CodigoPostal (NOT NULL en algunos entornos)
@@ -266,7 +279,7 @@ class MySQLCRM {
         const cpLimpio = codigoPostalTexto.replace(/[^0-9]/g, '').slice(0, 5);
         if (cpLimpio.length >= 4) {
           try {
-            const rows = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+            const rows = await this.query(`SELECT id FROM ${codigosPostalesTable} WHERE CodigoPostal = ? LIMIT 1`, [cpLimpio]);
             if (rows && rows.length > 0 && rows[0].id) {
               idCodigoPostal = rows[0].id;
             } else {
@@ -298,7 +311,7 @@ class MySQLCRM {
                 }
               } catch (e) {
                 // Si falló por duplicado o carrera, re-intentar select
-                const retry = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+                const retry = await this.query(`SELECT id FROM ${codigosPostalesTable} WHERE CodigoPostal = ? LIMIT 1`, [cpLimpio]);
                 if (retry && retry.length > 0 && retry[0].id) {
                   idCodigoPostal = retry[0].id;
                 }
@@ -349,13 +362,26 @@ class MySQLCRM {
       const updates = [];
       const params = [];
       
+      // Resolver nombre real de la tabla de códigos postales (en algunos servidores MySQL es case-sensitive)
+      const cpTableRows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'codigos_postales'
+         LIMIT 1`
+      );
+      const codigosPostalesTable = cpTableRows?.[0]?.name;
+
       // Si se actualiza el CódigoPostal y no viene Id_CodigoPostal, resolverlo
       if (payload.CodigoPostal !== undefined && payload.Id_CodigoPostal === undefined) {
         const codigoPostalTexto = (payload.CodigoPostal || '').toString().trim();
         const cpLimpio = codigoPostalTexto.replace(/[^0-9]/g, '').slice(0, 5);
         if (cpLimpio) {
           try {
-            const rows = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+            if (!codigosPostalesTable) {
+              throw new Error('No existe la tabla de códigos postales (Codigos_Postales/codigos_postales) en la BD.');
+            }
+            const rows = await this.query(`SELECT id FROM ${codigosPostalesTable} WHERE CodigoPostal = ? LIMIT 1`, [cpLimpio]);
             if (rows && rows.length > 0 && rows[0].id) {
               payload.Id_CodigoPostal = rows[0].id;
             } else {
@@ -388,7 +414,7 @@ class MySQLCRM {
                 });
                 if (creado && creado.insertId) payload.Id_CodigoPostal = creado.insertId;
               } catch (e) {
-                const retry = await this.query('SELECT id FROM Codigos_Postales WHERE CodigoPostal = ? LIMIT 1', [cpLimpio]);
+                const retry = await this.query(`SELECT id FROM ${codigosPostalesTable} WHERE CodigoPostal = ? LIMIT 1`, [cpLimpio]);
                 if (retry && retry.length > 0 && retry[0].id) {
                   payload.Id_CodigoPostal = retry[0].id;
                 }
@@ -3017,20 +3043,21 @@ class MySQLCRM {
 
   async createCodigoPostal(data) {
     try {
-      // Verificar si la tabla existe
-      const tableExists = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM information_schema.tables 
-        WHERE table_schema = DATABASE() 
-        AND table_name = 'Codigos_Postales'
-      `);
-      
-      if (!tableExists || tableExists.length === 0 || tableExists[0].count === 0) {
-        throw new Error('La tabla Codigos_Postales no existe. Ejecuta el script crear-tabla-codigos-postales.sql primero.');
+      // Resolver nombre real de la tabla de códigos postales (en algunos servidores MySQL es case-sensitive)
+      const cpTableRows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'codigos_postales'
+         LIMIT 1`
+      );
+      const codigosPostalesTable = cpTableRows?.[0]?.name;
+      if (!codigosPostalesTable) {
+        throw new Error('La tabla de códigos postales no existe (Codigos_Postales/codigos_postales).');
       }
       
       const sql = `
-        INSERT INTO Codigos_Postales 
+        INSERT INTO ${codigosPostalesTable}
         (CodigoPostal, Localidad, Provincia, Id_Provincia, ComunidadAutonoma, Latitud, Longitud, Activo)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `;
