@@ -1513,6 +1513,10 @@ router.get('/fijos-mensuales', async (req, res) => {
   console.log('🔍 [FIJOS-MENSUALES] Iniciando petición GET /fijos-mensuales');
   
   try {
+    const now = new Date();
+    const año = req.query.año ? parseInt(req.query.año) : now.getFullYear();
+    const mes = req.query.mes ? parseInt(req.query.mes) : (now.getMonth() + 1);
+
     console.log('📊 [FIJOS-MENSUALES] Obteniendo comerciales...');
     const comerciales = await crm.getComerciales() || [];
     console.log(`✅ [FIJOS-MENSUALES] Comerciales obtenidos: ${comerciales.length}`);
@@ -1547,7 +1551,8 @@ router.get('/fijos-mensuales', async (req, res) => {
     let fijosMensuales = [];
     try {
       console.log('📊 [FIJOS-MENSUALES] Obteniendo fijos mensuales...');
-      fijosMensuales = await comisionesCRM.getFijosMensualesMarca() || [];
+      // Nuevo: por periodo (año/mes). Si la tabla no existe, hace fallback interno a la tabla antigua.
+      fijosMensuales = await comisionesCRM.getFijosMensualesMarcaPeriodo({ año, mes }) || [];
       console.log(`✅ [FIJOS-MENSUALES] Fijos mensuales obtenidos: ${fijosMensuales.length}`);
     } catch (error) {
       console.error('❌ [FIJOS-MENSUALES] Error obteniendo fijos mensuales:', error.message);
@@ -1580,7 +1585,7 @@ router.get('/fijos-mensuales', async (req, res) => {
     // Solo devolver JSON si se solicita explícitamente (no acepta HTML)
     if (req.accepts('json') && !req.accepts('html')) {
       console.log('📤 [FIJOS-MENSUALES] Devolviendo JSON');
-      return res.json({ success: true, data: { comerciales, marcas, fijosMensuales } });
+      return res.json({ success: true, data: { comerciales, marcas, fijosMensuales, filters: { año, mes } } });
     }
 
     const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
@@ -1599,6 +1604,7 @@ router.get('/fijos-mensuales', async (req, res) => {
       fijosPorComercial: fijosPorComercial || {},
       esAdmin: esAdmin,
       currentPage: 'fijos-mensuales',
+      filters: { año, mes },
       req: req
     });
     console.log('✅ [FIJOS-MENSUALES] Vista renderizada correctamente');
@@ -1618,6 +1624,10 @@ router.get('/fijos-mensuales', async (req, res) => {
         fijosPorComercial: {},
         esAdmin: esAdmin,
         currentPage: 'fijos-mensuales',
+        filters: {
+          año: new Date().getFullYear(),
+          mes: new Date().getMonth() + 1
+        },
         req: req,
         error: error.message
       });
@@ -1635,18 +1645,31 @@ router.get('/fijos-mensuales', async (req, res) => {
 router.put('/fijos-mensuales/:comercialId', async (req, res) => {
   try {
     const comercialId = parseInt(req.params.comercialId);
-    const { marca_id, importe } = req.body;
+    const { marca_id, importe, año, mes } = req.body;
 
     if (!marca_id) {
       return res.status(400).json({ success: false, error: 'marca_id es requerido' });
     }
+    if (!año || !mes) {
+      return res.status(400).json({ success: false, error: 'año y mes son requeridos' });
+    }
 
     const marcaId = parseInt(marca_id);
     const importeNum = parseFloat(importe || 0);
+    const añoNum = parseInt(año);
+    const mesNum = parseInt(mes);
+    if (!Number.isFinite(añoNum) || añoNum < 2020 || añoNum > 2100) {
+      return res.status(400).json({ success: false, error: 'año inválido' });
+    }
+    if (!Number.isFinite(mesNum) || mesNum < 1 || mesNum > 12) {
+      return res.status(400).json({ success: false, error: 'mes inválido (1-12)' });
+    }
 
-    await comisionesCRM.saveFijoMensualMarca({
+    await comisionesCRM.saveFijoMensualMarcaPeriodo({
       comercial_id: comercialId,
       marca_id: marcaId,
+      año: añoNum,
+      mes: mesNum,
       importe: importeNum,
       activo: true
     });
@@ -1654,6 +1677,30 @@ router.put('/fijos-mensuales/:comercialId', async (req, res) => {
     res.json({ success: true, message: 'Fijo mensual actualizado correctamente' });
   } catch (error) {
     console.error('❌ Error actualizando fijo mensual:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Desactivar (soft delete) fijo mensual de un comercial por marca + periodo
+router.delete('/fijos-mensuales/:comercialId', async (req, res) => {
+  try {
+    const comercialId = parseInt(req.params.comercialId);
+    const { marca_id, año, mes } = req.body || {};
+
+    if (!marca_id || !año || !mes) {
+      return res.status(400).json({ success: false, error: 'marca_id, año y mes son requeridos' });
+    }
+
+    await comisionesCRM.disableFijoMensualMarcaPeriodo({
+      comercial_id: comercialId,
+      marca_id: parseInt(marca_id),
+      año: parseInt(año),
+      mes: parseInt(mes)
+    });
+
+    res.json({ success: true, message: 'Fijo mensual desactivado' });
+  } catch (error) {
+    console.error('❌ Error desactivando fijo mensual:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

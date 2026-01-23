@@ -131,3 +131,7 @@ scripts/configurar-usuario-mysql-remoto.sql
 /scripts/*.js
 /scripts/*.bat
 /scripts/*.sql
+
+# Whitelist: scripts de migración/estructura que SÍ queremos versionar
+!scripts/crear-tabla-fijos-mensuales-marca-periodo.sql
+!scripts/migrar-fijos-mensuales-marca-a-periodo-2026.sql

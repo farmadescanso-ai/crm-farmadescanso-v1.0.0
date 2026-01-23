@@ -17,7 +17,8 @@ class ComisionesCRM {
     };
     this.pool = null;
     this._cache = {
-      articulosHasMarcaColumn: null
+      articulosHasMarcaColumn: null,
+      fijosMensualesMarcaPeriodoTableExists: null
     };
   }
 
@@ -123,6 +124,20 @@ class ComisionesCRM {
   async tableExists(tableName) {
     const rows = await this.query(`SHOW TABLES LIKE ?`, [tableName]);
     return Array.isArray(rows) && rows.length > 0;
+  }
+
+  async hasFijosMensualesMarcaPeriodoTable() {
+    if (this._cache.fijosMensualesMarcaPeriodoTableExists !== null) {
+      return this._cache.fijosMensualesMarcaPeriodoTableExists;
+    }
+    try {
+      const exists = await this.tableExists('fijos_mensuales_marca_periodo');
+      this._cache.fijosMensualesMarcaPeriodoTableExists = !!exists;
+      return !!exists;
+    } catch (_) {
+      this._cache.fijosMensualesMarcaPeriodoTableExists = false;
+      return false;
+    }
   }
 
   async getConfigObjetivosVentaMensual({ plan = 'GEMAVIP', año }) {
@@ -1903,6 +1918,131 @@ class ComisionesCRM {
         return [];
       }
     }
+  }
+
+  /**
+   * Obtener fijos mensuales por marca para un periodo (año/mes) y/o comercial.
+   * Si la tabla nueva no existe, hace fallback a `fijos_mensuales_marca` (sin periodo).
+   */
+  async getFijosMensualesMarcaPeriodo(filters = {}) {
+    const hasPeriodo = await this.hasFijosMensualesMarcaPeriodoTable();
+
+    // Fallback a la tabla antigua (sin año/mes)
+    if (!hasPeriodo) {
+      return await this.getFijosMensualesMarca({
+        comercial_id: filters.comercial_id,
+        marca_id: filters.marca_id,
+        activo: filters.activo
+      });
+    }
+
+    try {
+      let sql = `
+        SELECT fmp.*,
+               c.Nombre as comercial_nombre,
+               c.Email as comercial_email,
+               m.Nombre as marca_nombre
+        FROM fijos_mensuales_marca_periodo fmp
+        INNER JOIN comerciales c ON fmp.comercial_id = c.id
+        INNER JOIN marcas m ON fmp.marca_id = m.id
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (filters.comercial_id !== undefined && filters.comercial_id !== null && filters.comercial_id !== '') {
+        sql += ' AND fmp.comercial_id = ?';
+        params.push(Number(filters.comercial_id));
+      }
+      if (filters.marca_id !== undefined && filters.marca_id !== null && filters.marca_id !== '') {
+        sql += ' AND fmp.marca_id = ?';
+        params.push(Number(filters.marca_id));
+      }
+      if (filters.año !== undefined && filters.año !== null && filters.año !== '') {
+        sql += ' AND fmp.año = ?';
+        params.push(Number(filters.año));
+      }
+      if (filters.mes !== undefined && filters.mes !== null && filters.mes !== '') {
+        sql += ' AND fmp.mes = ?';
+        params.push(Number(filters.mes));
+      }
+      if (filters.activo !== undefined) {
+        sql += ' AND fmp.activo = ?';
+        params.push(filters.activo ? 1 : 0);
+      }
+
+      sql += ' ORDER BY c.Nombre, fmp.año DESC, fmp.mes ASC, m.Nombre';
+      return await this.query(sql, params);
+    } catch (error) {
+      console.error('❌ Error obteniendo fijos mensuales por periodo:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Guardar/actualizar fijo mensual por marca + periodo (año/mes).
+   * Si la tabla nueva no existe, hace fallback a `saveFijoMensualMarca` (sin periodo).
+   */
+  async saveFijoMensualMarcaPeriodo(data) {
+    const hasPeriodo = await this.hasFijosMensualesMarcaPeriodoTable();
+    if (!hasPeriodo) {
+      return await this.saveFijoMensualMarca(data);
+    }
+
+    const comercialId = data.comercial_id || data.comercialId;
+    const marcaId = data.marca_id || data.marcaId;
+    const año = data.año ?? data.ano ?? data.anio;
+    const mes = data.mes;
+    const importe = parseFloat(data.importe || 0);
+    const activo = data.activo !== undefined ? (data.activo === true || data.activo === 1 || data.activo === 'true') : true;
+
+    if (!comercialId || !marcaId || año === undefined || año === null || mes === undefined || mes === null) {
+      throw new Error('comercial_id, marca_id, año y mes son requeridos');
+    }
+    if (!Number.isFinite(Number(mes)) || Number(mes) < 1 || Number(mes) > 12) {
+      throw new Error('mes inválido (1-12)');
+    }
+
+    const sql = `
+      INSERT INTO fijos_mensuales_marca_periodo
+        (comercial_id, marca_id, año, mes, importe, activo)
+      VALUES (?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        importe = VALUES(importe),
+        activo = VALUES(activo),
+        fecha_actualizacion = CURRENT_TIMESTAMP
+    `;
+    await this.execute(sql, [
+      Number(comercialId),
+      Number(marcaId),
+      Number(año),
+      Number(mes),
+      Number.isFinite(importe) ? importe : 0,
+      activo ? 1 : 0
+    ]);
+
+    return true;
+  }
+
+  /**
+   * Desactivar (soft delete) un fijo mensual por marca + periodo.
+   */
+  async disableFijoMensualMarcaPeriodo({ comercial_id, marca_id, año, mes }) {
+    const hasPeriodo = await this.hasFijosMensualesMarcaPeriodoTable();
+    if (!hasPeriodo) {
+      // En tabla antigua no hay periodo: desactivar el registro por comercial+marca.
+      const existente = await this.getFijoMensualMarca(comercial_id, marca_id);
+      if (!existente || !existente.id) return { success: true };
+      await this.execute('UPDATE fijos_mensuales_marca SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP WHERE id = ?', [existente.id]);
+      return { success: true };
+    }
+
+    await this.execute(
+      `UPDATE fijos_mensuales_marca_periodo
+       SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP
+       WHERE comercial_id = ? AND marca_id = ? AND año = ? AND mes = ?`,
+      [Number(comercial_id), Number(marca_id), Number(año), Number(mes)]
+    );
+    return { success: true };
   }
 
   /**

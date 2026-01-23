@@ -305,8 +305,8 @@ class CalculadorComisiones {
       // Obtener configuración de fijo mensual
       const configFijo = await comisionesCRM.getConfigFijoMensual();
 
-      // Obtener todos los fijos mensuales por marca del comercial
-      const fijosMarca = await this.obtenerFijosMensualesPorMarca(comercialId);
+      // Obtener todos los fijos mensuales por marca del comercial PARA EL PERIODO (año/mes)
+      const fijosMarca = await this.obtenerFijosMensualesPorMarca(comercialId, mes, año);
       
       let fijoAPagar = 0;
 
@@ -568,9 +568,13 @@ class CalculadorComisiones {
    * @param {number} comercialId - ID del comercial
    * @returns {Promise<Array>} Array de objetos con importe y marca_id
    */
-  async obtenerFijosMensualesPorMarca(comercialId) {
+  async obtenerFijosMensualesPorMarca(comercialId, mes = null, año = null) {
     try {
-      const fijos = await comisionesCRM.getFijosMensualesMarca({ comercial_id: comercialId });
+      const fijos = await comisionesCRM.getFijosMensualesMarcaPeriodo({
+        comercial_id: comercialId,
+        año: año,
+        mes: mes
+      });
       // Filtrar solo los activos
       return fijos.filter(f => f.activo === 1 || f.activo === true);
     } catch (error) {

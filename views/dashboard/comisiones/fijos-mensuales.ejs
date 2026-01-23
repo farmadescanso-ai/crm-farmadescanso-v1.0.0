@@ -54,6 +54,38 @@
                     </h1>
                 </div>
 
+                <!-- Filtros (año/mes) -->
+                <div class="card mb-4">
+                    <div class="card-body">
+                        <form method="GET" action="/dashboard/comisiones/fijos-mensuales" class="row g-3 align-items-end">
+                            <div class="col-md-2">
+                                <label class="form-label">Año</label>
+                                <input type="number" name="año" class="form-control" min="2020" max="2035"
+                                       value="<%= (filters && filters.año) ? filters.año : new Date().getFullYear() %>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Mes</label>
+                                <select name="mes" class="form-select">
+                                    <% const mesSel = (filters && filters.mes) ? Number(filters.mes) : (new Date().getMonth() + 1); %>
+                                    <% for (let i = 1; i <= 12; i++) { %>
+                                        <option value="<%= i %>" <%= mesSel === i ? 'selected' : '' %>>
+                                            <%= ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][i-1] %>
+                                        </option>
+                                    <% } %>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <button type="submit" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-filter me-1"></i>Filtrar
+                                </button>
+                            </div>
+                            <div class="col-md-4 text-muted small">
+                                Editas los importes del periodo seleccionado (año/mes) por comercial y marca.
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
                 <!-- Tabla de fijos mensuales por marca -->
                 <div class="card">
                     <div class="card-body">
@@ -193,9 +225,11 @@
         <% try { %>
         const marcas = <%- JSON.stringify(typeof marcas !== 'undefined' ? (marcas || []) : []) %>;
         const fijosPorComercial = <%- JSON.stringify(typeof fijosPorComercial !== 'undefined' ? (fijosPorComercial || {}) : {}) %>;
+        const filters = <%- JSON.stringify(typeof filters !== 'undefined' ? (filters || {}) : {}) %>;
         <% } catch (e) { %>
         const marcas = [];
         const fijosPorComercial = {};
+        const filters = {};
         console.error('Error serializando datos:', '<%= e.message %>');
         <% } %>
 
@@ -216,7 +250,7 @@
                 const input = document.querySelector(`.fijo-marca-input[data-marca-id="${marcaId}"]`);
                 if (input) {
                     // Mostrar el valor incluso si es 0
-                    input.value = importe || '';
+                    input.value = (importe !== undefined && importe !== null) ? importe : '';
                 }
             });
             
@@ -228,6 +262,8 @@
             e.preventDefault();
             const comercialId = parseInt(document.getElementById('editComercialId').value);
             const inputs = document.querySelectorAll('.fijo-marca-input');
+            const año = parseInt(filters?.año || (new Date().getFullYear()));
+            const mes = parseInt(filters?.mes || (new Date().getMonth() + 1));
             
             // Recopilar todos los fijos por marca
             const fijosPorMarca = [];
@@ -249,6 +285,8 @@
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
                         body: JSON.stringify({ 
+                            año: año,
+                            mes: mes,
                             marca_id: fijo.marca_id, 
                             importe: fijo.importe 
                         })
