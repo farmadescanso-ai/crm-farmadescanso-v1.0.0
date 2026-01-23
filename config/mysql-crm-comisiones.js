@@ -131,20 +131,13 @@ class ComisionesCRM {
       return this._cache.fijosMensualesMarcaHasPeriodoColumns;
     }
     try {
-      // Comprobar columnas `año` y `mes` en la tabla existente `fijos_mensuales_marca`
-      const rows = await this.query(
-        `
-        SELECT COUNT(*) AS c
-        FROM INFORMATION_SCHEMA.COLUMNS
-        WHERE TABLE_SCHEMA = DATABASE()
-          AND TABLE_NAME = 'fijos_mensuales_marca'
-          AND COLUMN_NAME IN ('año', 'mes')
-        `
+      // Evitar INFORMATION_SCHEMA (en algunos entornos falla por permisos).
+      // Probe barato: intentar usar las columnas. Si existen, la query funciona.
+      await this.query(
+        'SELECT año, mes FROM fijos_mensuales_marca WHERE 1=0'
       );
-      const count = Number(rows?.[0]?.c ?? 0);
-      const has = count >= 2;
-      this._cache.fijosMensualesMarcaHasPeriodoColumns = has;
-      return has;
+      this._cache.fijosMensualesMarcaHasPeriodoColumns = true;
+      return true;
     } catch (_) {
       // Si no hay permisos o falla, asumir que no existen para no romper
       this._cache.fijosMensualesMarcaHasPeriodoColumns = false;
@@ -1939,18 +1932,16 @@ class ComisionesCRM {
    * - Si NO existen columnas `año/mes`, hace fallback al comportamiento antiguo (sin periodo).
    */
   async getFijosMensualesMarcaPeriodo(filters = {}) {
-    const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
-
-    // Fallback a comportamiento antiguo (sin año/mes)
-    if (!hasPeriodoCols) {
-      return await this.getFijosMensualesMarca({
-        comercial_id: filters.comercial_id,
-        marca_id: filters.marca_id,
-        activo: filters.activo
-      });
-    }
-
     try {
+      const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
+      if (!hasPeriodoCols) {
+        return await this.getFijosMensualesMarca({
+          comercial_id: filters.comercial_id,
+          marca_id: filters.marca_id,
+          activo: filters.activo
+        });
+      }
+
       const año = filters.año !== undefined && filters.año !== null && filters.año !== '' ? Number(filters.año) : null;
       const mes = filters.mes !== undefined && filters.mes !== null && filters.mes !== '' ? Number(filters.mes) : null;
 
@@ -2029,6 +2020,16 @@ class ComisionesCRM {
 
       return rows;
     } catch (error) {
+      // Si por cualquier razón la query con año/mes falla (p.ej. columnas aún no creadas),
+      // caer al modo antiguo para no romper la pantalla.
+      if (String(error?.message || '').toLowerCase().includes('unknown column')) {
+        this._cache.fijosMensualesMarcaHasPeriodoColumns = false;
+        return await this.getFijosMensualesMarca({
+          comercial_id: filters.comercial_id,
+          marca_id: filters.marca_id,
+          activo: filters.activo
+        });
+      }
       console.error('❌ Error obteniendo fijos mensuales por periodo:', error.message);
       throw error;
     }
@@ -2041,11 +2042,6 @@ class ComisionesCRM {
    * - Si no, hace fallback al método antiguo (sin periodo).
    */
   async saveFijoMensualMarcaPeriodo(data) {
-    const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
-    if (!hasPeriodoCols) {
-      return await this.saveFijoMensualMarca(data);
-    }
-
     const comercialId = data.comercial_id || data.comercialId;
     const marcaId = data.marca_id || data.marcaId;
     const año = data.año ?? data.ano ?? data.anio;
@@ -2060,25 +2056,38 @@ class ComisionesCRM {
       throw new Error('mes inválido (1-12)');
     }
 
-    const sql = `
-      INSERT INTO fijos_mensuales_marca
-        (comercial_id, marca_id, año, mes, importe, activo)
-      VALUES (?, ?, ?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        importe = VALUES(importe),
-        activo = VALUES(activo),
-        fecha_actualizacion = CURRENT_TIMESTAMP
-    `;
-    await this.execute(sql, [
-      Number(comercialId),
-      Number(marcaId),
-      Number(año),
-      Number(mes),
-      Number.isFinite(importe) ? importe : 0,
-      activo ? 1 : 0
-    ]);
+    // Intentar guardar por periodo. Si aún no existen columnas, caer al método antiguo.
+    try {
+      const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
+      if (!hasPeriodoCols) {
+        return await this.saveFijoMensualMarca(data);
+      }
 
-    return true;
+      const sql = `
+        INSERT INTO fijos_mensuales_marca
+          (comercial_id, marca_id, año, mes, importe, activo)
+        VALUES (?, ?, ?, ?, ?, ?)
+        ON DUPLICATE KEY UPDATE
+          importe = VALUES(importe),
+          activo = VALUES(activo),
+          fecha_actualizacion = CURRENT_TIMESTAMP
+      `;
+      await this.execute(sql, [
+        Number(comercialId),
+        Number(marcaId),
+        Number(año),
+        Number(mes),
+        Number.isFinite(importe) ? importe : 0,
+        activo ? 1 : 0
+      ]);
+      return true;
+    } catch (error) {
+      if (String(error?.message || '').toLowerCase().includes('unknown column')) {
+        this._cache.fijosMensualesMarcaHasPeriodoColumns = false;
+        return await this.saveFijoMensualMarca(data);
+      }
+      throw error;
+    }
   }
 
   /**
