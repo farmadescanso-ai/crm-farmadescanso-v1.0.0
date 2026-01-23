@@ -18,7 +18,7 @@ class ComisionesCRM {
     this.pool = null;
     this._cache = {
       articulosHasMarcaColumn: null,
-      fijosMensualesMarcaPeriodoTableExists: null
+      fijosMensualesMarcaHasPeriodoColumns: null
     };
   }
 
@@ -126,16 +126,28 @@ class ComisionesCRM {
     return Array.isArray(rows) && rows.length > 0;
   }
 
-  async hasFijosMensualesMarcaPeriodoTable() {
-    if (this._cache.fijosMensualesMarcaPeriodoTableExists !== null) {
-      return this._cache.fijosMensualesMarcaPeriodoTableExists;
+  async hasFijosMensualesMarcaPeriodoColumns() {
+    if (this._cache.fijosMensualesMarcaHasPeriodoColumns !== null) {
+      return this._cache.fijosMensualesMarcaHasPeriodoColumns;
     }
     try {
-      const exists = await this.tableExists('fijos_mensuales_marca_periodo');
-      this._cache.fijosMensualesMarcaPeriodoTableExists = !!exists;
-      return !!exists;
+      // Comprobar columnas `año` y `mes` en la tabla existente `fijos_mensuales_marca`
+      const rows = await this.query(
+        `
+        SELECT COUNT(*) AS c
+        FROM INFORMATION_SCHEMA.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'fijos_mensuales_marca'
+          AND COLUMN_NAME IN ('año', 'mes')
+        `
+      );
+      const count = Number(rows?.[0]?.c ?? 0);
+      const has = count >= 2;
+      this._cache.fijosMensualesMarcaHasPeriodoColumns = has;
+      return has;
     } catch (_) {
-      this._cache.fijosMensualesMarcaPeriodoTableExists = false;
+      // Si no hay permisos o falla, asumir que no existen para no romper
+      this._cache.fijosMensualesMarcaHasPeriodoColumns = false;
       return false;
     }
   }
@@ -1922,13 +1934,15 @@ class ComisionesCRM {
 
   /**
    * Obtener fijos mensuales por marca para un periodo (año/mes) y/o comercial.
-   * Si la tabla nueva no existe, hace fallback a `fijos_mensuales_marca` (sin periodo).
+   * Se apoya en la tabla EXISTENTE `fijos_mensuales_marca`.
+   * - Si existen columnas `año/mes`, usa el periodo y hace fallback al registro global (año=0, mes=0).
+   * - Si NO existen columnas `año/mes`, hace fallback al comportamiento antiguo (sin periodo).
    */
   async getFijosMensualesMarcaPeriodo(filters = {}) {
-    const hasPeriodo = await this.hasFijosMensualesMarcaPeriodoTable();
+    const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
 
-    // Fallback a la tabla antigua (sin año/mes)
-    if (!hasPeriodo) {
+    // Fallback a comportamiento antiguo (sin año/mes)
+    if (!hasPeriodoCols) {
       return await this.getFijosMensualesMarca({
         comercial_id: filters.comercial_id,
         marca_id: filters.marca_id,
@@ -1937,41 +1951,83 @@ class ComisionesCRM {
     }
 
     try {
+      const año = filters.año !== undefined && filters.año !== null && filters.año !== '' ? Number(filters.año) : null;
+      const mes = filters.mes !== undefined && filters.mes !== null && filters.mes !== '' ? Number(filters.mes) : null;
+
+      // Traer registros del periodo y los globales (año=0, mes=0) para poder hacer fallback.
+      // Luego mergeamos en JS priorizando el específico sobre el global.
       let sql = `
-        SELECT fmp.*,
+        SELECT fmm.*,
                c.Nombre as comercial_nombre,
                c.Email as comercial_email,
                m.Nombre as marca_nombre
-        FROM fijos_mensuales_marca_periodo fmp
-        INNER JOIN comerciales c ON fmp.comercial_id = c.id
-        INNER JOIN marcas m ON fmp.marca_id = m.id
+        FROM fijos_mensuales_marca fmm
+        INNER JOIN comerciales c ON fmm.comercial_id = c.id
+        INNER JOIN marcas m ON fmm.marca_id = m.id
         WHERE 1=1
       `;
       const params = [];
 
       if (filters.comercial_id !== undefined && filters.comercial_id !== null && filters.comercial_id !== '') {
-        sql += ' AND fmp.comercial_id = ?';
+        sql += ' AND fmm.comercial_id = ?';
         params.push(Number(filters.comercial_id));
       }
       if (filters.marca_id !== undefined && filters.marca_id !== null && filters.marca_id !== '') {
-        sql += ' AND fmp.marca_id = ?';
+        sql += ' AND fmm.marca_id = ?';
         params.push(Number(filters.marca_id));
       }
-      if (filters.año !== undefined && filters.año !== null && filters.año !== '') {
-        sql += ' AND fmp.año = ?';
-        params.push(Number(filters.año));
+
+      if (año !== null && mes !== null) {
+        // Periodo o global
+        sql += ' AND ((fmm.año = ? AND fmm.mes = ?) OR (fmm.año = 0 AND fmm.mes = 0))';
+        params.push(año, mes);
+      } else if (año !== null && mes === null) {
+        // Si solo hay año, devolver ese año (todos los meses) + global
+        sql += ' AND (fmm.año = ? OR (fmm.año = 0 AND fmm.mes = 0))';
+        params.push(año);
+      } else {
+        // Sin filtro de periodo: devolver todo (incluye globales)
       }
-      if (filters.mes !== undefined && filters.mes !== null && filters.mes !== '') {
-        sql += ' AND fmp.mes = ?';
-        params.push(Number(filters.mes));
-      }
+
       if (filters.activo !== undefined) {
-        sql += ' AND fmp.activo = ?';
+        sql += ' AND fmm.activo = ?';
         params.push(filters.activo ? 1 : 0);
       }
 
-      sql += ' ORDER BY c.Nombre, fmp.año DESC, fmp.mes ASC, m.Nombre';
-      return await this.query(sql, params);
+      sql += ' ORDER BY c.Nombre, fmm.año DESC, fmm.mes ASC, m.Nombre';
+
+      const rows = await this.query(sql, params);
+
+      // Merge: clave comercial+marca. Si existe específico (año/mes), gana; si no, usar global (0/0).
+      if (año !== null && mes !== null) {
+        const byKey = new Map();
+        for (const r of rows || []) {
+          const key = `${r.comercial_id}:${r.marca_id}`;
+          const isSpecific = Number(r.año) === año && Number(r.mes) === mes;
+          const isGlobal = Number(r.año) === 0 && Number(r.mes) === 0;
+          if (!byKey.has(key)) {
+            byKey.set(key, r);
+          } else {
+            const cur = byKey.get(key);
+            const curSpecific = Number(cur.año) === año && Number(cur.mes) === mes;
+            if (!curSpecific && isSpecific) {
+              byKey.set(key, r);
+            } else if (!curSpecific && !isSpecific) {
+              // Ambos no específicos: preferir global frente a otro residual
+              const curGlobal = Number(cur.año) === 0 && Number(cur.mes) === 0;
+              if (!curGlobal && isGlobal) byKey.set(key, r);
+            }
+          }
+        }
+        // Normalizar filas devueltas para que parezcan del periodo solicitado (en UI)
+        return [...byKey.values()].map(r => ({
+          ...r,
+          año,
+          mes
+        }));
+      }
+
+      return rows;
     } catch (error) {
       console.error('❌ Error obteniendo fijos mensuales por periodo:', error.message);
       throw error;
@@ -1980,11 +2036,13 @@ class ComisionesCRM {
 
   /**
    * Guardar/actualizar fijo mensual por marca + periodo (año/mes).
-   * Si la tabla nueva no existe, hace fallback a `saveFijoMensualMarca` (sin periodo).
+   * Se guarda en `fijos_mensuales_marca`:
+   * - Si existen columnas `año/mes`, inserta (comercial_id, marca_id, año, mes)
+   * - Si no, hace fallback al método antiguo (sin periodo).
    */
   async saveFijoMensualMarcaPeriodo(data) {
-    const hasPeriodo = await this.hasFijosMensualesMarcaPeriodoTable();
-    if (!hasPeriodo) {
+    const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
+    if (!hasPeriodoCols) {
       return await this.saveFijoMensualMarca(data);
     }
 
@@ -2003,7 +2061,7 @@ class ComisionesCRM {
     }
 
     const sql = `
-      INSERT INTO fijos_mensuales_marca_periodo
+      INSERT INTO fijos_mensuales_marca
         (comercial_id, marca_id, año, mes, importe, activo)
       VALUES (?, ?, ?, ?, ?, ?)
       ON DUPLICATE KEY UPDATE
@@ -2027,8 +2085,8 @@ class ComisionesCRM {
    * Desactivar (soft delete) un fijo mensual por marca + periodo.
    */
   async disableFijoMensualMarcaPeriodo({ comercial_id, marca_id, año, mes }) {
-    const hasPeriodo = await this.hasFijosMensualesMarcaPeriodoTable();
-    if (!hasPeriodo) {
+    const hasPeriodoCols = await this.hasFijosMensualesMarcaPeriodoColumns();
+    if (!hasPeriodoCols) {
       // En tabla antigua no hay periodo: desactivar el registro por comercial+marca.
       const existente = await this.getFijoMensualMarca(comercial_id, marca_id);
       if (!existente || !existente.id) return { success: true };
@@ -2037,7 +2095,7 @@ class ComisionesCRM {
     }
 
     await this.execute(
-      `UPDATE fijos_mensuales_marca_periodo
+      `UPDATE fijos_mensuales_marca
        SET activo = 0, fecha_actualizacion = CURRENT_TIMESTAMP
        WHERE comercial_id = ? AND marca_id = ? AND año = ? AND mes = ?`,
       [Number(comercial_id), Number(marca_id), Number(año), Number(mes)]
