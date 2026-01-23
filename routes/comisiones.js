@@ -860,6 +860,79 @@ router.get('/comisiones/:id', async (req, res) => {
   }
 });
 
+// Documento de liquidación de comisiones de ventas (por cliente y pedido)
+router.get('/comisiones/:id/liquidacion', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id);
+    const comision = await comisionesCRM.getComisionById(id);
+    if (!comision) {
+      return res.status(404).render('error', { error: 'Comisión no encontrada', message: 'La comisión solicitada no existe' });
+    }
+
+    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const comercialIdAutenticado = req.comercialId || req.session?.comercialId;
+
+    // Si no es admin, solo puede ver su propia liquidación
+    if (!esAdmin && comercialIdAutenticado && Number(comision.comercial_id) !== Number(comercialIdAutenticado)) {
+      return res.status(403).render('error', { error: 'Sin permisos', message: 'No tienes permisos para ver esta liquidación' });
+    }
+
+    const filas = await comisionesCRM.getComisionLiquidacionVentas(id);
+
+    // Agrupar por cliente
+    const porClienteMap = new Map();
+    let totalVenta = 0;
+    let totalComisionVentas = 0;
+
+    for (const r of (filas || [])) {
+      const clienteId = r.cliente_id ?? null;
+      const clienteNombre = r.cliente_nombre || 'SIN_CLIENTE';
+      const key = `${clienteId ?? 'null'}:${clienteNombre}`; // estable
+      if (!porClienteMap.has(key)) {
+        porClienteMap.set(key, {
+          cliente_id: clienteId,
+          cliente_nombre: clienteNombre,
+          pedidos: [],
+          subtotal_venta: 0,
+          subtotal_comision: 0
+        });
+      }
+      const item = porClienteMap.get(key);
+      const impVenta = Number(r.importe_venta || 0);
+      const impCom = Number(r.importe_comision || 0);
+      item.pedidos.push({
+        pedido_id: r.pedido_id,
+        pedido_numero: r.pedido_numero,
+        pedido_fecha: r.pedido_fecha,
+        pedido_estado: r.pedido_estado,
+        importe_venta: impVenta,
+        importe_comision: impCom
+      });
+      item.subtotal_venta += impVenta;
+      item.subtotal_comision += impCom;
+      totalVenta += impVenta;
+      totalComisionVentas += impCom;
+    }
+
+    const porCliente = [...porClienteMap.values()].sort((a, b) => String(a.cliente_nombre).localeCompare(String(b.cliente_nombre), 'es'));
+
+    res.render('dashboard/comisiones/liquidacion-comisiones-ventas', {
+      title: `Liquidación Comisiones Ventas ${comision.mes}/${comision.año} - Farmadescaso`,
+      user: req.comercial || req.session?.comercial,
+      comision,
+      porCliente,
+      totales: {
+        total_venta: totalVenta,
+        total_comision_ventas: totalComisionVentas
+      },
+      esAdmin
+    });
+  } catch (error) {
+    console.error('❌ Error generando liquidación de comisiones:', error);
+    res.status(500).render('error', { error: 'Error generando liquidación', message: error.message });
+  }
+});
+
 // Calcular comisión mensual
 router.post('/comisiones/calcular', async (req, res) => {
   try {

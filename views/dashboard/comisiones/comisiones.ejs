@@ -236,6 +236,9 @@
                                     <a href="/dashboard/comisiones/comisiones/<%= comision.id %>" class="btn btn-sm btn-outline-primary" title="Ver Detalle">
                                         <i class="fas fa-eye"></i>
                                     </a>
+                                    <a href="/dashboard/comisiones/comisiones/<%= comision.id %>/liquidacion" class="btn btn-sm btn-outline-dark" title="Documento de liquidación (Comisiones de Ventas)" target="_blank" rel="noopener">
+                                        <i class="fas fa-file-invoice-dollar"></i>
+                                    </a>
                                     <% if (comision.estado !== 'Pagada' && (typeof esAdmin !== 'undefined' && esAdmin)) { %>
                                     <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Marcar como Pagada">
                                         <i class="fas fa-check"></i>

@@ -18,7 +18,8 @@ class ComisionesCRM {
     this.pool = null;
     this._cache = {
       articulosHasMarcaColumn: null,
-      fijosMensualesMarcaHasPeriodoColumns: null
+      fijosMensualesMarcaHasPeriodoColumns: null,
+      clientesNombreCol: null
     };
   }
 
@@ -919,6 +920,70 @@ class ComisionesCRM {
       return await this.query(sql, [comisionId]);
     } catch (error) {
       console.error('❌ Error obteniendo detalle de comisión:', error.message);
+      throw error;
+    }
+  }
+
+  async _getClienteNombreColumn() {
+    if (this._cache.clientesNombreCol !== null) return this._cache.clientesNombreCol;
+    try {
+      const cols = await this.query('SHOW COLUMNS FROM clientes');
+      const set = new Set((cols || []).map(r => String(r.Field || '').trim()));
+      const pick = (candidates) => candidates.find(c => set.has(c)) || null;
+      const col = pick([
+        'Nombre_Razon_Social',
+        'Nombre_Cial',
+        'Nombre',
+        'nombre',
+        'RazonSocial',
+        'Razon_Social'
+      ]);
+      this._cache.clientesNombreCol = col || 'Nombre';
+      return this._cache.clientesNombreCol;
+    } catch (_) {
+      this._cache.clientesNombreCol = 'Nombre';
+      return this._cache.clientesNombreCol;
+    }
+  }
+
+  /**
+   * Detalle para liquidación de comisiones de VENTAS, agregado por pedido y cliente.
+   * Devuelve filas con: cliente, pedido, importe_venta_total, importe_comision_total.
+   */
+  async getComisionLiquidacionVentas(comisionId) {
+    try {
+      const nombreCol = await this._getClienteNombreColumn();
+      const clienteNombreExpr = `cl.\`${String(nombreCol).replace(/`/g, '')}\``;
+
+      const sql = `
+        SELECT
+          p.Id_Cliente AS cliente_id,
+          ${clienteNombreExpr} AS cliente_nombre,
+          p.id AS pedido_id,
+          p.NumPedido AS pedido_numero,
+          p.FechaPedido AS pedido_fecha,
+          p.EstadoPedido AS pedido_estado,
+          SUM(cd.importe_venta) AS importe_venta,
+          SUM(cd.importe_comision) AS importe_comision
+        FROM comisiones_detalle cd
+        LEFT JOIN pedidos p ON cd.pedido_id = p.id
+        LEFT JOIN clientes cl ON (cl.id = p.Id_Cliente OR cl.Id = p.Id_Cliente)
+        WHERE cd.comision_id = ?
+          AND (cd.tipo_comision IS NULL OR cd.tipo_comision = 'Venta')
+          AND cd.pedido_id IS NOT NULL
+        GROUP BY
+          p.Id_Cliente,
+          cliente_nombre,
+          p.id,
+          p.NumPedido,
+          p.FechaPedido,
+          p.EstadoPedido
+        ORDER BY cliente_nombre ASC, p.FechaPedido ASC, p.id ASC
+      `;
+
+      return await this.query(sql, [Number(comisionId)]);
+    } catch (error) {
+      console.error('❌ Error obteniendo liquidación de comisión ventas:', error.message);
       throw error;
     }
   }
