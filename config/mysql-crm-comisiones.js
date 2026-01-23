@@ -668,7 +668,19 @@ class ComisionesCRM {
         params.push(filters.estado);
       }
 
-      sql += ' ORDER BY c.año DESC, c.mes DESC, co.Nombre';
+      // Orden deseado en UI:
+      // - Por comercial (A→Z)
+      // - Por año (DESC)
+      // - Por mes (enero→diciembre). Si mes es NULL/0 (comisión anual u otro), mandarlo al final.
+      sql += `
+        ORDER BY
+          co.Nombre ASC,
+          c.año DESC,
+          CASE
+            WHEN c.mes IS NULL OR c.mes = 0 THEN 13
+            ELSE c.mes
+          END ASC
+      `;
 
       return await this.query(sql, params);
     } catch (error) {
