@@ -14,6 +14,287 @@ const calculadorComisiones = require('../utils/calcular-comisiones');
  * =====================================================
  */
 
+/**
+ * =====================================================
+ * PRESUPUESTO GEMAVIP (plantilla por canal + reparto por marca)
+ * =====================================================
+ */
+
+// Helper para detectar admin (mismo criterio que otras rutas)
+const isAdminReq = (req) => {
+  const userFromReq = req.user || req.comercial || req.session?.comercial || {};
+  const roll = (userFromReq.roll || userFromReq.Roll || '').toString().toLowerCase();
+  return roll.includes('administrador') || roll.includes('admin');
+};
+
+// Helper robusto para obtener marcas desde BD
+async function getMarcasList() {
+  try {
+    let rows;
+    try {
+      rows = await crm.query('SELECT Nombre FROM marcas ORDER BY Nombre');
+    } catch (_) {
+      rows = await crm.query('SELECT Nombre FROM Marcas ORDER BY Nombre');
+    }
+    return (rows || [])
+      .map(r => (r?.Nombre || r?.nombre || '').toString().trim())
+      .filter(Boolean);
+  } catch (_) {
+    // fallback: marcas desde artículos
+    const articulos = await crm.getArticulos();
+    const marcas = [...new Set((articulos || [])
+      .map(a => (a?.Marca || a?.marca || '').toString().trim())
+      .filter(Boolean)
+      .map(m => m.toUpperCase())
+    )].sort();
+    return marcas;
+  }
+}
+
+async function getComercialesNoAdmin() {
+  const comerciales = await crm.getComerciales();
+  return (comerciales || []).filter(c => {
+    const roll = (c?.roll || c?.Roll || '').toString().toLowerCase();
+    return !(roll.includes('administrador') || roll.includes('admin'));
+  });
+}
+
+// Vista principal GEMAVIP
+router.get('/presupuesto-gemavip', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    const año = parseInt(req.query.año) || 2026;
+
+    const missingTables = !(
+      await comisionesCRM.tableExists('config_objetivos_venta_mensual') &&
+      await comisionesCRM.tableExists('config_reparto_presupuesto_marca') &&
+      await comisionesCRM.tableExists('objetivos_marca_mes')
+    );
+
+    const marcas = await getMarcasList();
+    const comerciales = await getComercialesNoAdmin();
+
+    // Config mensual -> map canal->mes->importe
+    const cfgMensualRows = missingTables ? [] : await comisionesCRM.getConfigObjetivosVentaMensual({ plan: 'GEMAVIP', año });
+    const cfgMensualMap = { DIRECTA: {}, MAYORISTA: {} };
+    for (const r of cfgMensualRows) {
+      const canal = String(r.canal || '').toUpperCase();
+      const mes = Number(r.mes);
+      if (cfgMensualMap[canal]) cfgMensualMap[canal][mes] = Number(r.importe_por_delegado || 0);
+    }
+    const totales = {
+      DIRECTA: Object.values(cfgMensualMap.DIRECTA).reduce((s, v) => s + Number(v || 0), 0),
+      MAYORISTA: Object.values(cfgMensualMap.MAYORISTA).reduce((s, v) => s + Number(v || 0), 0)
+    };
+
+    // Config reparto -> map canal->marca->%
+    const cfgRepartoRows = missingTables ? [] : await comisionesCRM.getConfigRepartoPresupuestoMarca({ plan: 'GEMAVIP', año });
+    const cfgRepartoMap = { DIRECTA: {}, MAYORISTA: {} };
+    for (const r of cfgRepartoRows) {
+      const canal = String(r.canal || '').toUpperCase();
+      const marca = String(r.marca || '').trim();
+      const pct = Number(r.porcentaje || 0);
+      if (cfgRepartoMap[canal]) cfgRepartoMap[canal][marca] = pct;
+    }
+    const sumasPct = {
+      DIRECTA: Object.values(cfgRepartoMap.DIRECTA).reduce((s, v) => s + Number(v || 0), 0),
+      MAYORISTA: Object.values(cfgRepartoMap.MAYORISTA).reduce((s, v) => s + Number(v || 0), 0)
+    };
+
+    // Resumen objetivo vs ventas (opcional)
+    const filters = {
+      comercial_id: req.query.comercial_id ? parseInt(req.query.comercial_id) : null,
+      año: parseInt(req.query.año) || año,
+      mes: req.query.mes ? parseInt(req.query.mes) : 2,
+      canal: (req.query.canal || 'DIRECTA').toUpperCase()
+    };
+
+    let resumen = [];
+    if (!missingTables && filters.comercial_id) {
+      const objetivos = await comisionesCRM.getObjetivosMarcaMes({
+        comercial_id: filters.comercial_id,
+        año: filters.año,
+        mes: filters.mes,
+        canal: filters.canal,
+        activo: 1
+      });
+
+      // Ventas por marca (mismo mes/canal). Clasificación simple: TRANSFER = MAYORISTA, resto = DIRECTA.
+      const pedidos = await crm.query(
+        `SELECT p.*, tp.Tipo as TipoPedidoNombre
+         FROM pedidos p
+         LEFT JOIN tipos_pedidos tp ON p.Id_TipoPedido = tp.id
+         WHERE p.Id_Cial = ?
+           AND YEAR(p.FechaPedido) = ?
+           AND MONTH(p.FechaPedido) = ?
+           AND p.EstadoPedido != 'Anulado'`,
+        [filters.comercial_id, filters.año, filters.mes]
+      );
+
+      const ventasPorMarca = {};
+
+      // Helper robusto para líneas (evitar problemas de case en tabla Marcas)
+      const obtenerLineasPedidoConMarca = async (pedidoId) => {
+        try {
+          // intentamos reutilizar el helper del calculador (rápido)
+          const lineas = await calculadorComisiones.obtenerLineasPedido(pedidoId);
+          if (Array.isArray(lineas) && lineas.length > 0) return lineas;
+        } catch (_) { /* fallback abajo */ }
+        try {
+          const sql1 = `
+            SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
+            FROM pedidos_articulos pa
+            INNER JOIN articulos a ON pa.Id_Articulo = a.id
+            LEFT JOIN marcas m ON a.Id_Marca = m.id
+            WHERE pa.Id_NumPedido = ?
+          `;
+          return await crm.query(sql1, [pedidoId]);
+        } catch (_) {
+          const sql2 = `
+            SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
+            FROM pedidos_articulos pa
+            INNER JOIN articulos a ON pa.Id_Articulo = a.id
+            LEFT JOIN Marcas m ON a.Id_Marca = m.id
+            WHERE pa.Id_NumPedido = ?
+          `;
+          return await crm.query(sql2, [pedidoId]);
+        }
+      };
+
+      for (const pedido of (pedidos || [])) {
+        const tipo = String(pedido.TipoPedidoNombre || '').toUpperCase();
+        const canalPedido = tipo.includes('TRANSFER') ? 'MAYORISTA' : 'DIRECTA';
+        if (canalPedido !== filters.canal) continue;
+
+        const lineas = await obtenerLineasPedidoConMarca(pedido.id);
+        for (const l of (lineas || [])) {
+          const marca = (l.MarcaNombre || '').toString().trim() || 'SIN_MARCA';
+          const subtotal = Number(l.Subtotal || l.subtotal || 0);
+          ventasPorMarca[marca] = (ventasPorMarca[marca] || 0) + subtotal;
+        }
+      }
+
+      const objetivoPorMarca = {};
+      for (const o of (objetivos || [])) {
+        objetivoPorMarca[o.marca] = (objetivoPorMarca[o.marca] || 0) + Number(o.objetivo || 0);
+      }
+
+      const marcasSet = new Set([...Object.keys(objetivoPorMarca), ...Object.keys(ventasPorMarca)]);
+      resumen = [...marcasSet].sort().map(marca => {
+        const obj = Number(objetivoPorMarca[marca] || 0);
+        const ven = Number(ventasPorMarca[marca] || 0);
+        const porcentaje = obj > 0 ? (ven / obj) * 100 : 0;
+        return {
+          marca,
+          objetivo: obj,
+          ventas: ven,
+          porcentaje,
+          diferencia: ven - obj
+        };
+      });
+    }
+
+    res.render('dashboard/comisiones/presupuesto-gemavip', {
+      title: 'Presupuesto GEMAVIP - Farmadescaso',
+      user: req.comercial || req.session?.comercial,
+      esAdmin,
+      año,
+      marcas,
+      comerciales,
+      missingTables,
+      cfgMensualMap,
+      cfgRepartoMap,
+      sumasPct,
+      totales,
+      filters,
+      resumen,
+      req
+    });
+  } catch (error) {
+    console.error('❌ Error cargando presupuesto GEMAVIP:', error);
+    res.status(500).render('error', { error: 'Error cargando Presupuesto GEMAVIP', message: error.message });
+  }
+});
+
+// Guardar config mensual
+router.post('/presupuesto-gemavip/config-mensual', async (req, res) => {
+  try {
+    if (!isAdminReq(req)) {
+      return res.status(403).redirect('/dashboard/comisiones/presupuesto-gemavip?error=' + encodeURIComponent('Sin permisos'));
+    }
+    const año = parseInt(req.body.año) || 2026;
+    for (let m = 1; m <= 12; m++) {
+      const directa = parseFloat(req.body[`directa_${m}`] || 0);
+      const mayorista = parseFloat(req.body[`mayorista_${m}`] || 0);
+      await comisionesCRM.upsertConfigObjetivoVentaMensual({ plan: 'GEMAVIP', año, mes: m, canal: 'DIRECTA', importe_por_delegado: directa, activo: 1 });
+      await comisionesCRM.upsertConfigObjetivoVentaMensual({ plan: 'GEMAVIP', año, mes: m, canal: 'MAYORISTA', importe_por_delegado: mayorista, activo: 1 });
+    }
+    res.redirect(`/dashboard/comisiones/presupuesto-gemavip?año=${año}&success=${encodeURIComponent('Configuración mensual guardada')}`);
+  } catch (error) {
+    console.error('❌ Error guardando config mensual GEMAVIP:', error);
+    res.redirect('/dashboard/comisiones/presupuesto-gemavip?error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Guardar reparto por marcas
+router.post('/presupuesto-gemavip/config-marcas', async (req, res) => {
+  try {
+    if (!isAdminReq(req)) {
+      return res.status(403).redirect('/dashboard/comisiones/presupuesto-gemavip?error=' + encodeURIComponent('Sin permisos'));
+    }
+    const año = parseInt(req.body.año) || 2026;
+
+    for (const [key, value] of Object.entries(req.body || {})) {
+      if (key.startsWith('directa_pct__')) {
+        const marca = key.replace('directa_pct__', '');
+        const pct = parseFloat(value || 0);
+        await comisionesCRM.upsertConfigRepartoPresupuestoMarca({ plan: 'GEMAVIP', año, canal: 'DIRECTA', marca, porcentaje: pct, activo: 1 });
+      }
+      if (key.startsWith('mayorista_pct__')) {
+        const marca = key.replace('mayorista_pct__', '');
+        const pct = parseFloat(value || 0);
+        await comisionesCRM.upsertConfigRepartoPresupuestoMarca({ plan: 'GEMAVIP', año, canal: 'MAYORISTA', marca, porcentaje: pct, activo: 1 });
+      }
+    }
+
+    res.redirect(`/dashboard/comisiones/presupuesto-gemavip?año=${año}&success=${encodeURIComponent('Reparto por marca guardado')}`);
+  } catch (error) {
+    console.error('❌ Error guardando reparto por marca GEMAVIP:', error);
+    res.redirect('/dashboard/comisiones/presupuesto-gemavip?error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Generar objetivos por comercial
+router.post('/presupuesto-gemavip/generar', async (req, res) => {
+  try {
+    if (!isAdminReq(req)) {
+      return res.status(403).redirect('/dashboard/comisiones/presupuesto-gemavip?error=' + encodeURIComponent('Sin permisos'));
+    }
+    const año = parseInt(req.body.año) || 2026;
+    const comercialId = req.body.comercial_id ? parseInt(req.body.comercial_id) : null;
+
+    let ids = [];
+    if (comercialId) {
+      ids = [comercialId];
+    } else {
+      const comerciales = await getComercialesNoAdmin();
+      ids = comerciales.map(c => c.id || c.Id).filter(Boolean).map(Number);
+    }
+
+    const result = await comisionesCRM.generarObjetivosMarcaMesDesdePlantilla({
+      plan: 'GEMAVIP',
+      año,
+      comercialesIds: ids,
+      eneroSoloIds: [2, 3]
+    });
+
+    res.redirect(`/dashboard/comisiones/presupuesto-gemavip?año=${año}&success=${encodeURIComponent(`Objetivos generados/actualizados: ${result.upserts}`)}`);
+  } catch (error) {
+    console.error('❌ Error generando objetivos GEMAVIP:', error);
+    res.redirect('/dashboard/comisiones/presupuesto-gemavip?error=' + encodeURIComponent(error.message));
+  }
+});
+
 // Listar presupuestos
 router.get('/presupuestos', async (req, res) => {
   try {
@@ -647,9 +928,16 @@ router.get('/rapeles', async (req, res) => {
     const rapeles = await comisionesCRM.getRapeles(filters);
     const comerciales = await crm.getComerciales();
 
-    // Obtener marcas únicas de artículos
-    const articulos = await crm.getArticulos();
-    const marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
+    // Obtener marcas desde tabla `marcas` (fallback interno si falla)
+    let marcas = await getMarcasList();
+    marcas = (marcas || [])
+      .map(m => (m || '').toString().trim())
+      .filter(Boolean)
+      .map(m => m.toUpperCase());
+    marcas = [...new Set(marcas)].sort();
+    if (marcas.length === 0) {
+      marcas = ['GEMAVIP', 'YOUBELLE'];
+    }
 
     // Solo devolver JSON si se solicita explícitamente (no acepta HTML)
     if (req.accepts('json') && !req.accepts('html')) {
@@ -690,16 +978,17 @@ router.post('/rapeles/calcular', async (req, res) => {
     }
 
     const calculadoPor = req.comercialId || req.session.comercialId;
+    const marcaNorm = String(marca).trim().toUpperCase();
     const rapelData = await calculadorComisiones.calcularRapelMarca(
       parseInt(comercial_id),
-      marca,
+      marcaNorm,
       parseInt(trimestre),
       parseInt(año)
     );
 
     const rapel = await comisionesCRM.saveRapel({
       comercial_id: parseInt(comercial_id),
-      marca: marca,
+      marca: marcaNorm,
       trimestre: parseInt(trimestre),
       año: parseInt(año),
       ventas_trimestre: rapelData.ventas_trimestre,
@@ -764,8 +1053,17 @@ router.get('/objetivos-marca', async (req, res) => {
 
     const objetivos = await comisionesCRM.getObjetivosMarca(filters);
     const comerciales = await crm.getComerciales();
-    const articulos = await crm.getArticulos();
-    const marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
+
+    // Obtener marcas desde tabla `marcas` (más fiable que artículos). Fallback interno si falla.
+    let marcas = await getMarcasList();
+    marcas = (marcas || [])
+      .map(m => (m || '').toString().trim())
+      .filter(Boolean)
+      .map(m => m.toUpperCase());
+    marcas = [...new Set(marcas)].sort();
+    if (marcas.length === 0) {
+      marcas = ['GEMAVIP', 'YOUBELLE'];
+    }
 
     // Solo devolver JSON si se solicita explícitamente (no acepta HTML)
     if (req.accepts('json') && !req.accepts('html')) {
@@ -810,7 +1108,7 @@ router.post('/objetivos-marca', async (req, res) => {
     };
 
     const comercial_id = parseSafeInt(req.body.comercial_id);
-    const marca = req.body.marca && req.body.marca !== '' ? req.body.marca : null;
+    const marca = req.body.marca && req.body.marca !== '' ? String(req.body.marca).trim().toUpperCase() : null;
     const año = parseSafeInt(req.body.año) || new Date().getFullYear();
     const activo = req.body.activo !== undefined ? req.body.activo === 'true' : true;
     const observaciones = req.body.observaciones && req.body.observaciones !== '' ? req.body.observaciones : null;
@@ -825,11 +1123,22 @@ router.post('/objetivos-marca', async (req, res) => {
     }
 
     // Guardar objetivos trimestrales (4 registros, uno por trimestre)
+    // Si el usuario mete objetivo_anual y deja Q1..Q4 a 0, distribuir automáticamente a partes iguales.
+    const objetivoAnual = parseSafeFloat(req.body.objetivo_anual);
+    let q1 = parseSafeFloat(req.body.objetivo_trimestral_q1);
+    let q2 = parseSafeFloat(req.body.objetivo_trimestral_q2);
+    let q3 = parseSafeFloat(req.body.objetivo_trimestral_q3);
+    let q4 = parseSafeFloat(req.body.objetivo_trimestral_q4);
+    const sumaQs = q1 + q2 + q3 + q4;
+    if (sumaQs === 0 && objetivoAnual > 0) {
+      const porTrimestre = objetivoAnual / 4;
+      q1 = porTrimestre; q2 = porTrimestre; q3 = porTrimestre; q4 = porTrimestre;
+    }
     const trimestres = [
-      { trimestre: 1, objetivo: parseSafeFloat(req.body.objetivo_trimestral_q1) },
-      { trimestre: 2, objetivo: parseSafeFloat(req.body.objetivo_trimestral_q2) },
-      { trimestre: 3, objetivo: parseSafeFloat(req.body.objetivo_trimestral_q3) },
-      { trimestre: 4, objetivo: parseSafeFloat(req.body.objetivo_trimestral_q4) }
+      { trimestre: 1, objetivo: q1 },
+      { trimestre: 2, objetivo: q2 },
+      { trimestre: 3, objetivo: q3 },
+      { trimestre: 4, objetivo: q4 }
     ];
 
     const objetivosGuardados = [];
@@ -894,10 +1203,8 @@ router.put('/objetivos-marca/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const objetivoData = {
-      id: id,
-      comercial_id: req.body.comercial_id ? parseInt(req.body.comercial_id) : undefined,
-      marca: req.body.marca !== undefined ? req.body.marca : undefined,
-      año: req.body.año ? parseInt(req.body.año) : undefined,
+      marca: req.body.marca !== undefined ? String(req.body.marca).trim().toUpperCase() : undefined,
+      año: req.body.año !== undefined ? parseInt(req.body.año) : undefined,
       objetivo_anual: req.body.objetivo_anual !== undefined ? parseFloat(req.body.objetivo_anual) : undefined,
       objetivo_trimestral_q1: req.body.objetivo_trimestral_q1 !== undefined ? parseFloat(req.body.objetivo_trimestral_q1) : undefined,
       objetivo_trimestral_q2: req.body.objetivo_trimestral_q2 !== undefined ? parseFloat(req.body.objetivo_trimestral_q2) : undefined,
@@ -906,7 +1213,7 @@ router.put('/objetivos-marca/:id', async (req, res) => {
       activo: req.body.activo !== undefined ? (req.body.activo === 'true' || req.body.activo === true) : undefined,
       observaciones: req.body.observaciones !== undefined ? req.body.observaciones : undefined
     };
-    const objetivo = await comisionesCRM.saveObjetivoMarca(objetivoData);
+    const objetivo = await comisionesCRM.updateObjetivoMarcaById(id, objetivoData);
     res.json({ success: true, data: objetivo });
   } catch (error) {
     console.error('❌ Error actualizando objetivo:', error);
@@ -918,7 +1225,7 @@ router.put('/objetivos-marca/:id', async (req, res) => {
 router.delete('/objetivos-marca/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
-    await comisionesCRM.deleteObjetivoMarca(id);
+    await comisionesCRM.deleteObjetivoMarcaById(id);
     res.json({ success: true });
   } catch (error) {
     console.error('❌ Error eliminando objetivo:', error);
@@ -952,7 +1259,15 @@ router.get('/condiciones-especiales', async (req, res) => {
     }
 
     const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
-    const marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
+    let marcas = await getMarcasList();
+    marcas = (marcas || [])
+      .map(m => (m || '').toString().trim())
+      .filter(Boolean)
+      .map(m => m.toUpperCase());
+    marcas = [...new Set(marcas)].sort();
+    if (marcas.length === 0) {
+      marcas = ['GEMAVIP', 'YOUBELLE'];
+    }
     res.render('dashboard/comisiones/condiciones-especiales', {
       title: 'Condiciones Especiales - Farmadescaso',
       user: req.comercial || req.session.comercial,
@@ -980,7 +1295,7 @@ router.post('/condiciones-especiales', async (req, res) => {
     const condicionData = {
       comercial_id: req.body.comercial_id ? parseInt(req.body.comercial_id) : null,
       articulo_id: req.body.articulo_id ? parseInt(req.body.articulo_id) : null,
-      marca: req.body.marca || null,
+      marca: req.body.marca ? String(req.body.marca).trim().toUpperCase() : null,
       tipo_condicion: req.body.tipo_condicion,
       valor: parseFloat(req.body.valor),
       fecha_inicio: req.body.fecha_inicio || null,
@@ -1074,8 +1389,15 @@ router.get('/rapeles-configuracion', async (req, res) => {
     };
 
     const configuraciones = await comisionesCRM.getRapelesConfiguracion(filters);
-    const articulos = await crm.getArticulos();
-    const marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
+    let marcas = await getMarcasList();
+    marcas = (marcas || [])
+      .map(m => (m || '').toString().trim())
+      .filter(Boolean)
+      .map(m => m.toUpperCase());
+    marcas = [...new Set(marcas)].sort();
+    if (marcas.length === 0) {
+      marcas = ['GEMAVIP', 'YOUBELLE'];
+    }
 
     // Solo devolver JSON si se solicita explícitamente (no acepta HTML)
     if (req.accepts('json') && !req.accepts('html')) {
@@ -1106,7 +1428,7 @@ router.get('/rapeles-configuracion', async (req, res) => {
 router.post('/rapeles-configuracion', async (req, res) => {
   try {
     const configData = {
-      marca: req.body.marca,
+      marca: req.body.marca ? String(req.body.marca).trim().toUpperCase() : null,
       porcentaje_cumplimiento_min: parseFloat(req.body.porcentaje_cumplimiento_min),
       porcentaje_cumplimiento_max: parseFloat(req.body.porcentaje_cumplimiento_max),
       porcentaje_rapel: parseFloat(req.body.porcentaje_rapel),
@@ -1381,7 +1703,7 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
     
     // Si por cualquier motivo sigue vacío, meter fallback mínimo para no bloquear el formulario
     if (!Array.isArray(marcas) || marcas.length === 0) {
-      marcas = ['IALOZON', 'YOUBELLE'];
+      marcas = ['GEMAVIP', 'YOUBELLE'];
     }
 
     // Filtrar solo configuraciones con marca específica (NO mostrar NULL)
@@ -1420,7 +1742,7 @@ router.post('/config-comisiones-tipo-pedido', async (req, res) => {
       if (req.accepts('json')) {
         return res.status(400).json({ success: false, error: 'La marca es obligatoria' });
       }
-      return res.redirect(`/dashboard/comisiones/config-comisiones-tipo-pedido?error=${encodeURIComponent('La marca es obligatoria. Debe seleccionar IALOZON o YOUBELLE.')}`);
+      return res.redirect(`/dashboard/comisiones/config-comisiones-tipo-pedido?error=${encodeURIComponent('La marca es obligatoria. Debe seleccionar GEMAVIP o YOUBELLE.')}`);
     }
 
     const configData = {
@@ -1491,16 +1813,8 @@ router.get('/config-rappel-presupuesto', async (req, res) => {
       activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined
     };
 
-    // Obtener marcas desde tabla Marcas
-    let marcas = [];
-    try {
-      const marcasResult = await crm.query('SELECT id, Nombre FROM Marcas ORDER BY Nombre');
-      marcas = marcasResult.map(m => m.Nombre || m.nombre).filter(m => m);
-    } catch (error) {
-      console.warn('⚠️ Error obteniendo marcas:', error.message);
-      const articulos = await crm.getArticulos();
-      marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
-    }
+    // Obtener marcas desde tabla `marcas` (fallback interno si falla)
+    let marcas = await getMarcasList();
 
     const configuraciones = await comisionesCRM.getConfigRappelPresupuesto(filters);
 
@@ -1660,16 +1974,8 @@ router.get('/config-descuento-transporte', async (req, res) => {
       activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined
     };
 
-    // Obtener marcas desde tabla Marcas
-    let marcas = [];
-    try {
-      const marcasResult = await crm.query('SELECT id, Nombre FROM Marcas ORDER BY Nombre');
-      marcas = marcasResult.map(m => m.Nombre || m.nombre).filter(m => m);
-    } catch (error) {
-      console.warn('⚠️ Error obteniendo marcas:', error.message);
-      const articulos = await crm.getArticulos();
-      marcas = [...new Set(articulos.map(a => a.Marca || a.marca).filter(m => m))];
-    }
+    // Obtener marcas desde tabla `marcas` (fallback interno si falla)
+    let marcas = await getMarcasList();
 
     // Filtrar solo configuraciones con marca específica (NO mostrar NULL)
     let configuraciones = await comisionesCRM.getConfigDescuentoTransporte(filters);
@@ -1707,7 +2013,7 @@ router.post('/config-descuento-transporte', async (req, res) => {
       if (req.accepts('json')) {
         return res.status(400).json({ success: false, error: 'La marca es obligatoria' });
       }
-      return res.redirect(`/dashboard/comisiones/config-descuento-transporte?error=${encodeURIComponent('La marca es obligatoria. Debe seleccionar IALOZON o YOUBELLE.')}`);
+      return res.redirect(`/dashboard/comisiones/config-descuento-transporte?error=${encodeURIComponent('La marca es obligatoria. Debe seleccionar GEMAVIP o YOUBELLE.')}`);
     }
 
     const configData = {

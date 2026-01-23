@@ -116,6 +116,239 @@ class ComisionesCRM {
   // PRESUPUESTOS
   // =====================================================
 
+  // =====================================================
+  // PLANTILLAS / OBJETIVOS GEMAVIP (por canal + reparto por marca)
+  // =====================================================
+
+  async tableExists(tableName) {
+    const rows = await this.query(`SHOW TABLES LIKE ?`, [tableName]);
+    return Array.isArray(rows) && rows.length > 0;
+  }
+
+  async getConfigObjetivosVentaMensual({ plan = 'GEMAVIP', año }) {
+    if (!año) throw new Error('año es requerido');
+    const sql = `
+      SELECT *
+      FROM config_objetivos_venta_mensual
+      WHERE plan = ?
+        AND año = ?
+      ORDER BY canal, mes
+    `;
+    return await this.query(sql, [plan, Number(año)]);
+  }
+
+  async upsertConfigObjetivoVentaMensual({ plan = 'GEMAVIP', año, mes, canal, importe_por_delegado, activo = 1, observaciones = null }) {
+    if (!año || !mes || !canal) throw new Error('plan/año/mes/canal son requeridos');
+    const sql = `
+      INSERT INTO config_objetivos_venta_mensual
+        (plan, año, mes, canal, importe_por_delegado, activo, observaciones)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        importe_por_delegado = VALUES(importe_por_delegado),
+        activo = VALUES(activo),
+        observaciones = VALUES(observaciones)
+    `;
+    await this.execute(sql, [
+      String(plan),
+      Number(año),
+      Number(mes),
+      String(canal).toUpperCase(),
+      Number(importe_por_delegado || 0),
+      activo ? 1 : 0,
+      observaciones
+    ]);
+    return true;
+  }
+
+  async getConfigRepartoPresupuestoMarca({ plan = 'GEMAVIP', año, canal }) {
+    if (!año) throw new Error('año es requerido');
+    let sql = `
+      SELECT *
+      FROM config_reparto_presupuesto_marca
+      WHERE plan = ?
+        AND año = ?
+    `;
+    const params = [String(plan), Number(año)];
+    if (canal) {
+      sql += ` AND canal = ?`;
+      params.push(String(canal).toUpperCase());
+    }
+    sql += ` ORDER BY canal, marca`;
+    return await this.query(sql, params);
+  }
+
+  async upsertConfigRepartoPresupuestoMarca({ plan = 'GEMAVIP', año, canal, marca, porcentaje, activo = 1, observaciones = null }) {
+    if (!año || !canal || !marca) throw new Error('plan/año/canal/marca son requeridos');
+    const sql = `
+      INSERT INTO config_reparto_presupuesto_marca
+        (plan, año, canal, marca, porcentaje, activo, observaciones)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        porcentaje = VALUES(porcentaje),
+        activo = VALUES(activo),
+        observaciones = VALUES(observaciones)
+    `;
+    await this.execute(sql, [
+      String(plan),
+      Number(año),
+      String(canal).toUpperCase(),
+      String(marca).trim(),
+      Number(porcentaje || 0),
+      activo ? 1 : 0,
+      observaciones
+    ]);
+    return true;
+  }
+
+  async getObjetivosMarcaMes(filters = {}) {
+    let sql = `
+      SELECT o.*,
+             c.Nombre AS comercial_nombre
+      FROM objetivos_marca_mes o
+      LEFT JOIN comerciales c ON c.id = o.comercial_id
+      WHERE 1=1
+    `;
+    const params = [];
+    if (filters.comercial_id !== undefined && filters.comercial_id !== null && filters.comercial_id !== '') {
+      sql += ' AND o.comercial_id = ?';
+      params.push(Number(filters.comercial_id));
+    }
+    if (filters.año !== undefined && filters.año !== null && filters.año !== '') {
+      sql += ' AND o.año = ?';
+      params.push(Number(filters.año));
+    }
+    if (filters.mes !== undefined && filters.mes !== null && filters.mes !== '') {
+      sql += ' AND o.mes = ?';
+      params.push(Number(filters.mes));
+    }
+    if (filters.canal) {
+      sql += ' AND o.canal = ?';
+      params.push(String(filters.canal).toUpperCase());
+    }
+    if (filters.marca) {
+      sql += ' AND o.marca = ?';
+      params.push(String(filters.marca));
+    }
+    if (filters.activo !== undefined) {
+      sql += ' AND o.activo = ?';
+      params.push(filters.activo ? 1 : 0);
+    }
+    sql += ' ORDER BY o.año DESC, o.mes ASC, o.canal, o.marca';
+    return await this.query(sql, params);
+  }
+
+  async upsertObjetivoMarcaMes({ comercial_id, marca, año, mes, canal, objetivo, porcentaje_marca, activo = 1, observaciones = null }) {
+    if (!comercial_id || !marca || !año || !mes || !canal) {
+      throw new Error('comercial_id/marca/año/mes/canal son requeridos');
+    }
+    const sql = `
+      INSERT INTO objetivos_marca_mes
+        (comercial_id, marca, año, mes, canal, objetivo, porcentaje_marca, activo, observaciones)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON DUPLICATE KEY UPDATE
+        objetivo = VALUES(objetivo),
+        porcentaje_marca = VALUES(porcentaje_marca),
+        activo = VALUES(activo),
+        observaciones = VALUES(observaciones)
+    `;
+    await this.execute(sql, [
+      Number(comercial_id),
+      String(marca).trim(),
+      Number(año),
+      Number(mes),
+      String(canal).toUpperCase(),
+      Number(objetivo || 0),
+      Number(porcentaje_marca || 0),
+      activo ? 1 : 0,
+      observaciones
+    ]);
+    return true;
+  }
+
+  /**
+   * Genera objetivos por marca/mes/canal para uno o varios comerciales, a partir de:
+   * - config_objetivos_venta_mensual (importe por delegado)
+   * - config_reparto_presupuesto_marca (porcentaje por marca)
+   *
+   * Regla enero 2026: solo aplica a comerciales con ID en eneroSoloIds.
+   */
+  async generarObjetivosMarcaMesDesdePlantilla({
+    plan = 'GEMAVIP',
+    año,
+    comercialesIds = [],
+    eneroSoloIds = [2, 3]
+  }) {
+    if (!año) throw new Error('año es requerido');
+
+    const hasCfgMensual = await this.tableExists('config_objetivos_venta_mensual');
+    const hasCfgReparto = await this.tableExists('config_reparto_presupuesto_marca');
+    const hasObjetivos = await this.tableExists('objetivos_marca_mes');
+    if (!hasCfgMensual || !hasCfgReparto || !hasObjetivos) {
+      throw new Error('Faltan tablas GEMAVIP. Ejecuta scripts/crear-presupuesto-gemavip.sql');
+    }
+
+    const cfgMensual = await this.getConfigObjetivosVentaMensual({ plan, año });
+    const cfgReparto = await this.getConfigRepartoPresupuestoMarca({ plan, año });
+
+    // Indexar por canal+mes
+    const mensualPorCanalMes = {};
+    for (const row of cfgMensual) {
+      const canal = String(row.canal || '').toUpperCase();
+      const mes = Number(row.mes);
+      mensualPorCanalMes[`${canal}:${mes}`] = Number(row.importe_por_delegado || 0);
+    }
+
+    // Indexar reparto por canal
+    const repartoPorCanal = {};
+    for (const row of cfgReparto) {
+      if (!(row.activo === 1 || row.activo === true)) continue;
+      const canal = String(row.canal || '').toUpperCase();
+      if (!repartoPorCanal[canal]) repartoPorCanal[canal] = [];
+      repartoPorCanal[canal].push({
+        marca: String(row.marca || '').trim(),
+        porcentaje: Number(row.porcentaje || 0)
+      });
+    }
+
+    const canales = ['DIRECTA', 'MAYORISTA'];
+    let upserts = 0;
+
+    for (const comercialId of comercialesIds) {
+      const cId = Number(comercialId);
+      if (!Number.isFinite(cId) || cId <= 0) continue;
+
+      for (const canal of canales) {
+        const reparto = repartoPorCanal[canal] || [];
+        // Si no hay reparto configurado, no generamos nada para ese canal.
+        if (reparto.length === 0) continue;
+
+        for (let mes = 1; mes <= 12; mes++) {
+          // Regla de enero: solo IDs 2 y 3 (según tu indicación)
+          if (Number(año) === 2026 && mes === 1 && !eneroSoloIds.includes(cId)) continue;
+
+          const importeDelegado = mensualPorCanalMes[`${canal}:${mes}`] ?? 0;
+          for (const r of reparto) {
+            const objetivo = (importeDelegado * r.porcentaje) / 100;
+            await this.upsertObjetivoMarcaMes({
+              comercial_id: cId,
+              marca: r.marca,
+              año,
+              mes,
+              canal,
+              objetivo,
+              porcentaje_marca: r.porcentaje,
+              activo: 1,
+              observaciones: `Generado desde plantilla ${plan}`
+            });
+            upserts += 1;
+          }
+        }
+      }
+    }
+
+    return { upserts };
+  }
+
   /**
    * Obtener todos los presupuestos
    */
@@ -923,9 +1156,26 @@ class ComisionesCRM {
    */
   async getObjetivosMarca(filters = {}) {
     try {
+      // IMPORTANTE:
+      // - En BD guardamos 1 fila por trimestre (trimestre 1..4) en `objetivos_marca.objetivo`
+      // - La UI espera una fila agregada por (comercial_id, marca, año) con columnas:
+      //   objetivo_anual, objetivo_trimestral_q1..q4
       let sql = `
-        SELECT o.*, 
-               c.Nombre as comercial_nombre
+        SELECT
+          MIN(o.id) AS id,
+          o.comercial_id,
+          c.Nombre AS comercial_nombre,
+          o.marca,
+          o.año,
+          SUM(o.objetivo) AS objetivo_anual,
+          SUM(CASE WHEN o.trimestre = 1 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q1,
+          SUM(CASE WHEN o.trimestre = 2 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q2,
+          SUM(CASE WHEN o.trimestre = 3 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q3,
+          SUM(CASE WHEN o.trimestre = 4 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q4,
+          MAX(o.activo) AS activo,
+          MAX(o.actualizado_en) AS actualizado_en,
+          MAX(o.creado_en) AS creado_en,
+          MAX(o.observaciones) AS observaciones
         FROM objetivos_marca o
         LEFT JOIN comerciales c ON o.comercial_id = c.id
         WHERE 1=1
@@ -965,7 +1215,8 @@ class ComisionesCRM {
         throw new Error('Parámetros undefined detectados en la consulta SQL');
       }
 
-      sql += ' ORDER BY o.año DESC, o.trimestre DESC, o.marca, c.Nombre';
+      sql += ' GROUP BY o.comercial_id, o.marca, o.año';
+      sql += ' ORDER BY o.año DESC, o.marca, c.Nombre';
 
       return await this.query(sql, params);
     } catch (error) {
@@ -979,17 +1230,174 @@ class ComisionesCRM {
    */
   async getObjetivoMarcaById(id) {
     try {
+      // El ID que viene de la UI es el MIN(id) del grupo.
+      // Recuperar clave del grupo y devolver un objeto agregado compatible con la UI.
+      const base = await this.query(
+        'SELECT comercial_id, marca, año FROM objetivos_marca WHERE id = ? LIMIT 1',
+        [Number(id)]
+      );
+      if (!base || base.length === 0) return null;
+
+      const comercialId = Number(base[0].comercial_id);
+      const marca = String(base[0].marca);
+      const año = Number(base[0].año);
+
       const sql = `
-        SELECT o.*, 
-               c.Nombre as comercial_nombre
+        SELECT
+          MIN(o.id) AS id,
+          o.comercial_id,
+          c.Nombre AS comercial_nombre,
+          o.marca,
+          o.año,
+          SUM(o.objetivo) AS objetivo_anual,
+          SUM(CASE WHEN o.trimestre = 1 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q1,
+          SUM(CASE WHEN o.trimestre = 2 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q2,
+          SUM(CASE WHEN o.trimestre = 3 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q3,
+          SUM(CASE WHEN o.trimestre = 4 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q4,
+          MAX(o.activo) AS activo,
+          MAX(o.observaciones) AS observaciones
         FROM objetivos_marca o
         LEFT JOIN comerciales c ON o.comercial_id = c.id
-        WHERE o.id = ?
+        WHERE o.comercial_id = ?
+          AND o.marca = ?
+          AND o.año = ?
+        GROUP BY o.comercial_id, o.marca, o.año
+        LIMIT 1
       `;
-      const rows = await this.query(sql, [id]);
-      return rows.length > 0 ? rows[0] : null;
+      const rows = await this.query(sql, [comercialId, marca, año]);
+      return rows[0] || null;
     } catch (error) {
       console.error('❌ Error obteniendo objetivo por marca:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Actualizar un grupo de objetivos (Q1..Q4) por ID (MIN(id) del grupo)
+   */
+  async updateObjetivoMarcaById(id, data) {
+    try {
+      const base = await this.query(
+        'SELECT comercial_id, marca, año FROM objetivos_marca WHERE id = ? LIMIT 1',
+        [Number(id)]
+      );
+      if (!base || base.length === 0) {
+        throw new Error('Objetivo no encontrado');
+      }
+
+      const comercial_id = Number(base[0].comercial_id);
+      const marca = String(data.marca !== undefined ? data.marca : base[0].marca);
+      const año = Number(data.año !== undefined ? data.año : base[0].año);
+
+      // Normalizar objetivos
+      const objetivoAnual = data.objetivo_anual !== undefined ? Number(data.objetivo_anual || 0) : null;
+      let q1 = data.objetivo_trimestral_q1 !== undefined ? Number(data.objetivo_trimestral_q1 || 0) : null;
+      let q2 = data.objetivo_trimestral_q2 !== undefined ? Number(data.objetivo_trimestral_q2 || 0) : null;
+      let q3 = data.objetivo_trimestral_q3 !== undefined ? Number(data.objetivo_trimestral_q3 || 0) : null;
+      let q4 = data.objetivo_trimestral_q4 !== undefined ? Number(data.objetivo_trimestral_q4 || 0) : null;
+
+      // Si no vienen Qs, mantener los actuales
+      if (q1 === null || q2 === null || q3 === null || q4 === null) {
+        const actuales = await this.query(
+          'SELECT trimestre, objetivo FROM objetivos_marca WHERE comercial_id = ? AND marca = ? AND año = ?',
+          [comercial_id, String(base[0].marca), Number(base[0].año)]
+        );
+        const map = {};
+        for (const r of (actuales || [])) map[Number(r.trimestre)] = Number(r.objetivo || 0);
+        if (q1 === null) q1 = map[1] ?? 0;
+        if (q2 === null) q2 = map[2] ?? 0;
+        if (q3 === null) q3 = map[3] ?? 0;
+        if (q4 === null) q4 = map[4] ?? 0;
+      }
+
+      const sumaQs = Number(q1 || 0) + Number(q2 || 0) + Number(q3 || 0) + Number(q4 || 0);
+      if (sumaQs === 0 && objetivoAnual !== null && objetivoAnual > 0) {
+        const porTrimestre = objetivoAnual / 4;
+        q1 = porTrimestre; q2 = porTrimestre; q3 = porTrimestre; q4 = porTrimestre;
+      }
+
+      const activo = data.activo !== undefined ? (data.activo ? 1 : 0) : 1;
+      const observaciones = data.observaciones !== undefined ? (data.observaciones || null) : null;
+
+      // Si cambia marca/año, borrar el grupo antiguo y recrear en el nuevo (manteniendo trimestre)
+      // Borrado grupo antiguo (por la marca/año originales del base)
+      await this.execute(
+        'DELETE FROM objetivos_marca WHERE comercial_id = ? AND marca = ? AND año = ?',
+        [comercial_id, String(base[0].marca), Number(base[0].año)]
+      );
+
+      // Insertar/actualizar 4 trimestres
+      const trimestres = [
+        { trimestre: 1, objetivo: q1 },
+        { trimestre: 2, objetivo: q2 },
+        { trimestre: 3, objetivo: q3 },
+        { trimestre: 4, objetivo: q4 }
+      ];
+
+      for (const t of trimestres) {
+        await this.saveObjetivoMarca({
+          comercial_id,
+          marca,
+          trimestre: t.trimestre,
+          año,
+          objetivo: Number(t.objetivo || 0),
+          activo,
+          observaciones
+        });
+      }
+
+      // Devolver agregado actualizado
+      const rows = await this.query(
+        `
+        SELECT
+          MIN(o.id) AS id,
+          o.comercial_id,
+          c.Nombre AS comercial_nombre,
+          o.marca,
+          o.año,
+          SUM(o.objetivo) AS objetivo_anual,
+          SUM(CASE WHEN o.trimestre = 1 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q1,
+          SUM(CASE WHEN o.trimestre = 2 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q2,
+          SUM(CASE WHEN o.trimestre = 3 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q3,
+          SUM(CASE WHEN o.trimestre = 4 THEN o.objetivo ELSE 0 END) AS objetivo_trimestral_q4,
+          MAX(o.activo) AS activo,
+          MAX(o.observaciones) AS observaciones
+        FROM objetivos_marca o
+        LEFT JOIN comerciales c ON o.comercial_id = c.id
+        WHERE o.comercial_id = ?
+          AND o.marca = ?
+          AND o.año = ?
+        GROUP BY o.comercial_id, o.marca, o.año
+        LIMIT 1
+        `,
+        [comercial_id, marca, año]
+      );
+      return rows[0] || { success: true };
+    } catch (error) {
+      console.error('❌ Error actualizando objetivo por marca (grupo):', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Eliminar un grupo de objetivos (Q1..Q4) por ID (MIN(id) del grupo)
+   */
+  async deleteObjetivoMarcaById(id) {
+    try {
+      const base = await this.query(
+        'SELECT comercial_id, marca, año FROM objetivos_marca WHERE id = ? LIMIT 1',
+        [Number(id)]
+      );
+      if (!base || base.length === 0) {
+        return { success: true };
+      }
+      await this.execute(
+        'DELETE FROM objetivos_marca WHERE comercial_id = ? AND marca = ? AND año = ?',
+        [Number(base[0].comercial_id), String(base[0].marca), Number(base[0].año)]
+      );
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error eliminando objetivo por marca (grupo):', error.message);
       throw error;
     }
   }
@@ -1643,7 +2051,7 @@ class ComisionesCRM {
     try {
       // Validar que marca no sea NULL (obligatorio)
       if (!data.marca || data.marca === null || data.marca === '') {
-        throw new Error('La marca es obligatoria. Debe seleccionar una marca específica (IALOZON, YOUBELLE, etc.)');
+        throw new Error('La marca es obligatoria. Debe seleccionar una marca específica (GEMAVIP, YOUBELLE, etc.)');
       }
 
       if (data.id) {
@@ -1977,7 +2385,7 @@ class ComisionesCRM {
     try {
       // Validar que marca no sea NULL (obligatorio)
       if (!data.id && (!data.marca || data.marca === null || data.marca === '')) {
-        throw new Error('La marca es obligatoria. Debe seleccionar una marca específica (IALOZON, YOUBELLE, etc.)');
+        throw new Error('La marca es obligatoria. Debe seleccionar una marca específica (GEMAVIP, YOUBELLE, etc.)');
       }
 
       if (data.id) {

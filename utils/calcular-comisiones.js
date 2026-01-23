@@ -450,14 +450,26 @@ class CalculadorComisiones {
     try {
       // La tabla pedidos_articulos usa Id_NumPedido para relacionar con pedidos.id
       // Incluir información de marca del artículo
-      const sql = `
+      // En Linux, el nombre de tabla puede ser case-sensitive: probar `marcas` y luego `Marcas`
+      const sqlLower = `
         SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
         FROM pedidos_articulos pa
         INNER JOIN articulos a ON pa.Id_Articulo = a.id
-        LEFT JOIN Marcas m ON a.Id_Marca = m.id
+        LEFT JOIN marcas m ON a.Id_Marca = m.id
         WHERE pa.Id_NumPedido = ?
       `;
-      return await crm.query(sql, [pedidoId]);
+      try {
+        return await crm.query(sqlLower, [pedidoId]);
+      } catch (_) {
+        const sqlUpper = `
+          SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
+          FROM pedidos_articulos pa
+          INNER JOIN articulos a ON pa.Id_Articulo = a.id
+          LEFT JOIN Marcas m ON a.Id_Marca = m.id
+          WHERE pa.Id_NumPedido = ?
+        `;
+        return await crm.query(sqlUpper, [pedidoId]);
+      }
     } catch (error) {
       console.error('❌ Error obteniendo líneas de pedido:', error);
       return [];
@@ -512,20 +524,39 @@ class CalculadorComisiones {
       const mesInicio = (trimestre - 1) * 3 + 1;
       const mesFin = trimestre * 3;
 
-      const sql = `
+      // La marca real vive en `marcas.Nombre` (o `Marcas`), no en `articulos.Marca` en la mayoría de instalaciones.
+      const marcaNorm = String(marca || '').trim().toUpperCase();
+      const sqlLower = `
         SELECT SUM(pa.Subtotal) as total
         FROM pedidos p
         INNER JOIN pedidos_articulos pa ON p.id = pa.Id_NumPedido OR p.id = pa.PedidoId
         INNER JOIN articulos a ON pa.Id_Articulo = a.id
+        LEFT JOIN marcas m ON a.Id_Marca = m.id
         WHERE p.Id_Cial = ?
-        AND YEAR(p.FechaPedido) = ?
-        AND MONTH(p.FechaPedido) >= ? AND MONTH(p.FechaPedido) <= ?
-        AND a.Marca = ?
-        AND p.EstadoPedido != 'Anulado'
+          AND YEAR(p.FechaPedido) = ?
+          AND MONTH(p.FechaPedido) BETWEEN ? AND ?
+          AND UPPER(m.Nombre) = ?
+          AND p.EstadoPedido != 'Anulado'
       `;
-      
-      const rows = await crm.query(sql, [comercialId, año, mesInicio, mesFin, marca]);
-      return parseFloat(rows[0]?.total || 0);
+      try {
+        const rows = await crm.query(sqlLower, [comercialId, año, mesInicio, mesFin, marcaNorm]);
+        return parseFloat(rows[0]?.total || 0);
+      } catch (_) {
+        const sqlUpper = `
+          SELECT SUM(pa.Subtotal) as total
+          FROM pedidos p
+          INNER JOIN pedidos_articulos pa ON p.id = pa.Id_NumPedido OR p.id = pa.PedidoId
+          INNER JOIN articulos a ON pa.Id_Articulo = a.id
+          LEFT JOIN Marcas m ON a.Id_Marca = m.id
+          WHERE p.Id_Cial = ?
+            AND YEAR(p.FechaPedido) = ?
+            AND MONTH(p.FechaPedido) BETWEEN ? AND ?
+            AND UPPER(m.Nombre) = ?
+            AND p.EstadoPedido != 'Anulado'
+        `;
+        const rows = await crm.query(sqlUpper, [comercialId, año, mesInicio, mesFin, marcaNorm]);
+        return parseFloat(rows[0]?.total || 0);
+      }
     } catch (error) {
       console.error('❌ Error obteniendo ventas por marca:', error);
       return 0;
