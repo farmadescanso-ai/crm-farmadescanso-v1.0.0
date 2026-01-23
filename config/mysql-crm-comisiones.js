@@ -703,6 +703,78 @@ class ComisionesCRM {
    */
   async saveComision(comisionData) {
     try {
+      // Si viene ID, actualizar directamente por ID (evita pasar undefined en el SELECT por clave compuesta)
+      if (comisionData && comisionData.id !== undefined && comisionData.id !== null) {
+        const id = Number(comisionData.id);
+        if (!Number.isFinite(id) || id <= 0) {
+          throw new Error(`ID de comisión inválido: ${comisionData.id}`);
+        }
+
+        const updates = [];
+        const params = [];
+
+        if (comisionData.fijo_mensual !== undefined) {
+          updates.push('fijo_mensual = ?');
+          params.push(comisionData.fijo_mensual);
+        }
+        if (comisionData.comision_ventas !== undefined) {
+          updates.push('comision_ventas = ?');
+          params.push(comisionData.comision_ventas);
+        }
+        if (comisionData.comision_presupuesto !== undefined) {
+          updates.push('comision_presupuesto = ?');
+          params.push(comisionData.comision_presupuesto);
+        }
+        if (comisionData.total_ventas !== undefined) {
+          updates.push('total_ventas = ?');
+          params.push(comisionData.total_ventas);
+        }
+        if (comisionData.total_comision !== undefined) {
+          updates.push('total_comision = ?');
+          params.push(comisionData.total_comision);
+        }
+        if (comisionData.estado !== undefined) {
+          updates.push('estado = ?');
+          params.push(comisionData.estado);
+        }
+        if (comisionData.fecha_pago !== undefined) {
+          updates.push('fecha_pago = ?');
+          // Normalizar vacío -> NULL (pero nunca undefined)
+          params.push(comisionData.fecha_pago || null);
+        }
+        if (comisionData.observaciones !== undefined) {
+          updates.push('observaciones = ?');
+          params.push(comisionData.observaciones || null);
+        }
+        if (comisionData.calculado_por !== undefined) {
+          updates.push('calculado_por = ?');
+          params.push(comisionData.calculado_por ?? null);
+        }
+        if (comisionData.pagado_por !== undefined) {
+          updates.push('pagado_por = ?');
+          params.push(comisionData.pagado_por ?? null);
+        }
+
+        if (updates.length === 0) {
+          return { id };
+        }
+
+        params.push(id);
+        const sql = `UPDATE comisiones SET ${updates.join(', ')} WHERE id = ?`;
+        await this.execute(sql, params);
+        return { id, ...comisionData };
+      }
+
+      // Sin ID, se requiere clave compuesta para upsert (comercial_id, mes, año)
+      if (
+        !comisionData ||
+        comisionData.comercial_id === undefined ||
+        comisionData.mes === undefined ||
+        comisionData.año === undefined
+      ) {
+        throw new Error('saveComision requiere id o (comercial_id, mes, año)');
+      }
+
       // Verificar si ya existe
       const existing = await this.query(
         'SELECT id FROM comisiones WHERE comercial_id = ? AND mes = ? AND año = ?',
@@ -939,6 +1011,78 @@ class ComisionesCRM {
    */
   async saveRapel(rapelData) {
     try {
+      // Si viene ID, actualizar directamente por ID (evita pasar undefined en el SELECT por clave compuesta)
+      if (rapelData && rapelData.id !== undefined && rapelData.id !== null) {
+        const id = Number(rapelData.id);
+        if (!Number.isFinite(id) || id <= 0) {
+          throw new Error(`ID de rapel inválido: ${rapelData.id}`);
+        }
+
+        const updates = [];
+        const params = [];
+
+        if (rapelData.ventas_trimestre !== undefined) {
+          updates.push('ventas_trimestre = ?');
+          params.push(rapelData.ventas_trimestre);
+        }
+        if (rapelData.objetivo_trimestre !== undefined) {
+          updates.push('objetivo_trimestre = ?');
+          params.push(rapelData.objetivo_trimestre);
+        }
+        if (rapelData.porcentaje_cumplimiento !== undefined) {
+          updates.push('porcentaje_cumplimiento = ?');
+          params.push(rapelData.porcentaje_cumplimiento);
+        }
+        if (rapelData.porcentaje_rapel !== undefined) {
+          updates.push('porcentaje_rapel = ?');
+          params.push(rapelData.porcentaje_rapel);
+        }
+        if (rapelData.importe_rapel !== undefined) {
+          updates.push('importe_rapel = ?');
+          params.push(rapelData.importe_rapel);
+        }
+        if (rapelData.estado !== undefined) {
+          updates.push('estado = ?');
+          params.push(rapelData.estado);
+        }
+        if (rapelData.fecha_pago !== undefined) {
+          updates.push('fecha_pago = ?');
+          params.push(rapelData.fecha_pago || null);
+        }
+        if (rapelData.observaciones !== undefined) {
+          updates.push('observaciones = ?');
+          params.push(rapelData.observaciones || null);
+        }
+        if (rapelData.calculado_por !== undefined) {
+          updates.push('calculado_por = ?');
+          params.push(rapelData.calculado_por ?? null);
+        }
+        if (rapelData.pagado_por !== undefined) {
+          updates.push('pagado_por = ?');
+          params.push(rapelData.pagado_por ?? null);
+        }
+
+        if (updates.length === 0) {
+          return { id };
+        }
+
+        params.push(id);
+        const sql = `UPDATE rapeles SET ${updates.join(', ')} WHERE id = ?`;
+        await this.execute(sql, params);
+        return { id, ...rapelData };
+      }
+
+      // Sin ID, se requiere clave compuesta para upsert (comercial_id, marca, trimestre, año)
+      if (
+        !rapelData ||
+        rapelData.comercial_id === undefined ||
+        rapelData.marca === undefined ||
+        rapelData.trimestre === undefined ||
+        rapelData.año === undefined
+      ) {
+        throw new Error('saveRapel requiere id o (comercial_id, marca, trimestre, año)');
+      }
+
       // Verificar si ya existe
       const existing = await this.query(
         'SELECT id FROM rapeles WHERE comercial_id = ? AND marca = ? AND trimestre = ? AND año = ?',

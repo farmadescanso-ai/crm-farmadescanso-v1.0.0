@@ -892,7 +892,7 @@ router.post('/comisiones/:id/pagar', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const fechaPago = req.body.fecha_pago || new Date().toISOString().split('T')[0];
-    const pagadoPor = req.comercialId || req.session.comercialId;
+    const pagadoPor = req.comercialId || req.session.comercialId || null;
 
     await comisionesCRM.saveComision({
       id: id,
@@ -1012,7 +1012,7 @@ router.post('/rapeles/:id/pagar', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const fechaPago = req.body.fecha_pago || new Date().toISOString().split('T')[0];
-    const pagadoPor = req.comercialId || req.session.comercialId;
+    const pagadoPor = req.comercialId || req.session.comercialId || null;
 
     await comisionesCRM.saveRapel({
       id: id,
