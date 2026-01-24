@@ -20,6 +20,8 @@
     }
     .table thead th { white-space: nowrap; }
     .badge-pill { border-radius: 999px; }
+    .importe-pagado { color: #198754 !important; } /* bootstrap success */
+    .importe-pendiente { color: #6c757d !important; } /* bootstrap secondary */
   </style>
 </head>
 <body>
@@ -124,6 +126,10 @@
                   <div class="small text-muted mt-2">
                     Nota: si aún no se ha aplicado el ALTER TABLE, el sistema guardará el pago como “ambos” (modo compatibilidad).
                   </div>
+                  <div class="small mt-2">
+                    <span class="me-3"><span class="fw-bold importe-pagado">Pagado</span></span>
+                    <span><span class="fw-bold importe-pendiente">Pendiente</span></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -167,7 +173,7 @@
                       </div>
                       <div class="text-muted small">
                         Subtotal base: € <%= Number(g.subtotal_base || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
-                        · Subtotal comisión: € <%= Number(g.subtotal_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                        · Subtotal comisión: <span class="<%= ventasPagadas ? 'importe-pagado' : 'importe-pendiente' %> fw-bold">€ <%= Number(g.subtotal_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
                         · % efectivo: <%= Number(g.pct_efectivo || 0).toFixed(2) %>%
                       </div>
                     </div>
@@ -193,7 +199,7 @@
                             <td><%= r.cliente_nombre || '-' %></td>
                             <td class="text-end">€ <%= Number(r.base_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
                             <td class="text-end"><%= Number(r.pct_efectivo || 0).toFixed(2) %>%</td>
-                            <td class="text-end fw-bold">€ <%= Number(r.comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                            <td class="text-end fw-bold <%= ventasPagadas ? 'importe-pagado' : 'importe-pendiente' %>">€ <%= Number(r.comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
                           </tr>
                         <% }) %>
                       </tbody>
@@ -202,7 +208,7 @@
                           <th scope="row" colspan="3" class="text-end">Subtotal <%= g.marca_nombre %></th>
                           <th class="text-end">€ <%= Number(g.subtotal_base || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
                           <th class="text-end"><%= Number(g.pct_efectivo || 0).toFixed(2) %>%</th>
-                          <th class="text-end fw-bold">€ <%= Number(g.subtotal_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
+                          <th class="text-end fw-bold <%= ventasPagadas ? 'importe-pagado' : 'importe-pendiente' %>">€ <%= Number(g.subtotal_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
                         </tr>
                       </tfoot>
                     </table>
@@ -218,6 +224,7 @@
             <h5 class="mb-0">
               <i class="fas fa-coins me-2"></i>Fijo mensual por marca (periodo)
               <span class="badge bg-warning text-dark ms-2">€ <%= Number(totales.total_fijo_marca || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+              <span class="badge <%= fijoPagado ? 'bg-success' : 'bg-secondary' %> ms-2"><%= fijoPagado ? 'Fijo pagado' : 'Fijo pendiente' %></span>
             </h5>
           </div>
           <div class="card-body">
@@ -235,16 +242,16 @@
                   </thead>
                   <tbody>
                     <% fijosPorMarca.forEach(f => { %>
-                      <tr>
+                      <tr class="<%= fijoPagado ? 'table-success' : '' %>">
                         <td><%= f.marca_nombre %></td>
-                        <td class="text-end fw-bold">€ <%= Number(f.importe || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                        <td class="text-end fw-bold <%= fijoPagado ? 'importe-pagado' : 'importe-pendiente' %>">€ <%= Number(f.importe || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
                       </tr>
                     <% }) %>
                   </tbody>
                   <tfoot>
                     <tr class="table-light">
                       <th scope="row" class="text-end">Total fijo</th>
-                      <th class="text-end">€ <%= Number(totales.total_fijo_marca || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
+                      <th class="text-end fw-bold <%= fijoPagado ? 'importe-pagado' : 'importe-pendiente' %>">€ <%= Number(totales.total_fijo_marca || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
                     </tr>
                   </tfoot>
                 </table>
