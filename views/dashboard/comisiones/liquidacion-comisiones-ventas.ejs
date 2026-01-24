@@ -132,54 +132,83 @@
 
         <div class="card mb-3">
           <div class="card-header bg-light">
-            <h5 class="mb-0">
-              <i class="fas fa-table me-2"></i>Ventas por pedido y marca
-              <span class="badge bg-primary ms-2"><%= (ventasPedidoMarca || []).length %> fila(s)</span>
-            </h5>
+            <div class="d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">
+                <i class="fas fa-layer-group me-2"></i>Ventas separadas por marca
+                <span class="badge bg-primary ms-2"><%= ((ventasPorMarca || []).length || 0) %> marca(s)</span>
+              </h5>
+              <% if (ventasPorMarca && ventasPorMarca.length > 1) { %>
+                <div class="small text-muted">Acceso rápido:</div>
+              <% } %>
+            </div>
+            <% if (ventasPorMarca && ventasPorMarca.length > 1) { %>
+              <div class="mt-2 d-flex flex-wrap gap-2">
+                <% ventasPorMarca.forEach((g, idx) => { %>
+                  <a class="btn btn-sm btn-outline-secondary" href="#marca-<%= idx %>">
+                    <%= g.marca_nombre %>
+                  </a>
+                <% }) %>
+              </div>
+            <% } %>
           </div>
           <div class="card-body">
-            <% if (!ventasPedidoMarca || ventasPedidoMarca.length === 0) { %>
+            <% if ((!ventasPorMarca || ventasPorMarca.length === 0) && (!ventasPedidoMarca || ventasPedidoMarca.length === 0)) { %>
               <div class="alert alert-info mb-0">
                 No hay líneas de <strong>comisión de ventas</strong> guardadas para esta comisión.
               </div>
             <% } else { %>
-              <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover align-middle">
-                  <caption class="text-muted">Detalle de ventas comisionables agrupadas por pedido y marca.</caption>
-                  <thead>
-                    <tr>
-                      <th scope="col">Pedido</th>
-                      <th scope="col">Fecha</th>
-                      <th scope="col">Cliente</th>
-                      <th scope="col">Marca</th>
-                      <th scope="col" class="text-end">Base imponible</th>
-                      <th scope="col" class="text-end">% efectivo</th>
-                      <th scope="col" class="text-end">Comisión ventas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <% ventasPedidoMarca.forEach(r => { %>
-                      <tr>
-                        <td><%= r.pedido_numero || r.pedido_id || 'N/A' %></td>
-                        <td><%= r.pedido_fecha ? new Date(r.pedido_fecha).toLocaleDateString('es-ES') : '-' %></td>
-                        <td><%= r.cliente_nombre || '-' %></td>
-                        <td><%= r.marca_nombre || '-' %></td>
-                        <td class="text-end">€ <%= Number(r.base_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                        <td class="text-end"><%= Number(r.pct_efectivo || 0).toFixed(2) %>%</td>
-                        <td class="text-end fw-bold">€ <%= Number(r.comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
-                      </tr>
-                    <% }) %>
-                  </tbody>
-                  <tfoot>
-                    <tr class="table-light">
-                      <th scope="row" colspan="4" class="text-end">Totales</th>
-                      <th class="text-end">€ <%= Number(totales.total_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
-                      <th class="text-end"><%= (Number(totales.total_venta || 0) > 0 ? (Number(totales.total_comision_ventas || 0) / Number(totales.total_venta || 1)) * 100 : 0).toFixed(2) %>%</th>
-                      <th class="text-end fw-bold">€ <%= Number(totales.total_comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
-                    </tr>
-                  </tfoot>
-                </table>
-              </div>
+              <% const grupos = (ventasPorMarca && ventasPorMarca.length > 0) ? ventasPorMarca : [{ marca_nombre: 'TODAS', filas: ventasPedidoMarca || [], subtotal_base: totales.total_venta || 0, subtotal_comision: totales.total_comision_ventas || 0, pct_efectivo: (Number(totales.total_venta||0)>0 ? (Number(totales.total_comision_ventas||0)/Number(totales.total_venta||1))*100 : 0) }]; %>
+              <% grupos.forEach((g, idx) => { %>
+                <div class="mb-4" id="marca-<%= idx %>">
+                  <div class="d-flex justify-content-between align-items-end mb-2">
+                    <div>
+                      <div class="fw-bold">
+                        <i class="fas fa-tag me-2 text-secondary"></i><%= g.marca_nombre %>
+                      </div>
+                      <div class="text-muted small">
+                        Subtotal base: € <%= Number(g.subtotal_base || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                        · Subtotal comisión: € <%= Number(g.subtotal_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                        · % efectivo: <%= Number(g.pct_efectivo || 0).toFixed(2) %>%
+                      </div>
+                    </div>
+                  </div>
+                  <div class="table-responsive">
+                    <table class="table table-sm table-striped table-hover align-middle">
+                      <caption class="text-muted">Detalle de ventas comisionables para la marca <%= g.marca_nombre %>.</caption>
+                      <thead>
+                        <tr>
+                          <th scope="col">Pedido</th>
+                          <th scope="col">Fecha</th>
+                          <th scope="col">Cliente</th>
+                          <th scope="col" class="text-end">Base imponible</th>
+                          <th scope="col" class="text-end">% efectivo</th>
+                          <th scope="col" class="text-end">Comisión ventas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <% (g.filas || []).forEach(r => { %>
+                          <tr>
+                            <td><%= r.pedido_numero || r.pedido_id || 'N/A' %></td>
+                            <td><%= r.pedido_fecha ? new Date(r.pedido_fecha).toLocaleDateString('es-ES') : '-' %></td>
+                            <td><%= r.cliente_nombre || '-' %></td>
+                            <td class="text-end">€ <%= Number(r.base_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                            <td class="text-end"><%= Number(r.pct_efectivo || 0).toFixed(2) %>%</td>
+                            <td class="text-end fw-bold">€ <%= Number(r.comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></td>
+                          </tr>
+                        <% }) %>
+                      </tbody>
+                      <tfoot>
+                        <tr class="table-light">
+                          <th scope="row" colspan="3" class="text-end">Subtotal <%= g.marca_nombre %></th>
+                          <th class="text-end">€ <%= Number(g.subtotal_base || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
+                          <th class="text-end"><%= Number(g.pct_efectivo || 0).toFixed(2) %>%</th>
+                          <th class="text-end fw-bold">€ <%= Number(g.subtotal_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></th>
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
+                </div>
+              <% }) %>
             <% } %>
           </div>
         </div>

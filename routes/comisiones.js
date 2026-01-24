@@ -926,11 +926,37 @@ router.get('/comisiones/:id(\\d+)/liquidacion', async (req, res) => {
       };
     });
 
+    // Agrupar por marca para el informe (secciones por marca)
+    const ventasPorMarcaMap = new Map();
+    for (const row of ventasPedidoMarca) {
+      const nombre = String(row.marca_nombre || 'SIN_MARCA');
+      const key = nombre.toUpperCase();
+      if (!ventasPorMarcaMap.has(key)) {
+        ventasPorMarcaMap.set(key, {
+          marca_nombre: nombre,
+          filas: [],
+          subtotal_base: 0,
+          subtotal_comision: 0
+        });
+      }
+      const g = ventasPorMarcaMap.get(key);
+      g.filas.push(row);
+      g.subtotal_base += Number(row.base_venta || 0);
+      g.subtotal_comision += Number(row.comision_ventas || 0);
+    }
+    const ventasPorMarca = [...ventasPorMarcaMap.values()]
+      .map(g => ({
+        ...g,
+        pct_efectivo: g.subtotal_base > 0 ? (g.subtotal_comision / g.subtotal_base) * 100 : 0
+      }))
+      .sort((a, b) => String(a.marca_nombre).localeCompare(String(b.marca_nombre), 'es'));
+
     res.render('dashboard/comisiones/liquidacion-comisiones-ventas', {
       title: `Liquidación Comisiones Ventas ${comision.mes}/${comision.año} - Farmadescaso`,
       user: req.comercial || req.session?.comercial,
       comision,
       ventasPedidoMarca,
+      ventasPorMarca,
       fijosPorMarca: [...fijoPorMarca.values()].sort((a, b) => String(a.marca_nombre).localeCompare(String(b.marca_nombre), 'es')),
       totales: {
         total_venta: totalVenta,
