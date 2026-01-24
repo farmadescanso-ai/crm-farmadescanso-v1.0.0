@@ -252,9 +252,17 @@
                                     <%= comision.año %>
                                     <% } %>
                                 </td>
-                                <td class="text-end <%= fijoPagado ? 'importe-pagado' : '' %>">€ <%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                <td class="text-end <%= ventasPagadas ? 'importe-pagado' : '' %>">€ <%= parseFloat(comision.comision_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                <td class="text-end fw-bold <%= totalPagado ? 'importe-pagado' : '' %>">€ <%= parseFloat(comision.total_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                <%
+                                    const fijoVal = Number(comision.fijo_mensual || 0);
+                                    const ventasValDb = Number(comision.comision_ventas || 0);
+                                    const ventasValDetalle = Number(comision.comision_ventas_detalle || 0);
+                                    const ventasVal = ventasValDb > 0 ? ventasValDb : ventasValDetalle;
+                                    const totalValDb = Number(comision.total_comision || 0);
+                                    const totalVal = totalValDb > 0 ? totalValDb : (fijoVal + ventasVal);
+                                %>
+                                <td class="text-end <%= fijoPagado ? 'importe-pagado' : '' %>">€ <%= fijoVal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                <td class="text-end <%= ventasPagadas ? 'importe-pagado' : '' %>">€ <%= ventasVal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                <td class="text-end fw-bold <%= totalPagado ? 'importe-pagado' : '' %>">€ <%= totalVal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-center">
                                     <% if (comision.estado === 'Pagado' || comision.estado === 'Pagada') { %>
                                     <span class="badge bg-success">Pagado</span>

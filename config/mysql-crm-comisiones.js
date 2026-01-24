@@ -844,11 +844,25 @@ class ComisionesCRM {
    */
   async getComisiones(filters = {}) {
     try {
+      const cdTable = await this._getComisionesDetalleTable();
       let sql = `
-        SELECT c.*, 
+        SELECT c.*,
+               COALESCE(dv.total_ventas_detalle, 0) AS total_ventas_detalle,
+               COALESCE(dv.comision_ventas_detalle, 0) AS comision_ventas_detalle,
+               COALESCE(dv.detalles_venta_count, 0) AS detalles_venta_count,
                co.Nombre as comercial_nombre,
                co.Email as comercial_email
         FROM comisiones c
+        LEFT JOIN (
+          SELECT
+            comision_id,
+            SUM(COALESCE(importe_venta, 0)) AS total_ventas_detalle,
+            SUM(COALESCE(importe_comision, 0)) AS comision_ventas_detalle,
+            COUNT(*) AS detalles_venta_count
+          FROM ${cdTable}
+          WHERE (tipo_comision IS NULL OR tipo_comision = 'Venta')
+          GROUP BY comision_id
+        ) dv ON dv.comision_id = c.id
         LEFT JOIN comerciales co ON c.comercial_id = co.id
         WHERE 1=1
       `;
@@ -906,11 +920,25 @@ class ComisionesCRM {
    */
   async getComisionById(id) {
     try {
+      const cdTable = await this._getComisionesDetalleTable();
       const sql = `
-        SELECT c.*, 
+        SELECT c.*,
+               COALESCE(dv.total_ventas_detalle, 0) AS total_ventas_detalle,
+               COALESCE(dv.comision_ventas_detalle, 0) AS comision_ventas_detalle,
+               COALESCE(dv.detalles_venta_count, 0) AS detalles_venta_count,
                co.Nombre as comercial_nombre,
                co.Email as comercial_email
         FROM comisiones c
+        LEFT JOIN (
+          SELECT
+            comision_id,
+            SUM(COALESCE(importe_venta, 0)) AS total_ventas_detalle,
+            SUM(COALESCE(importe_comision, 0)) AS comision_ventas_detalle,
+            COUNT(*) AS detalles_venta_count
+          FROM ${cdTable}
+          WHERE (tipo_comision IS NULL OR tipo_comision = 'Venta')
+          GROUP BY comision_id
+        ) dv ON dv.comision_id = c.id
         LEFT JOIN comerciales co ON c.comercial_id = co.id
         WHERE c.id = ?
       `;
