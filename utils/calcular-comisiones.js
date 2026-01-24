@@ -86,11 +86,12 @@ class CalculadorComisiones {
           // Obtener porcentaje de comisión desde configuración (considerando marca del artículo)
           const marcaNombre = linea.MarcaNombre || null;
           const tipoPedidoId = pedido.Id_TipoPedido || pedido.id_tipo_pedido || null;
+          // Firma: (marca, tipoPedidoNombre, año, tipoPedidoId)
           let porcentajeComision = await comisionesCRM.getPorcentajeComision(
             marcaNombre,
-            tipoPedidoId,
             tipoPedidoNombre,
-            año
+            año,
+            tipoPedidoId
           );
 
           if (condicionEspecial) {
