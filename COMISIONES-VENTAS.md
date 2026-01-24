@@ -206,9 +206,9 @@ Acceso (admin):
 - **¿Hay líneas vinculadas al pedido?**
   - Ver sección 4 (Id_NumPedido vs NumPedido).
 - **¿Existe `tipo_pedido_id` en el pedido?**
-  - Si falta, el sistema puede caer a defaults.
+  - Si falta, puede no encontrarse configuración por ID y la línea terminar en **0%** (ver warnings `SIN_CONFIG`).
 - **¿Existe configuración en `config_comisiones_tipo_pedido` para esa marca/año?**
-  - Si no, se usan defaults.
+  - Si no existe configuración, **NO hay comisión por defecto**: la línea queda al **0%** y se registra aviso `SIN_CONFIG`.
 - **¿La marca del artículo se resuelve correctamente?**
   - La marca se obtiene por join `articulos.Id_Marca -> marcas.Nombre`.
 - **¿Descuento de transporte configurado?**
