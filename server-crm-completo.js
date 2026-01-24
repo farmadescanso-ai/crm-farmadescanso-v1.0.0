@@ -381,14 +381,22 @@ const recalcularComisionesPedido = async (pedidoId) => {
     }
 
     // Obtener comercial del pedido
-    const comercialId = pedido.Id_Cial || pedido.comercial_id;
+    const comercialIdRaw =
+      pedido.Id_Cial ??
+      pedido.id_cial ??
+      pedido.Comercial_id ??
+      pedido.comercial_id ??
+      pedido.ComercialId ??
+      pedido.comercialId ??
+      null;
+    const comercialId = comercialIdRaw ? Number(comercialIdRaw) : null;
     if (!comercialId) {
       console.warn(`⚠️ [COMISIONES] Pedido ${pedidoId} no tiene comercial asignado`);
       return;
     }
 
     // Obtener fecha del pedido
-    const fechaPedido = pedido.FechaPedido || pedido.fecha_pedido;
+    const fechaPedido = pedido.FechaPedido || pedido.fecha_pedido || pedido['Fecha Pedido'] || pedido.fecha || null;
     if (!fechaPedido) {
       console.warn(`⚠️ [COMISIONES] Pedido ${pedidoId} no tiene fecha`);
       return;
@@ -399,7 +407,7 @@ const recalcularComisionesPedido = async (pedidoId) => {
     const año = fecha.getFullYear();
 
     // Verificar que el pedido no esté anulado
-    const estadoPedido = pedido.EstadoPedido || pedido.estado_pedido || '';
+    const estadoPedido = pedido.EstadoPedido || pedido.Estado || pedido.estado_pedido || pedido.estado || '';
     if (estadoPedido.toLowerCase() === 'anulado') {
       console.log(`ℹ️ [COMISIONES] Pedido ${pedidoId} está anulado, recalculando comisiones del mes ${mes}/${año}...`);
     }
@@ -13782,7 +13790,7 @@ app.post('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
     if (!pedido) {
       throw new Error('Pedido no encontrado');
     }
-    const estadoActual = (pedido.EstadoPedido || pedido.Estado || '').toLowerCase();
+    const estadoActual = (pedido.EstadoPedido || pedido.Estado || pedido.estado_pedido || pedido.estado || '').toLowerCase();
     if (estadoActual === 'cerrado') {
       if (req.accepts('json') && !req.body.__fromDashboard) {
         return res.status(400).json({ success: false, error: 'Pedido cerrado. No se puede modificar.' });
@@ -13791,6 +13799,17 @@ app.post('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
     }
 
     await crm.updatePedido(id, { 'EstadoPedido': estado });
+
+    // Trigger de comisiones: solo cuando pasa de Pendiente -> Tramitado
+    const nuevoEstado = String(estado || '').toLowerCase();
+    const eraPendiente = estadoActual.includes('pend');
+    const pasaATramitado = nuevoEstado.includes('tramit');
+    if (eraPendiente && pasaATramitado) {
+      recalcularComisionesPedido(id).catch(err => {
+        console.error(`❌ [PEDIDO ESTADO] Error recalculando comisiones (no crítico):`, err.message);
+      });
+    }
+
     if (req.accepts('json') && !req.body.__fromDashboard) {
       return res.json({ success: true, data: { id, estado } });
     }

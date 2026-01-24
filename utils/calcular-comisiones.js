@@ -69,11 +69,12 @@ class CalculadorComisiones {
 
           // Obtener porcentaje de comisión desde configuración (considerando marca del artículo)
           const marcaNombre = linea.MarcaNombre || null;
+          const tipoPedidoId = pedido.Id_TipoPedido || pedido.id_tipo_pedido || null;
           let porcentajeComision = await comisionesCRM.getPorcentajeComision(
             marcaNombre,
+            tipoPedidoId,
             tipoPedidoNombre,
-            año,
-            pedido.Id_TipoPedido || pedido.id_tipo_pedido || null
+            año
           );
 
           if (condicionEspecial) {
@@ -438,7 +439,7 @@ class CalculadorComisiones {
         WHERE p.Id_Cial = ? 
         AND MONTH(p.FechaPedido) = ? 
         AND YEAR(p.FechaPedido) = ?
-        AND p.EstadoPedido != 'Anulado'
+        AND LOWER(COALESCE(p.EstadoPedido, '')) NOT IN ('anulado', 'pendiente', 'cancelado')
         ORDER BY p.FechaPedido
       `;
       return await crm.query(sql, [comercialId, mes, año]);
