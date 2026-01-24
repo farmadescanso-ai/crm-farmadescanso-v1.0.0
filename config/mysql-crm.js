@@ -2348,6 +2348,24 @@ class MySQLCRM {
         if (rows && rows.length > 0) return rows[0];
       }
 
+      // 1.1) Fallback (cuando el parámetro es un número "humano" de pedido):
+      // Ejemplo: /pedidos/7 puede referirse a NumPedido = P250007 (no al ID interno).
+      // Probamos con prefijos de los últimos años (PYY0007).
+      if (isNum) {
+        const sec = String(asNum).padStart(4, '0');
+        const nowYear = new Date().getFullYear();
+        const yearsToTry = [0, 1, 2, 3, 4, 5].map(d => nowYear - d);
+        for (const y of yearsToTry) {
+          const yy = String(y).slice(-2);
+          const numPedido = `P${yy}${sec}`;
+          const rowsByNum = await this.query(
+            'SELECT * FROM pedidos WHERE NumPedido = ? OR Numero_Pedido = ? OR `Número_Pedido` = ? OR `Número Pedido` = ? LIMIT 1',
+            [numPedido, numPedido, numPedido, numPedido]
+          );
+          if (rowsByNum && rowsByNum.length > 0) return rowsByNum[0];
+        }
+      }
+
       // 2) Fallback: buscar por NumPedido si el parámetro parece un número de pedido
       if (asStr) {
         const sqlNumPedido = `
