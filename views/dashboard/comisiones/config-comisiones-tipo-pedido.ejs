@@ -172,7 +172,10 @@
                                 </td>
                                 <% if (esAdmin) { %>
                                 <td class="text-center">
-                                    <button class="btn btn-sm btn-outline-primary" onclick='editarConfig(<%= JSON.stringify(config).replace(/"/g, "&quot;") %>)'>
+                                    <button
+                                        class="btn btn-sm btn-outline-primary"
+                                        data-config="<%= encodeURIComponent(JSON.stringify(config)) %>"
+                                        onclick="editarConfigFromEl(this)">
                                         <i class="fas fa-edit"></i>
                                     </button>
                                     <button class="btn btn-sm btn-outline-danger" onclick="eliminarConfig(<%= config.id %>)">
@@ -265,6 +268,17 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        function editarConfigFromEl(el) {
+            try {
+                const raw = el.getAttribute('data-config') || '';
+                const config = JSON.parse(decodeURIComponent(raw));
+                editarConfig(config);
+            } catch (e) {
+                console.error('Error parseando config para editar:', e);
+                alert('Error al abrir la configuración para editar');
+            }
+        }
+
         function editarConfig(config) {
             document.getElementById('modalTitle').textContent = 'Editar Configuración';
             document.getElementById('configId').value = config.id;
