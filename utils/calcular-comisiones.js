@@ -634,7 +634,7 @@ class CalculadorComisiones {
         mes: mes
       });
       // Filtrar solo los activos
-      return fijos.filter(f => f.activo === 1 || f.activo === true);
+      return (fijos || []).filter(f => Number(f.activo) === 1 || f.activo === true);
     } catch (error) {
       console.error('❌ Error obteniendo fijos mensuales por marca:', error);
       return [];
