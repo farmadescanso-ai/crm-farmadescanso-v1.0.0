@@ -264,6 +264,11 @@
                                     <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Registrar pago (Ventas/Fijo)">
                                         <i class="fas fa-check"></i>
                                     </button>
+                                    <% if (comision.estado !== 'Pagado' && comision.estado !== 'Pagada') { %>
+                                    <button class="btn btn-sm btn-outline-danger" onclick="borrarComision(<%= comision.id %>)" title="Borrar comisión (admin)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <% } %>
                                     <% } %>
                                 </td>
                             </tr>
@@ -347,6 +352,25 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error al recalcular: ' + (error.message || 'desconocido'));
+            }
+        }
+
+        async function borrarComision(id) {
+            const ok = confirm('⚠️ ¿Borrar esta comisión?\n\nSe eliminarán también sus detalles y su estado asociado.\nNo se permite borrar si está marcada como PAGADA.');
+            if (!ok) return;
+            try {
+                const res = await fetch(`/dashboard/comisiones/comisiones/${id}`, {
+                    method: 'DELETE',
+                    headers: { 'Accept': 'application/json' },
+                    credentials: 'include'
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok || data.success === false) {
+                    throw new Error(data.error || `HTTP ${res.status}`);
+                }
+                location.reload();
+            } catch (e) {
+                alert(`No se pudo borrar: ${e.message}`);
             }
         }
 

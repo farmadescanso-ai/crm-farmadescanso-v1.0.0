@@ -1316,6 +1316,40 @@ class ComisionesCRM {
   }
 
   /**
+   * Eliminar una comisión mensual por ID manteniendo integridad:
+   * - Borra detalle (comisiones_detalle) primero (por si no hay FK cascade)
+   * - Borra estadoComisiones (si existe) para no dejar huérfanos en instalaciones sin FK
+   * - Borra la comisión
+   */
+  async deleteComisionById(comisionId) {
+    const id = Number(comisionId);
+    if (!Number.isFinite(id) || id <= 0) throw new Error('ID de comisión inválido');
+
+    // 1) Detalle
+    try {
+      await this.deleteComisionDetalleByComisionId(id);
+    } catch (e) {
+      // no bloquear si la tabla no existe o hay case issues ya cubiertos por _getComisionesDetalleTable
+      console.warn('⚠️ No se pudo borrar detalle (no crítico):', e.message);
+    }
+
+    // 2) estadoComisiones (si existe la tabla)
+    try {
+      await this.execute('DELETE FROM estadoComisiones WHERE comision_id = ?', [id]);
+    } catch (e) {
+      // En entornos sin la tabla aún, ignorar
+      const msg = String(e?.message || '').toLowerCase();
+      if (!msg.includes('doesn\'t exist') && !msg.includes('no such table')) {
+        console.warn('⚠️ No se pudo borrar estadoComisiones (no crítico):', e.message);
+      }
+    }
+
+    // 3) comisión
+    const res = await this.execute('DELETE FROM comisiones WHERE id = ?', [id]);
+    return { affectedRows: res?.affectedRows ?? 0 };
+  }
+
+  /**
    * Agregar detalle a una comisión
    */
   async addComisionDetalle(detalleData) {

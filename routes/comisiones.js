@@ -1180,6 +1180,30 @@ router.post('/comisiones/:id(\\d+)/pagar', async (req, res) => {
   }
 });
 
+// Eliminar comisión (solo admin)
+router.delete('/comisiones/:id(\\d+)', async (req, res) => {
+  try {
+    if (!isAdminReq(req)) {
+      return res.status(403).json({ success: false, error: 'Solo administradores' });
+    }
+    const id = parseInt(req.params.id, 10);
+    const comision = await comisionesCRM.getComisionById(id);
+    if (!comision) {
+      return res.status(404).json({ success: false, error: 'Comisión no encontrada' });
+    }
+    const estadoLower = String(comision.estado || '').toLowerCase();
+    if (estadoLower.includes('pagad')) {
+      return res.status(409).json({ success: false, error: 'No se puede borrar una comisión marcada como pagada.' });
+    }
+
+    const result = await comisionesCRM.deleteComisionById(id);
+    return res.json({ success: true, data: { id, deleted: result.affectedRows || 0 } });
+  } catch (error) {
+    console.error('❌ Error eliminando comisión:', error);
+    return res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 /**
  * =====================================================
  * ESTADO COMISIONES (CRUD)
