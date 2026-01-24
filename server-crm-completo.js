@@ -13843,7 +13843,7 @@ app.post('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
  */
 
 // Recalcular comisiones del mes del pedido (solo admin)
-// Flujo: confirma -> (si no está pendiente) poner a Pendiente -> recalcular -> restaurar estado original
+// Nota: se permite independientemente del estado del pedido, EXCEPTO si la comisión del mes está pagada.
 app.post('/dashboard/pedidos/:id/recalcular-comisiones', requireAuth, requireAdmin, async (req, res) => {
   try {
     const pedidoId = Number(req.params.id);
@@ -13855,9 +13855,6 @@ app.post('/dashboard/pedidos/:id/recalcular-comisiones', requireAuth, requireAdm
     if (!pedido) {
       throw new Error('Pedido no encontrado');
     }
-
-    const estadoOriginal = (pedido.EstadoPedido || pedido.Estado || pedido.estado_pedido || pedido.estado || 'Pendiente').toString();
-    const estadoOriginalLower = estadoOriginal.toLowerCase();
 
     const comercialIdRaw =
       pedido.Id_Cial ??
@@ -13883,37 +13880,49 @@ app.post('/dashboard/pedidos/:id/recalcular-comisiones', requireAuth, requireAdm
     const mes = d.getMonth() + 1;
     const año = d.getFullYear();
 
-    // Confirmación explícita desde el front
-    const confirmChange = String(req.body?.confirm_change_to_pendiente || req.query?.confirm_change_to_pendiente || 'false') === 'true';
-    if (!confirmChange) {
-      // No tocar nada si no hay confirmación
+    // Confirmación explícita desde el front (no se toca el estado del pedido)
+    const confirmRecalc =
+      String(req.body?.confirm_recalculo || req.query?.confirm_recalculo || 'false') === 'true' ||
+      // compatibilidad con versiones anteriores del botón
+      String(req.body?.confirm_change_to_pendiente || req.query?.confirm_change_to_pendiente || 'false') === 'true';
+    if (!confirmRecalc) {
       if (req.accepts('json') && !req.accepts('html')) {
         return res.status(400).json({
           success: false,
-          error: 'Confirmación requerida para cambiar el pedido a Pendiente y recalcular.'
+          error: 'Confirmación requerida para recalcular comisiones desde este pedido.'
         });
       }
       return res.redirect(`/dashboard/pedidos/${pedidoId}?error=confirmacion_requerida_recalculo`);
     }
 
-    // Cambiar a Pendiente (si no lo está) para “rehacer” el flujo del negocio
-    if (!estadoOriginalLower.includes('pend')) {
-      await crm.updatePedido(pedidoId, { EstadoPedido: 'Pendiente' });
+    // Bloqueo: si la comisión mensual ya está pagada, NO permitir recálculo.
+    try {
+      const comisionesCRM = require('./config/mysql-crm-comisiones');
+      const rows = await comisionesCRM.query(
+        'SELECT id, estado FROM comisiones WHERE comercial_id = ? AND mes = ? AND año = ? LIMIT 1',
+        [comercialId, mes, año]
+      );
+      const estadoComision = String(rows?.[0]?.estado || '').toLowerCase();
+      if (estadoComision.includes('pagad')) {
+        const msg = `La comisión del ${String(mes).padStart(2, '0')}/${año} para el comercial ${comercialId} está marcada como PAGADA. No se permite recalcular.`;
+        if (req.accepts('json') && !req.accepts('html')) {
+          return res.status(409).json({ success: false, error: msg });
+        }
+        return res.redirect(`/dashboard/pedidos/${pedidoId}?error=comision_pagada_no_recalcular`);
+      }
+    } catch (e) {
+      // Si falla el check, no bloqueamos el recálculo (pero lo logeamos)
+      console.warn('⚠️ [RECALC PEDIDO] No se pudo verificar estado pagado (no crítico):', e.message);
     }
 
     // Ejecutar recalculo mensual (misma lógica que scripts internos, pero sin spawn)
     const calculadoPor = req.comercialId || req.session?.comercialId || null;
     await calculadorComisiones.calcularComisionMensual(comercialId, mes, año, calculadoPor);
 
-    // Restaurar estado original
-    if (!estadoOriginalLower.includes('pend')) {
-      await crm.updatePedido(pedidoId, { EstadoPedido: estadoOriginal });
-    }
-
     if (req.accepts('json') && !req.accepts('html')) {
       return res.json({
         success: true,
-        data: { pedidoId, comercialId, mes, año, estadoOriginal }
+        data: { pedidoId, comercialId, mes, año }
       });
     }
     return res.redirect(`/dashboard/pedidos/${pedidoId}?success=recalculo_comisiones_ok`);

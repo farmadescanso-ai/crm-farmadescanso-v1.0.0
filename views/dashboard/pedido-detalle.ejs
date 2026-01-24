@@ -382,7 +382,7 @@
                             'Content-Type': 'application/json',
                             'Accept': 'application/json'
                         },
-                        body: JSON.stringify({ confirm_change_to_pendiente: true })
+                        body: JSON.stringify({ confirm_recalculo: true })
                     });
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok || data.success === false) {
