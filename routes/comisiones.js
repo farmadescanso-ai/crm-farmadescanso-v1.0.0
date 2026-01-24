@@ -1791,6 +1791,7 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
       marca: req.query.marca !== undefined
         ? (req.query.marca === 'null' ? null : (String(req.query.marca).trim() !== '' ? String(req.query.marca).trim().toUpperCase() : ''))
         : undefined,
+      tipo_pedido_id: req.query.tipo_pedido_id ? parseInt(req.query.tipo_pedido_id) : undefined,
       nombre_tipo_pedido: req.query.nombre_tipo_pedido || undefined,
       año_aplicable: req.query.año_aplicable ? parseInt(req.query.año_aplicable) : undefined,
       activo: req.query.activo !== undefined ? req.query.activo === 'true' : undefined
@@ -1830,6 +1831,14 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
     let configuraciones = await comisionesCRM.getConfigComisionesTipoPedido(filters);
     configuraciones = configuraciones.filter(c => c.marca && c.marca !== null && c.marca !== '');
 
+    // Tipos de pedido reales (para dropdowns). Si falla, usar fallback básico.
+    let tiposPedidoList = [];
+    try {
+      tiposPedidoList = await crm.query('SELECT id, Tipo FROM tipos_pedidos ORDER BY Tipo ASC').catch(() => []);
+    } catch (_) {
+      tiposPedidoList = [];
+    }
+
     if (req.accepts('json') && !req.accepts('html')) {
       return res.json({ success: true, data: configuraciones });
     }
@@ -1840,6 +1849,7 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
       user: req.comercial || req.session?.comercial || req.user || {},
       configuraciones: configuraciones,
       marcas: marcas,
+      tiposPedidoList,
       filters: filters,
       esAdmin: esAdmin,
       currentPage: 'config-comisiones-tipo-pedido',
@@ -1868,6 +1878,7 @@ router.post('/config-comisiones-tipo-pedido', async (req, res) => {
     const configData = {
       id: req.body.id ? parseInt(req.body.id) : undefined,
       marca: req.body.marca.toUpperCase(), // Normalizar a mayúsculas
+      tipo_pedido_id: req.body.tipo_pedido_id ? parseInt(req.body.tipo_pedido_id) : undefined,
       nombre_tipo_pedido: req.body.nombre_tipo_pedido,
       año_aplicable: parseInt(req.body.año_aplicable),
       porcentaje_comision: parseFloat(req.body.porcentaje_comision),

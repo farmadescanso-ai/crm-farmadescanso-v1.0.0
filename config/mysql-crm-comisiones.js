@@ -2432,31 +2432,44 @@ class ComisionesCRM {
 
   async getConfigComisionesTipoPedido(filters = {}) {
     try {
-      let sql = 'SELECT * FROM config_comisiones_tipo_pedido WHERE 1=1';
+      // Incluir nombre del tipo desde tipos_pedidos si existe
+      let sql = `
+        SELECT
+          cctp.*,
+          COALESCE(tp.Tipo, cctp.nombre_tipo_pedido) AS nombre_tipo_pedido
+        FROM config_comisiones_tipo_pedido cctp
+        LEFT JOIN tipos_pedidos tp ON tp.id = cctp.tipo_pedido_id
+        WHERE 1=1
+      `;
       const params = [];
 
       if (filters.marca !== undefined) {
         if (filters.marca === null) {
-          sql += ' AND marca IS NULL';
+          sql += ' AND cctp.marca IS NULL';
         } else {
-          sql += ' AND marca = ?';
+          sql += ' AND cctp.marca = ?';
           params.push(filters.marca);
         }
       }
+      if (filters.tipo_pedido_id) {
+        sql += ' AND cctp.tipo_pedido_id = ?';
+        params.push(Number(filters.tipo_pedido_id));
+      }
       if (filters.nombre_tipo_pedido) {
-        sql += ' AND nombre_tipo_pedido = ?';
+        sql += ' AND (cctp.nombre_tipo_pedido = ? OR tp.Tipo = ?)';
+        params.push(filters.nombre_tipo_pedido);
         params.push(filters.nombre_tipo_pedido);
       }
       if (filters.año_aplicable) {
-        sql += ' AND año_aplicable = ?';
+        sql += ' AND cctp.año_aplicable = ?';
         params.push(filters.año_aplicable);
       }
       if (filters.activo !== undefined) {
-        sql += ' AND activo = ?';
+        sql += ' AND cctp.activo = ?';
         params.push(filters.activo ? 1 : 0);
       }
 
-      sql += ' ORDER BY año_aplicable DESC, marca, nombre_tipo_pedido';
+      sql += ' ORDER BY cctp.año_aplicable DESC, cctp.marca, nombre_tipo_pedido';
       return await this.query(sql, params);
     } catch (error) {
       console.error('❌ Error obteniendo config comisiones tipo pedido:', error.message);
@@ -2482,6 +2495,51 @@ class ComisionesCRM {
         throw new Error('La marca es obligatoria. Debe seleccionar una marca específica (GEMAVIP, YOUBELLE, etc.)');
       }
 
+      // Resolver tipo_pedido_id (algunas BDs lo tienen NOT NULL)
+      const ensureTipoPedidoId = async (nombre) => {
+        const n = String(nombre || '').trim();
+        if (!n) return null;
+        // Exact match (case-insensitive)
+        const rows = await this.query(
+          'SELECT id, Tipo FROM tipos_pedidos WHERE UPPER(Tipo) = UPPER(?) LIMIT 1',
+          [n]
+        ).catch(() => []);
+        if (rows && rows.length > 0) return Number(rows[0].id);
+        // Fallback: LIKE (por si vienen nombres tipo "Transfer")
+        const rowsLike = await this.query(
+          'SELECT id, Tipo FROM tipos_pedidos WHERE Tipo LIKE ? ORDER BY id ASC LIMIT 1',
+          [`%${n}%`]
+        ).catch(() => []);
+        if (rowsLike && rowsLike.length > 0) return Number(rowsLike[0].id);
+        // Crear tipo si no existe (para evitar bloquear el CRUD)
+        const result = await this.execute('INSERT INTO tipos_pedidos (Tipo) VALUES (?)', [n]);
+        return Number(result.insertId);
+      };
+
+      let tipoPedidoId = null;
+      if (data.tipo_pedido_id !== undefined && data.tipo_pedido_id !== null && data.tipo_pedido_id !== '') {
+        tipoPedidoId = Number(data.tipo_pedido_id);
+      }
+      if (!tipoPedidoId || !Number.isFinite(tipoPedidoId) || tipoPedidoId <= 0) {
+        tipoPedidoId = await ensureTipoPedidoId(data.nombre_tipo_pedido);
+      }
+      if (!tipoPedidoId || !Number.isFinite(tipoPedidoId) || tipoPedidoId <= 0) {
+        throw new Error('No se pudo resolver tipo_pedido_id. Revisa la tabla tipos_pedidos.');
+      }
+
+      // Asegurar nombre_tipo_pedido (si no viene, resolver desde tipos_pedidos)
+      if (!data.nombre_tipo_pedido || String(data.nombre_tipo_pedido).trim() === '') {
+        try {
+          const rows = await this.query('SELECT Tipo FROM tipos_pedidos WHERE id = ? LIMIT 1', [tipoPedidoId]);
+          if (rows && rows.length > 0) {
+            data.nombre_tipo_pedido = rows[0].Tipo;
+          }
+        } catch (_) { /* noop */ }
+      }
+      if (!data.nombre_tipo_pedido || String(data.nombre_tipo_pedido).trim() === '') {
+        throw new Error('nombre_tipo_pedido es requerido');
+      }
+
       if (data.id) {
         // UPDATE
         const updateFields = [];
@@ -2492,6 +2550,10 @@ class ComisionesCRM {
           params.push(data.marca.toUpperCase()); // Normalizar a mayúsculas
         }
         
+        // Guardar siempre el tipo_pedido_id y el nombre (por compatibilidad con lógica existente)
+        updateFields.push('tipo_pedido_id = ?');
+        params.push(tipoPedidoId);
+
         if (data.nombre_tipo_pedido !== undefined) {
           updateFields.push('nombre_tipo_pedido = ?');
           params.push(data.nombre_tipo_pedido);
@@ -2523,11 +2585,12 @@ class ComisionesCRM {
         // INSERT
         const sql = `
           INSERT INTO config_comisiones_tipo_pedido 
-          (marca, nombre_tipo_pedido, año_aplicable, porcentaje_comision, activo, descripcion, creado_en)
-          VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+          (marca, tipo_pedido_id, nombre_tipo_pedido, año_aplicable, porcentaje_comision, activo, descripcion, creado_en)
+          VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
         `;
         const result = await this.execute(sql, [
           data.marca.toUpperCase(), // Normalizar a mayúsculas - OBLIGATORIO
+          tipoPedidoId,
           data.nombre_tipo_pedido,
           data.año_aplicable,
           data.porcentaje_comision,

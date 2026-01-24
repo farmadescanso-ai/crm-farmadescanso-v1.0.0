@@ -107,11 +107,15 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Tipo Pedido</label>
-                        <select name="nombre_tipo_pedido" class="form-select">
+                        <select name="tipo_pedido_id" class="form-select">
                             <option value="">Todos</option>
-                            <option value="Transfer" <%= filters.nombre_tipo_pedido === 'Transfer' ? 'selected' : '' %>>Transfer</option>
-                            <option value="Directo" <%= filters.nombre_tipo_pedido === 'Directo' ? 'selected' : '' %>>Directo</option>
-                            <option value="Normal" <%= filters.nombre_tipo_pedido === 'Normal' ? 'selected' : '' %>>Normal</option>
+                            <% if (typeof tiposPedidoList !== 'undefined' && tiposPedidoList && tiposPedidoList.length > 0) { %>
+                              <% tiposPedidoList.forEach(tp => { %>
+                                <option value="<%= tp.id %>" <%= (filters && filters.tipo_pedido_id == tp.id) ? 'selected' : '' %>><%= tp.Tipo %></option>
+                              <% }) %>
+                            <% } else { %>
+                              <option value="">(Sin tipos de pedido)</option>
+                            <% } %>
                         </select>
                     </div>
                     <div class="col-md-2">
@@ -205,6 +209,7 @@
                 <form id="formConfiguracion" method="POST" action="/dashboard/comisiones/config-comisiones-tipo-pedido">
                     <div class="modal-body">
                         <input type="hidden" name="id" id="configId">
+                        <input type="hidden" name="nombre_tipo_pedido" id="configNombreTipoPedido">
                         <div class="mb-3">
                             <label class="form-label">Marca * <small class="text-muted">(obligatorio)</small></label>
                             <select name="marca" id="configMarca" class="form-select" required>
@@ -216,11 +221,13 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Tipo de Pedido *</label>
-                            <select name="nombre_tipo_pedido" id="configTipoPedido" class="form-select" required>
+                            <select name="tipo_pedido_id" id="configTipoPedidoId" class="form-select" required>
                                 <option value="">Seleccione...</option>
-                                <option value="Transfer">Transfer</option>
-                                <option value="Directo">Directo</option>
-                                <option value="Normal">Normal</option>
+                                <% if (typeof tiposPedidoList !== 'undefined' && tiposPedidoList && tiposPedidoList.length > 0) { %>
+                                  <% tiposPedidoList.forEach(tp => { %>
+                                    <option value="<%= tp.id %>"><%= tp.Tipo %></option>
+                                  <% }) %>
+                                <% } %>
                             </select>
                         </div>
                         <div class="mb-3">
@@ -262,7 +269,8 @@
             document.getElementById('modalTitle').textContent = 'Editar Configuración';
             document.getElementById('configId').value = config.id;
             document.getElementById('configMarca').value = config.marca || '';
-            document.getElementById('configTipoPedido').value = config.nombre_tipo_pedido;
+            document.getElementById('configTipoPedidoId').value = config.tipo_pedido_id || '';
+            document.getElementById('configNombreTipoPedido').value = config.nombre_tipo_pedido || '';
             document.getElementById('configAño').value = config.año_aplicable;
             document.getElementById('configPorcentaje').value = config.porcentaje_comision;
             document.getElementById('configActivo').value = (config.activo === 1 || config.activo === true) ? 'true' : 'false';
@@ -283,6 +291,16 @@
             document.getElementById('modalTitle').textContent = 'Nueva Configuración';
             document.getElementById('formConfiguracion').reset();
             document.getElementById('configId').value = '';
+            document.getElementById('configNombreTipoPedido').value = '';
+        });
+
+        // Mantener nombre_tipo_pedido en POST (compatibilidad), derivándolo del option seleccionado
+        document.getElementById('formConfiguracion')?.addEventListener('submit', function() {
+            const sel = document.getElementById('configTipoPedidoId');
+            const hidden = document.getElementById('configNombreTipoPedido');
+            if (sel && hidden) {
+                hidden.value = sel.options[sel.selectedIndex]?.text || '';
+            }
         });
     </script>
             </main>
