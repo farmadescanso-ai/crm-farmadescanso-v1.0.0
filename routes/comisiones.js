@@ -1888,14 +1888,15 @@ router.post('/config-comisiones-tipo-pedido', async (req, res) => {
 
     const config = await comisionesCRM.saveConfigComisionTipoPedido(configData);
 
-    if (req.accepts('json')) {
+    // Solo devolver JSON si se solicita explícitamente (no acepta HTML)
+    if (req.accepts('json') && !req.accepts('html')) {
       return res.json({ success: true, data: config });
     }
 
     res.redirect(`/dashboard/comisiones/config-comisiones-tipo-pedido?success=configuracion_guardada`);
   } catch (error) {
     console.error('❌ Error guardando config:', error);
-    if (req.accepts('json')) {
+    if (req.accepts('json') && !req.accepts('html')) {
       return res.status(500).json({ success: false, error: error.message });
     }
     res.redirect(`/dashboard/comisiones/config-comisiones-tipo-pedido?error=${encodeURIComponent(error.message)}`);
