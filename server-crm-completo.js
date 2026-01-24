@@ -13836,6 +13836,96 @@ app.post('/api/pedidos/:id/estado', requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * =====================================================
+ * RECÁLCULO ADMIN DE COMISIONES (desde pedido / por comercial)
+ * =====================================================
+ */
+
+// Recalcular comisiones del mes del pedido (solo admin)
+// Flujo: confirma -> (si no está pendiente) poner a Pendiente -> recalcular -> restaurar estado original
+app.post('/dashboard/pedidos/:id/recalcular-comisiones', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const pedidoId = Number(req.params.id);
+    if (!Number.isFinite(pedidoId) || pedidoId <= 0) {
+      throw new Error('ID de pedido inválido');
+    }
+
+    const pedido = await crm.getPedidoById(pedidoId);
+    if (!pedido) {
+      throw new Error('Pedido no encontrado');
+    }
+
+    const estadoOriginal = (pedido.EstadoPedido || pedido.Estado || pedido.estado_pedido || pedido.estado || 'Pendiente').toString();
+    const estadoOriginalLower = estadoOriginal.toLowerCase();
+
+    const comercialIdRaw =
+      pedido.Id_Cial ??
+      pedido.id_cial ??
+      pedido.Comercial_id ??
+      pedido.comercial_id ??
+      pedido.ComercialId ??
+      pedido.comercialId ??
+      null;
+    const comercialId = comercialIdRaw ? Number(comercialIdRaw) : null;
+    if (!Number.isFinite(comercialId) || comercialId <= 0) {
+      throw new Error('El pedido no tiene comercial asignado (Id_Cial)');
+    }
+
+    const fechaPedido = pedido.FechaPedido || pedido.fecha_pedido || pedido['Fecha Pedido'] || pedido.fecha || null;
+    if (!fechaPedido) {
+      throw new Error('El pedido no tiene fecha (FechaPedido)');
+    }
+    const d = new Date(fechaPedido);
+    if (Number.isNaN(d.getTime())) {
+      throw new Error(`FechaPedido inválida: ${fechaPedido}`);
+    }
+    const mes = d.getMonth() + 1;
+    const año = d.getFullYear();
+
+    // Confirmación explícita desde el front
+    const confirmChange = String(req.body?.confirm_change_to_pendiente || req.query?.confirm_change_to_pendiente || 'false') === 'true';
+    if (!confirmChange) {
+      // No tocar nada si no hay confirmación
+      if (req.accepts('json') && !req.accepts('html')) {
+        return res.status(400).json({
+          success: false,
+          error: 'Confirmación requerida para cambiar el pedido a Pendiente y recalcular.'
+        });
+      }
+      return res.redirect(`/dashboard/pedidos/${pedidoId}?error=confirmacion_requerida_recalculo`);
+    }
+
+    // Cambiar a Pendiente (si no lo está) para “rehacer” el flujo del negocio
+    if (!estadoOriginalLower.includes('pend')) {
+      await crm.updatePedido(pedidoId, { EstadoPedido: 'Pendiente' });
+    }
+
+    // Ejecutar recalculo mensual (misma lógica que scripts internos, pero sin spawn)
+    const calculadoPor = req.comercialId || req.session?.comercialId || null;
+    await calculadorComisiones.calcularComisionMensual(comercialId, mes, año, calculadoPor);
+
+    // Restaurar estado original
+    if (!estadoOriginalLower.includes('pend')) {
+      await crm.updatePedido(pedidoId, { EstadoPedido: estadoOriginal });
+    }
+
+    if (req.accepts('json') && !req.accepts('html')) {
+      return res.json({
+        success: true,
+        data: { pedidoId, comercialId, mes, año, estadoOriginal }
+      });
+    }
+    return res.redirect(`/dashboard/pedidos/${pedidoId}?success=recalculo_comisiones_ok`);
+  } catch (error) {
+    console.error('❌ Error recalculando comisiones desde pedido:', error);
+    if (req.accepts('json') && !req.accepts('html')) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    return res.redirect(`/dashboard/pedidos/${req.params.id}?error=recalculo_comisiones_error&detalle=${encodeURIComponent(error.message)}`);
+  }
+});
+
 app.post('/dashboard/pedidos/:id/eliminar', requireAuth, async (req, res) => {
   try {
     const pedido = await crm.getPedidoById(req.params.id);

@@ -237,6 +237,11 @@
                                     <a href="/dashboard/comisiones/comisiones/<%= comision.id %>/liquidacion" class="btn btn-sm btn-outline-dark" title="Documento de liquidación (Comisiones de Ventas)" target="_blank" rel="noopener">
                                         <i class="fas fa-file-invoice-dollar"></i>
                                     </a>
+                                    <% if ((typeof esAdmin !== 'undefined' && esAdmin) && comision.mes && comision.mes > 0 && comision.año) { %>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="recalcularComision(<%= comision.comercial_id %>, <%= comision.mes %>, <%= comision.año %>)" title="Recalcular comisiones (mes)">
+                                        <i class="fas fa-rotate-right"></i>
+                                    </button>
+                                    <% } %>
                                     <% if ((comision.estado !== 'Pagado' && comision.estado !== 'Pagada') && (typeof esAdmin !== 'undefined' && esAdmin)) { %>
                                     <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Marcar como Pagado">
                                         <i class="fas fa-check"></i>
@@ -290,6 +295,29 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Error al marcar como pagada');
+            }
+        }
+
+        async function recalcularComision(comercialId, mes, año) {
+            const confirmado = confirm(`¿Recalcular comisiones del ${String(mes).padStart(2,'0')}/${año} para el comercial #${comercialId}?`);
+            if (!confirmado) return;
+
+            try {
+                const response = await fetch('/dashboard/comisiones/comisiones/calcular', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ comercial_id: comercialId, mes, año })
+                });
+
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.success === false) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                location.reload();
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error al recalcular: ' + (error.message || 'desconocido'));
             }
         }
     </script>

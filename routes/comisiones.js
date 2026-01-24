@@ -936,6 +936,12 @@ router.get('/comisiones/:id/liquidacion', async (req, res) => {
 // Calcular comisión mensual
 router.post('/comisiones/calcular', async (req, res) => {
   try {
+    // Solo administradores pueden forzar recálculos
+    const esAdmin = isAdminReq(req);
+    if (!esAdmin) {
+      return res.status(403).json({ success: false, error: 'Solo administradores' });
+    }
+
     const { comercial_id, mes, año } = req.body;
     
     if (!comercial_id || !mes || !año) {

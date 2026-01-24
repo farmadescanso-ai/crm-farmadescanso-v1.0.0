@@ -222,5 +222,32 @@ Si necesitas rehacer meses/años completos (por ejemplo, 2025), usa los scripts 
 
 - `scripts/recalcular-comisiones-segun-pedido.js`
 
+### 10.1 Recalcular desde un pedido concreto (acción en la app, SOLO admin)
+
+En la ficha del pedido (`/dashboard/pedidos/:id`) hay un botón **“Recalcular comisiones”** (solo visible para administradores).
+
+Flujo:
+
+- La UI pide confirmación.
+- El servidor cambia el pedido temporalmente a **`Pendiente`** (si no lo estaba).
+- Ejecuta el recálculo del mes/año del pedido para el **comercial asignado** (`pedidos.Id_Cial`).
+- Restaura el **estado original** del pedido.
+
+Endpoint:
+
+- `POST /dashboard/pedidos/:id/recalcular-comisiones`
+
+> Esto sirve para “rehacer” un pedido concreto cuando sospechas que su comisión no se ha incorporado bien al mes.
+
+### 10.2 Recalcular por comercial / mes / año (acción en Comisiones, SOLO admin)
+
+En el listado de comisiones (`/dashboard/comisiones/comisiones`), cada fila tiene un botón **↻ Recalcular** (solo admin) que fuerza el recálculo del:
+
+- Comercial + mes + año de esa comisión.
+
+Endpoint interno:
+
+- `POST /dashboard/comisiones/comisiones/calcular` con `{ comercial_id, mes, año }`
+
 > Importante: antes de recalcular histórico, asegúrate de que los pedidos del periodo estén en estado “comisionable” (p.ej. Tramitado/Entregado), porque el cálculo excluye pendientes.
 
