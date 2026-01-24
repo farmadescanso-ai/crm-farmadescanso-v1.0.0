@@ -19,8 +19,28 @@ class ComisionesCRM {
     this._cache = {
       articulosHasMarcaColumn: null,
       fijosMensualesMarcaHasPeriodoColumns: null,
-      clientesNombreCol: null
+      clientesNombreCol: null,
+      comisionesDetalleTable: null
     };
+  }
+
+  async _getComisionesDetalleTable() {
+    if (this._cache.comisionesDetalleTable) return this._cache.comisionesDetalleTable;
+    try {
+      if (await this.tableExists('comisiones_detalle')) {
+        this._cache.comisionesDetalleTable = 'comisiones_detalle';
+        return this._cache.comisionesDetalleTable;
+      }
+      if (await this.tableExists('Comisiones_Detalle')) {
+        this._cache.comisionesDetalleTable = 'Comisiones_Detalle';
+        return this._cache.comisionesDetalleTable;
+      }
+    } catch (_) {
+      // ignore y usar default
+    }
+    // Default (mejor esfuerzo). Si no existe, fallará y lo veremos en logs.
+    this._cache.comisionesDetalleTable = 'comisiones_detalle';
+    return this._cache.comisionesDetalleTable;
   }
 
   async connect() {
@@ -1076,13 +1096,14 @@ class ComisionesCRM {
    */
   async getComisionDetalle(comisionId) {
     try {
+      const cdTable = await this._getComisionesDetalleTable();
       const sql = `
         SELECT cd.*,
                p.NumPedido as pedido_numero,
                p.FechaPedido as pedido_fecha,
                a.Nombre as articulo_nombre,
                a.SKU as articulo_sku
-        FROM comisiones_detalle cd
+        FROM ${cdTable} cd
         LEFT JOIN pedidos p ON cd.pedido_id = p.id
         LEFT JOIN articulos a ON cd.articulo_id = a.id
         WHERE cd.comision_id = ?
@@ -1123,6 +1144,7 @@ class ComisionesCRM {
    */
   async getComisionLiquidacionVentas(comisionId) {
     try {
+      const cdTable = await this._getComisionesDetalleTable();
       const nombreCol = await this._getClienteNombreColumn();
       const clienteNombreExpr = `cl.\`${String(nombreCol).replace(/`/g, '')}\``;
 
@@ -1136,7 +1158,7 @@ class ComisionesCRM {
           p.EstadoPedido AS pedido_estado,
           SUM(cd.importe_venta) AS importe_venta,
           SUM(cd.importe_comision) AS importe_comision
-        FROM comisiones_detalle cd
+        FROM ${cdTable} cd
         LEFT JOIN pedidos p ON cd.pedido_id = p.id
         LEFT JOIN clientes cl ON (cl.id = p.Id_Cliente OR cl.Id = p.Id_Cliente)
         WHERE cd.comision_id = ?
@@ -1164,7 +1186,8 @@ class ComisionesCRM {
    */
   async deleteComisionDetalleByComisionId(comisionId) {
     try {
-      const sql = 'DELETE FROM comisiones_detalle WHERE comision_id = ?';
+      const cdTable = await this._getComisionesDetalleTable();
+      const sql = `DELETE FROM ${cdTable} WHERE comision_id = ?`;
       await this.execute(sql, [comisionId]);
       return { affectedRows: 1 };
     } catch (error) {
@@ -1178,8 +1201,9 @@ class ComisionesCRM {
    */
   async addComisionDetalle(detalleData) {
     try {
+      const cdTable = await this._getComisionesDetalleTable();
       const sql = `
-        INSERT INTO comisiones_detalle 
+        INSERT INTO ${cdTable} 
         (comision_id, pedido_id, articulo_id, cantidad, importe_venta, 
          porcentaje_comision, importe_comision, tipo_comision, observaciones)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
