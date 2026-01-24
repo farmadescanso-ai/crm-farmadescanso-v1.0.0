@@ -825,7 +825,7 @@ router.get('/comisiones', async (req, res) => {
 });
 
 // Ver detalle de comisión
-router.get('/comisiones/:id', async (req, res) => {
+router.get('/comisiones/:id(\\d+)', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const comision = await comisionesCRM.getComisionById(id);
@@ -861,7 +861,7 @@ router.get('/comisiones/:id', async (req, res) => {
 });
 
 // Documento de liquidación de comisiones de ventas (por cliente y pedido)
-router.get('/comisiones/:id/liquidacion', async (req, res) => {
+router.get('/comisiones/:id(\\d+)/liquidacion', async (req, res) => {
   try {
     const id = parseInt(req.params.id);
     const comision = await comisionesCRM.getComisionById(id);
@@ -1094,7 +1094,7 @@ router.post('/comisiones/calcular', async (req, res) => {
 });
 
 // Marcar comisión como pagada
-router.post('/comisiones/:id/pagar', async (req, res) => {
+router.post('/comisiones/:id(\\d+)/pagar', async (req, res) => {
   try {
     if (!isAdminReq(req)) {
       return res.status(403).json({ success: false, error: 'Solo administradores' });
