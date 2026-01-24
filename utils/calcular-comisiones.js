@@ -443,8 +443,12 @@ class CalculadorComisiones {
         COALESCE(
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d'),
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d %H:%i:%s'),
+          STR_TO_DATE(p.FechaPedido, '%Y/%m/%d'),
+          STR_TO_DATE(p.FechaPedido, '%Y/%m/%d %H:%i:%s'),
           STR_TO_DATE(p.FechaPedido, '%d/%m/%Y'),
           STR_TO_DATE(p.FechaPedido, '%d/%m/%Y %H:%i:%s'),
+          STR_TO_DATE(p.FechaPedido, '%d-%m-%Y'),
+          STR_TO_DATE(p.FechaPedido, '%d-%m-%Y %H:%i:%s'),
           p.FechaPedido
         )
       `;
@@ -579,8 +583,12 @@ class CalculadorComisiones {
         COALESCE(
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d'),
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d %H:%i:%s'),
+          STR_TO_DATE(p.FechaPedido, '%Y/%m/%d'),
+          STR_TO_DATE(p.FechaPedido, '%Y/%m/%d %H:%i:%s'),
           STR_TO_DATE(p.FechaPedido, '%d/%m/%Y'),
           STR_TO_DATE(p.FechaPedido, '%d/%m/%Y %H:%i:%s'),
+          STR_TO_DATE(p.FechaPedido, '%d-%m-%Y'),
+          STR_TO_DATE(p.FechaPedido, '%d-%m-%Y %H:%i:%s'),
           p.FechaPedido
         )
       `;
