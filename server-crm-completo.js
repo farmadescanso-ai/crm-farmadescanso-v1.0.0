@@ -9454,6 +9454,44 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
     } catch (error) {
       console.warn('⚠️ Error cargando marcas para optimización:', error.message);
     }
+
+    // Cargar todos los comerciales de una vez para poder mostrar iniciales en el listado
+    let comercialesMap = null;
+    try {
+      const comercialesRows = await crm.query('SELECT id, Nombre FROM comerciales');
+      comercialesMap = new Map();
+      (comercialesRows || []).forEach(c => {
+        const id = c.id || c.Id;
+        if (id) {
+          comercialesMap.set(Number(id), c.Nombre || c.nombre || '');
+        }
+      });
+    } catch (error) {
+      console.warn('⚠️ Error cargando comerciales para iniciales:', error.message);
+    }
+
+    function obtenerInicialesComercial(nombre, maxLen = 3) {
+      if (!nombre) return '';
+      try {
+        const stopWords = new Set(['DE', 'DEL', 'LA', 'LAS', 'LOS', 'Y']);
+        const limpio = String(nombre)
+          .trim()
+          .replace(/\s+/g, ' ')
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, ''); // quitar acentos
+
+        const partes = limpio
+          .split(' ')
+          .map(p => p.replace(/[^A-Za-zÑñ]/g, '').toUpperCase())
+          .filter(Boolean)
+          .filter(p => !stopWords.has(p));
+
+        const iniciales = partes.map(p => p[0]).join('');
+        return iniciales.slice(0, maxLen);
+      } catch (_) {
+        return '';
+      }
+    }
  
     // (Diagnóstico desactivado)
 
@@ -9503,6 +9541,19 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
       
       // Normalizar estado: puede venir como Estado, EstadoPedido, o estado
       const estado = pedido.EstadoPedido || pedido.Estado || pedido.estado || 'Pendiente';
+
+      // Comercial asignado al pedido (Id_Cial es el campo correcto en BD, con fallbacks por casing/alias)
+      const comercialIdPedidoRaw =
+        pedido.Id_Cial ??
+        pedido.id_cial ??
+        pedido.Comercial_id ??
+        pedido.comercial_id ??
+        pedido.ComercialId ??
+        pedido.comercialId ??
+        null;
+      const comercial_id = comercialIdPedidoRaw ? Number(comercialIdPedidoRaw) : null;
+      const comercial_nombre = (comercialesMap && comercial_id) ? (comercialesMap.get(Number(comercial_id)) || '') : '';
+      const comercial_iniciales = obtenerInicialesComercial(comercial_nombre);
       
       // Normalizar fecha entrega - usar el nombre correcto de la columna (con fallbacks por alias/casing)
       const fechaEntrega = pedido.FechaEntrega
@@ -9651,6 +9702,9 @@ app.get('/dashboard/pedidos', requireAuth, async (req, res) => {
         numero,
         numeroOrden,
         cliente: clienteNombre,
+        comercial_id,
+        comercial_nombre,
+        comercial_iniciales,
         estado,
         fecha,
         fechaEntrega,

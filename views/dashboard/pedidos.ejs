@@ -156,6 +156,7 @@
                         <option value="all">Todos los campos</option>
                         <option value="numero">Número Pedido</option>
                         <option value="cliente">Cliente</option>
+                        <option value="comercial">Comercial</option>
                         <option value="estado">Estado</option>
                         <option value="formaPago">Forma de pago</option>
                         <option value="tipoPedido">Tipo de pedido</option>
@@ -194,6 +195,12 @@
                             </th>
                             <th class="sortable" data-sort="cliente">
                                 Cliente
+                                <span class="sort-icons">
+                                    <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
+                                </span>
+                            </th>
+                            <th class="text-center sortable" data-sort="comercial">
+                                Comercial
                                 <span class="sort-icons">
                                     <i class="fas fa-arrow-up"></i><i class="fas fa-arrow-down"></i>
                                 </span>
@@ -247,7 +254,7 @@
                     <tbody>
                         <% if (pedidos.length === 0) { %>
                         <tr>
-                            <td colspan="11" class="text-center text-muted py-4">
+                            <td colspan="12" class="text-center text-muted py-4">
                                 <i class="fas fa-inbox me-2"></i>No hay pedidos registrados todavía.
                             </td>
                         </tr>
@@ -339,6 +346,9 @@
                             <tr class="pedido-row" data-pedido='<%- JSON.stringify(pedido) %>'>
                                 <td><%= pedido.numero || pedido.id %></td>
                                 <td><%= pedido.cliente %></td>
+                                <td class="text-center">
+                                    <%= pedido.comercial_iniciales || '—' %>
+                                </td>
                                 <td><%= formatearFechaDDMMYYYY(pedido.fecha) %></td>
                                 <td><%= formatearFechaDDMMYYYY(pedido.fechaEntrega) %></td>
                                 <td>
@@ -454,9 +464,10 @@
             const highlightMap = {
                 numero: 0,
                 cliente: 1,
-                estado: 4,
-                formaPago: 5,
-                tipoPedido: 6
+                comercial: 2,
+                estado: 5,
+                formaPago: 6,
+                tipoPedido: 8
             };
 
             rows.forEach(row => {
@@ -470,6 +481,8 @@
                     const pool = [
                         data.numero,
                         data.cliente,
+                        data.comercial_iniciales,
+                        data.comercial_nombre,
                         data.estado,
                         data.formaPago,
                         data.tipoPedido
@@ -480,6 +493,7 @@
                     switch (field) {
                         case 'numero': value = data.numero || data.id; break;
                         case 'cliente': value = data.cliente; break;
+                        case 'comercial': value = data.comercial_iniciales || data.comercial_nombre; break;
                         case 'estado': value = data.estado; break;
                         case 'formaPago': value = data.formaPago; break;
                         case 'tipoPedido': value = data.tipoPedido; break;
@@ -516,7 +530,7 @@
 
                     if (term) {
                         const fieldsToHighlight = field === 'all'
-                            ? ['numero', 'cliente', 'estado', 'formaPago', 'tipoPedido']
+                            ? ['numero', 'cliente', 'comercial', 'estado', 'formaPago', 'tipoPedido']
                             : [field];
                         fieldsToHighlight.forEach(key => {
                             const index = highlightMap[key];
