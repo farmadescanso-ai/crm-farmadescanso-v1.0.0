@@ -199,7 +199,6 @@
                                 <th>Mes/Año</th>
                                 <th class="text-end">Fijo Mensual</th>
                                 <th class="text-end">Comisión Ventas</th>
-                                <th class="text-end">Rappel Acumulado</th>
                                 <th class="text-end">Total Comisión</th>
                                 <th class="text-center">Estado</th>
                                 <th class="text-center">Acciones</th>
@@ -221,7 +220,6 @@
                                 </td>
                                 <td class="text-end">€ <%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-end">€ <%= parseFloat(comision.comision_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                <td class="text-end">€ <%= parseFloat(comision.comision_presupuesto || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-end fw-bold">€ <%= parseFloat(comision.total_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-center">
                                     <% if (comision.estado === 'Pagada') { %>
@@ -249,7 +247,7 @@
                             <% }) %>
                             <% } else { %>
                             <tr>
-                                <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '8' : '7' %>" class="text-center text-muted py-4">
+                                <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '7' : '6' %>" class="text-center text-muted py-4">
                                     <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                     No hay comisiones registradas
                                 </td>

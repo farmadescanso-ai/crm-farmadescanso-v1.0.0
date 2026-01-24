@@ -242,9 +242,7 @@ class CalculadorComisiones {
   /**
    * Calcular rapel por marca
    * Sobre el exceso del objetivo según porcentajes:
-   * - 80-100% = 2%
-   * - 100-120% = 3%
-   * - +120% = 5%
+   * - Se obtiene de la tabla rapeles_configuracion (por marca y rango de cumplimiento)
    */
   async calcularRapelMarca(comercialId, marca, trimestre, año) {
     try {
@@ -268,14 +266,19 @@ class CalculadorComisiones {
       
       const porcentajeCumplimiento = objetivo > 0 ? (ventasTrimestre / objetivo) * 100 : 0;
       
-      // Determinar porcentaje de rapel según cumplimiento
+      // Determinar porcentaje de rapel según configuración
+      const marcaNorm = String(marca || '').trim().toUpperCase();
+      const configuraciones = await comisionesCRM.getRapelesConfiguracion({ marca: marcaNorm, activo: true });
       let porcentajeRapel = 0;
-      if (porcentajeCumplimiento >= 80 && porcentajeCumplimiento < 100) {
-        porcentajeRapel = 2;
-      } else if (porcentajeCumplimiento >= 100 && porcentajeCumplimiento < 120) {
-        porcentajeRapel = 3;
-      } else if (porcentajeCumplimiento >= 120) {
-        porcentajeRapel = 5;
+      for (const cfg of (configuraciones || [])) {
+        const min = Number(cfg.porcentaje_cumplimiento_min ?? 0);
+        const maxRaw = cfg.porcentaje_cumplimiento_max;
+        const maxNum = maxRaw === null || maxRaw === undefined ? Infinity : Number(maxRaw);
+        const max = (!Number.isFinite(maxNum) || maxNum <= 0) ? Infinity : maxNum;
+        if (porcentajeCumplimiento >= min && porcentajeCumplimiento <= max) {
+          porcentajeRapel = Number(cfg.porcentaje_rapel || 0);
+          break;
+        }
       }
 
       // Calcular rapel sobre el exceso del objetivo
@@ -297,7 +300,7 @@ class CalculadorComisiones {
   }
 
   /**
-   * Calcular comisión mensual completa (ventas + presupuesto + fijo)
+   * Calcular comisión mensual completa (ventas + fijo)
    */
   async calcularComisionMensual(comercialId, mes, año, calculadoPor = null) {
     try {
@@ -361,11 +364,8 @@ class CalculadorComisiones {
       // Calcular comisión por ventas
       const comisionVentas = await this.calcularComisionVentas(comercialId, mes, año);
 
-      // Calcular comisión por presupuesto
-      const comisionPresupuesto = await this.calcularComisionPresupuesto(comercialId, mes, año);
-
       // Total de comisión
-      const totalComision = fijoAPagar + comisionVentas.total_comision + comisionPresupuesto.comision_presupuesto;
+      const totalComision = fijoAPagar + comisionVentas.total_comision;
 
       // Guardar o actualizar comisión
       const comisionData = {
@@ -374,12 +374,13 @@ class CalculadorComisiones {
         año: año,
         fijo_mensual: fijoAPagar,
         comision_ventas: comisionVentas.total_comision,
-        comision_presupuesto: comisionPresupuesto.comision_presupuesto,
+        // Ya no usamos "rappel/presupuesto" en la comisión mensual (se gestiona en rapeles)
+        comision_presupuesto: 0,
         total_ventas: comisionVentas.total_ventas,
         total_comision: totalComision,
         estado: 'Calculada',
         calculado_por: calculadoPor,
-        observaciones: `Fijo: ${fijoAPagar > 0 ? 'Sí' : 'No'} (${fijoAPagar.toFixed(2)}€), Ventas: ${comisionVentas.total_comision.toFixed(2)}€, Presupuesto: ${comisionPresupuesto.comision_presupuesto.toFixed(2)}€`
+        observaciones: `Fijo: ${fijoAPagar > 0 ? 'Sí' : 'No'} (${fijoAPagar.toFixed(2)}€), Ventas: ${comisionVentas.total_comision.toFixed(2)}€`
       };
 
       const comision = await comisionesCRM.saveComision(comisionData);

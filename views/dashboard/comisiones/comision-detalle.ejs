@@ -84,7 +84,7 @@
 
                 <!-- Resumen de la comisión -->
                 <div class="row mb-4">
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card border-primary">
                             <div class="card-body text-center">
                                 <h6 class="text-muted mb-2">Fijo Mensual</h6>
@@ -92,7 +92,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card border-info">
                             <div class="card-body text-center">
                                 <h6 class="text-muted mb-2">Comisión Ventas</h6>
@@ -100,15 +100,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <div class="card border-success">
-                            <div class="card-body text-center">
-                                <h6 class="text-muted mb-2">Comisión Presupuesto</h6>
-                                <h4 class="text-success mb-0">€ <%= parseFloat(comision.comision_presupuesto || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></h4>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
+                    <div class="col-md-4">
                         <div class="card border-warning">
                             <div class="card-body text-center">
                                 <h6 class="text-muted mb-2">Total Comisión</h6>
@@ -182,9 +174,6 @@
                                     <p class="mb-2">Esta comisión incluye únicamente los siguientes conceptos:</p>
                                     <ul class="mb-0">
                                         <li><strong>Fijo mensual:</strong> €<%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></li>
-                                        <% if (parseFloat(comision.comision_presupuesto || 0) > 0) { %>
-                                        <li><strong>Comisión por presupuesto:</strong> €<%= parseFloat(comision.comision_presupuesto || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></li>
-                                        <% } %>
                                     </ul>
                                     <% } else { %>
                                     <h6 class="alert-heading mb-2"><strong>No hay detalles disponibles para esta comisión</strong></h6>
