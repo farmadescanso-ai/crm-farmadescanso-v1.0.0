@@ -441,6 +441,12 @@ class CalculadorComisiones {
       // Si es DATE/DATETIME, MySQL lo convierte implícitamente a string YYYY-MM-DD, por lo que STR_TO_DATE funciona.
       const fechaExpr = `
         COALESCE(
+          -- Si viene importada como número (serial Excel: días desde 1899-12-30)
+          CASE
+            WHEN p.FechaPedido REGEXP '^[0-9]{4,6}$'
+              THEN DATE_ADD('1899-12-30', INTERVAL CAST(p.FechaPedido AS UNSIGNED) DAY)
+            ELSE NULL
+          END,
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d'),
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d %H:%i:%s'),
           STR_TO_DATE(p.FechaPedido, '%Y/%m/%d'),
@@ -581,6 +587,12 @@ class CalculadorComisiones {
       const marcaNorm = String(marca || '').trim().toUpperCase();
       const fechaExpr = `
         COALESCE(
+          -- Si viene importada como número (serial Excel: días desde 1899-12-30)
+          CASE
+            WHEN p.FechaPedido REGEXP '^[0-9]{4,6}$'
+              THEN DATE_ADD('1899-12-30', INTERVAL CAST(p.FechaPedido AS UNSIGNED) DAY)
+            ELSE NULL
+          END,
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d'),
           STR_TO_DATE(p.FechaPedido, '%Y-%m-%d %H:%i:%s'),
           STR_TO_DATE(p.FechaPedido, '%Y/%m/%d'),
