@@ -2334,13 +2334,37 @@ class MySQLCRM {
 
   async getPedidoById(id) {
     try {
-      // La columna de ID es 'id' (minúscula) según la estructura de la base de datos
-      const sql = 'SELECT * FROM pedidos WHERE id = ? LIMIT 1';
-      const rows = await this.query(sql, [id]);
-      return rows.length > 0 ? rows[0] : null;
+      // En algunas instalaciones la PK se referencia como Id (mayúscula) aunque se use "id" en el código.
+      // Además, a veces se intenta acceder por NumPedido (P25xxxx). Hacemos lookup robusto.
+      const raw = id;
+      const asNum = Number(raw);
+      const isNum = Number.isFinite(asNum) && asNum > 0;
+      const asStr = String(raw || '').trim();
+
+      // 1) Buscar por ID numérico (Id/id)
+      if (isNum) {
+        const sql = 'SELECT * FROM pedidos WHERE Id = ? OR id = ? LIMIT 1';
+        const rows = await this.query(sql, [asNum, asNum]);
+        if (rows && rows.length > 0) return rows[0];
+      }
+
+      // 2) Fallback: buscar por NumPedido si el parámetro parece un número de pedido
+      if (asStr) {
+        const sqlNumPedido = `
+          SELECT * FROM pedidos
+          WHERE NumPedido = ?
+             OR Numero_Pedido = ?
+             OR \`Número_Pedido\` = ?
+             OR \`Número Pedido\` = ?
+          LIMIT 1
+        `;
+        const rowsNum = await this.query(sqlNumPedido, [asStr, asStr, asStr, asStr]);
+        if (rowsNum && rowsNum.length > 0) return rowsNum[0];
+      }
+
+      return null;
     } catch (error) {
       console.error('❌ Error obteniendo pedido por ID:', error.message);
-      console.error('❌ SQL que falló:', 'SELECT * FROM pedidos WHERE id = ? LIMIT 1');
       console.error('❌ ID usado:', id);
       return null;
     }
@@ -2360,7 +2384,7 @@ class MySQLCRM {
   async getArticulosByPedido(pedidoId) {
     try {
       // Primero obtener el número de pedido desde el ID
-      const pedido = await this.query('SELECT NumPedido FROM pedidos WHERE id = ? LIMIT 1', [pedidoId]);
+      const pedido = await this.query('SELECT NumPedido FROM pedidos WHERE Id = ? OR id = ? LIMIT 1', [pedidoId, pedidoId]);
       if (!pedido || pedido.length === 0) {
         return [];
       }
