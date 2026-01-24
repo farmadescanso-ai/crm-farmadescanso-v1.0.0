@@ -346,52 +346,10 @@ class CalculadorComisiones {
       
       let fijoAPagar = 0;
 
-      if (año <= configFijo.año_limite) {
-        // Hasta año_limite (2026): fijo se paga siempre
-        fijoAPagar = fijosMarca.reduce((sum, f) => sum + parseFloat(f.importe || 0), 0);
-      } else {
-        // A partir de año_limite + 1 (2027): solo si alcanza porcentaje_minimo_ventas de ventas mensuales
-        const comisionVentas = await this.calcularComisionVentas(comercialId, mes, año);
-        const ventasMensuales = comisionVentas.total_ventas;
-        
-        // Calcular porcentaje_minimo_ventas del objetivo mensual
-        let presupuestos = await comisionesCRM.getPresupuestos({
-          comercial_id: comercialId,
-          año: año,
-          mes: mes,
-          activo: 1
-        });
-
-        if (!presupuestos || presupuestos.length === 0) {
-          presupuestos = await comisionesCRM.getPresupuestos({
-            comercial_id: comercialId,
-            año: año,
-            mes: null,
-            activo: 1
-          });
-        }
-        
-        let presupuestoMensual = 0;
-        for (const presupuesto of presupuestos) {
-          const importe = parseFloat(presupuesto.importe_presupuestado || 0);
-          if (presupuesto.mes && presupuesto.mes > 0) {
-            if (parseInt(presupuesto.mes) === mes) {
-              presupuestoMensual += importe;
-            }
-          } else {
-            presupuestoMensual += importe / 12;
-          }
-        }
-        
-        const minimoVentas = presupuestoMensual * (configFijo.porcentaje_minimo_ventas / 100);
-
-        if (ventasMensuales >= minimoVentas) {
-          // Si alcanza el mínimo, pagar todos los fijos
-          fijoAPagar = fijosMarca.reduce((sum, f) => sum + parseFloat(f.importe || 0), 0);
-        } else {
-          fijoAPagar = 0;
-        }
-      }
+      // Nota negocio (2026-01): "De momento pagamos comisiones desde la primera unidad".
+      // Interpretación: NO aplicar mínimos/umbrales para pagar el fijo; se paga siempre si existe fijo configurado.
+      // Mantenemos `configFijo` por compatibilidad, pero no aplicamos `porcentaje_minimo_ventas`.
+      fijoAPagar = fijosMarca.reduce((sum, f) => sum + parseFloat(f.importe || 0), 0);
 
       // Calcular comisión por ventas
       const comisionVentas = await this.calcularComisionVentas(comercialId, mes, año);
@@ -461,7 +419,8 @@ class CalculadorComisiones {
       return {
         ...comision,
         detalles: comisionVentas.detalles,
-        presupuesto: comisionPresupuesto
+        // Ya no calculamos comisión por presupuesto dentro de comisiones mensuales (se gestiona en rapeles).
+        presupuesto: { comision_presupuesto: 0 }
       };
     } catch (error) {
       console.error('❌ Error calculando comisión mensual:', error);
