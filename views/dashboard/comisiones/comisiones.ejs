@@ -10,6 +10,12 @@
     <link href="/css/colors.css" rel="stylesheet">
     <link href="/css/dashboard.css" rel="stylesheet">
     <%- include('../../partials/navbar-styles') %>
+    <style>
+        .importe-pagado {
+            color: #198754 !important; /* bootstrap success */
+            font-weight: 700;
+        }
+    </style>
 </head>
 <body>
     <%- include('../../partials/navbar-dashboard') %>
@@ -189,6 +195,11 @@
         <!-- Tabla de comisiones -->
         <div class="card">
             <div class="card-body">
+                <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                <div class="small text-muted mb-2">
+                    <span class="importe-pagado">Verde</span> = concepto pagado (ventas/fijo). Si no está pagado, se muestra sin marcar.
+                </div>
+                <% } %>
                 <div class="table-responsive">
                     <table class="table table-striped table-hover">
                         <thead>
@@ -212,6 +223,11 @@
                         <tbody>
                             <% if (comisiones && comisiones.length > 0) { %>
                             <% comisiones.forEach(comision => { %>
+                            <% 
+                                const ventasPagadas = !!(comision.fecha_pago_ventas || (comision.estado === 'Pagado' || comision.estado === 'Pagada'));
+                                const fijoPagado = !!(comision.fecha_pago_fijo || (comision.estado === 'Pagado' || comision.estado === 'Pagada'));
+                                const totalPagado = ventasPagadas && fijoPagado;
+                            %>
                             <tr>
                                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
                                 <td class="text-center">
@@ -236,9 +252,9 @@
                                     <%= comision.año %>
                                     <% } %>
                                 </td>
-                                <td class="text-end">€ <%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                <td class="text-end">€ <%= parseFloat(comision.comision_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
-                                <td class="text-end fw-bold">€ <%= parseFloat(comision.total_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                <td class="text-end <%= fijoPagado ? 'importe-pagado' : '' %>">€ <%= parseFloat(comision.fijo_mensual || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                <td class="text-end <%= ventasPagadas ? 'importe-pagado' : '' %>">€ <%= parseFloat(comision.comision_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
+                                <td class="text-end fw-bold <%= totalPagado ? 'importe-pagado' : '' %>">€ <%= parseFloat(comision.total_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-center">
                                     <% if (comision.estado === 'Pagado' || comision.estado === 'Pagada') { %>
                                     <span class="badge bg-success">Pagado</span>
