@@ -15,15 +15,12 @@ class MySQLCRM {
       // (evita que apunte a "farmadescanso" por error y no veas cambios en phpMyAdmin).
       database: process.env.DB_NAME || (process.env.VERCEL ? 'crm_farmadescanso' : 'farmadescanso'),
       charset: 'utf8mb4',
-      collation: 'utf8mb4_unicode_ci',
       waitForConnections: true,
       connectionLimit: 10,
       queueLimit: 0,
       enableKeepAlive: true,
       keepAliveInitialDelay: 0,
-      connectTimeout: 10000, // 10 segundos para conectar
-      acquireTimeout: 10000, // 10 segundos para adquirir conexión del pool
-      timeout: 10000 // 10 segundos para queries
+      connectTimeout: 10000 // 10 segundos para conectar
     };
 
     // Debug: Log de configuración (solo en producción para diagnosticar)

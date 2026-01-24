@@ -30,7 +30,15 @@ function parseIdList(arg) {
 
 // Permitir apuntar el script a la BD remota sin tocar el código
 // (OJO: mysql-crm lee env en require-time, así que esto debe ir ANTES del require).
+const dbHostArg = argValue('--dbHost') || argValue('--host');
+const dbPortArg = argValue('--dbPort') || argValue('--port');
+const dbUserArg = argValue('--dbUser') || argValue('--user');
+const dbPassArg = argValue('--dbPassword') || argValue('--pass') || argValue('--password');
 const dbNameArg = argValue('--dbName') || argValue('--db');
+if (dbHostArg) process.env.DB_HOST = dbHostArg;
+if (dbPortArg) process.env.DB_PORT = String(dbPortArg);
+if (dbUserArg) process.env.DB_USER = dbUserArg;
+if (dbPassArg) process.env.DB_PASSWORD = dbPassArg;
 if (dbNameArg) process.env.DB_NAME = dbNameArg;
 
 const crm = require('../config/mysql-crm');
