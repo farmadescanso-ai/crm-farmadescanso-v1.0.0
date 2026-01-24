@@ -72,7 +72,8 @@ class CalculadorComisiones {
           let porcentajeComision = await comisionesCRM.getPorcentajeComision(
             marcaNombre,
             tipoPedidoNombre,
-            año
+            año,
+            pedido.Id_TipoPedido || pedido.id_tipo_pedido || null
           );
 
           if (condicionEspecial) {

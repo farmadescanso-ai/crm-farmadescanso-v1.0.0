@@ -2266,9 +2266,10 @@ class ComisionesCRM {
    * @param {string} marca - Nombre de la marca (null para general)
    * @param {string} tipoPedido - Nombre del tipo de pedido (Transfer, Directo, Normal)
    * @param {number} año - Año para el que se aplica
+   * @param {number|null} tipoPedidoId - ID real de tipos_pedidos (opcional, recomendado)
    * @returns {Promise<number>} Porcentaje de comisión
    */
-  async getPorcentajeComision(marca, tipoPedido, año) {
+  async getPorcentajeComision(marca, tipoPedido, año, tipoPedidoId = null) {
     try {
       // Normalizar tipo de pedido
       let nombreTipoBuscar = tipoPedido || 'Directo';
@@ -2287,16 +2288,74 @@ class ComisionesCRM {
         return nombreTipoBuscar === 'Transfer' ? 5 : 10;
       }
 
-      const sql = `
-        SELECT porcentaje_comision, activo
-        FROM config_comisiones_tipo_pedido
-        WHERE marca = ?
-        AND nombre_tipo_pedido = ?
-        AND año_aplicable = ?
-        AND activo = 1
-        LIMIT 1
-      `;
-      const rows = await this.query(sql, [marca.toUpperCase(), nombreTipoBuscar, año]);
+      // Prioridad de búsqueda:
+      // 1) marca + tipo_pedido_id + año exacto
+      // 2) marca + nombre_tipo_pedido normalizado + año exacto
+      // 3) marca + tipo_pedido_id + año_aplicable IS NULL
+      // 4) marca + nombre_tipo_pedido + año_aplicable IS NULL
+      // Nota: mantenemos nombre_tipo_pedido por compatibilidad, aunque ahora guardemos tipo_pedido_id.
+      const marcaNorm = String(marca).toUpperCase();
+      const tipoId = tipoPedidoId != null ? Number(tipoPedidoId) : null;
+
+      const tryQueries = [];
+      if (Number.isFinite(tipoId) && tipoId > 0) {
+        tryQueries.push({
+          sql: `
+            SELECT porcentaje_comision
+            FROM config_comisiones_tipo_pedido
+            WHERE marca = ?
+              AND tipo_pedido_id = ?
+              AND año_aplicable = ?
+              AND activo = 1
+            LIMIT 1
+          `,
+          params: [marcaNorm, tipoId, Number(año)]
+        });
+      }
+      tryQueries.push({
+        sql: `
+          SELECT porcentaje_comision
+          FROM config_comisiones_tipo_pedido
+          WHERE marca = ?
+            AND nombre_tipo_pedido = ?
+            AND año_aplicable = ?
+            AND activo = 1
+          LIMIT 1
+        `,
+        params: [marcaNorm, nombreTipoBuscar, Number(año)]
+      });
+      if (Number.isFinite(tipoId) && tipoId > 0) {
+        tryQueries.push({
+          sql: `
+            SELECT porcentaje_comision
+            FROM config_comisiones_tipo_pedido
+            WHERE marca = ?
+              AND tipo_pedido_id = ?
+              AND año_aplicable IS NULL
+              AND activo = 1
+            LIMIT 1
+          `,
+          params: [marcaNorm, tipoId]
+        });
+      }
+      tryQueries.push({
+        sql: `
+          SELECT porcentaje_comision
+          FROM config_comisiones_tipo_pedido
+          WHERE marca = ?
+            AND nombre_tipo_pedido = ?
+            AND año_aplicable IS NULL
+            AND activo = 1
+          LIMIT 1
+        `,
+        params: [marcaNorm, nombreTipoBuscar]
+      });
+
+      let rows = [];
+      for (const q of tryQueries) {
+        rows = await this.query(q.sql, q.params);
+        if (rows && rows.length > 0) break;
+      }
       
       if (rows && rows.length > 0) {
         return parseFloat(rows[0].porcentaje_comision);
