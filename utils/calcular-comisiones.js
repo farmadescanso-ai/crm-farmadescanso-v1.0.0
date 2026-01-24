@@ -35,17 +35,26 @@ class CalculadorComisiones {
           null;
         const lineas = await this.obtenerLineasPedido(pedidoId, pedidoNumero);
         const tipoPedidoNombre = pedido.TipoPedidoNombre || '';
-        
+
         if (!lineas || lineas.length === 0) {
           console.warn(`⚠️ [COMISIONES][SIN_LINEAS] Pedido ${pedidoId} (${pedidoNumero || 'sin_num'}) no tiene líneas. No se puede calcular comisión por ventas para este pedido.`);
           continue;
         }
         
-        // Calcular el transporte del pedido (diferencia entre TotalPedido y BaseImponible + TotalIva)
-        const totalPedido = parseFloat(pedido.TotalPedido || pedido.total || 0);
-        const baseImponiblePedido = parseFloat(pedido.BaseImponible || 0);
-        const totalIvaPedido = parseFloat(pedido.TotalIva || 0);
-        const transporte = totalPedido - baseImponiblePedido - totalIvaPedido;
+        // Calcular transporte de forma robusta:
+        // - No depender de columnas BaseImponible/TotalIva (pueden no existir o venir a 0)
+        // - Derivarlo desde líneas: totalPedido - (sum Subtotal + sum IVA)
+        const totalPedido = parseFloat(pedido.TotalPedido || pedido.Total_pedido || pedido.Total_pedido_ || pedido.total || 0);
+        let baseImponibleTotalPedido = 0;
+        let totalIvaLineas = 0;
+        for (const l of lineas) {
+          const sub = parseFloat(l.Subtotal || l.subtotal || 0) || 0;
+          const ivaPct = parseFloat(l.IVA || l.iva || 0) || 0;
+          baseImponibleTotalPedido += sub;
+          totalIvaLineas += (sub * (ivaPct / 100));
+        }
+        const transporteRaw = totalPedido - baseImponibleTotalPedido - totalIvaLineas;
+        const transporte = Number.isFinite(transporteRaw) && transporteRaw > 0 ? transporteRaw : 0;
         
         // Obtener descuento de transporte desde configuración
         // Usamos la primera marca del pedido para buscar la configuración (para calcular el descuento total)
@@ -54,12 +63,6 @@ class CalculadorComisiones {
         const descuentoTransporte = transporte > 0 && descuentoTransportePorcentaje > 0 
           ? (transporte * descuentoTransportePorcentaje) / 100 
           : 0;
-        
-        // Calcular base imponible total del pedido para distribuir el descuento proporcionalmente
-        let baseImponibleTotalPedido = 0;
-        for (const linea of lineas) {
-          baseImponibleTotalPedido += parseFloat(linea.Subtotal || linea.subtotal || 0);
-        }
         
         for (const linea of lineas) {
           let baseImponible = parseFloat(linea.Subtotal || linea.subtotal || 0);
@@ -434,15 +437,26 @@ class CalculadorComisiones {
 
   async obtenerPedidosDelMes(comercialId, mes, año) {
     try {
+      // Normalizar fecha por si `FechaPedido` está como string (YYYY-MM-DD o DD/MM/YYYY)
+      // Si es DATE/DATETIME, MySQL lo convierte implícitamente a string YYYY-MM-DD, por lo que STR_TO_DATE funciona.
+      const fechaExpr = `
+        COALESCE(
+          STR_TO_DATE(p.FechaPedido, '%Y-%m-%d'),
+          STR_TO_DATE(p.FechaPedido, '%Y-%m-%d %H:%i:%s'),
+          STR_TO_DATE(p.FechaPedido, '%d/%m/%Y'),
+          STR_TO_DATE(p.FechaPedido, '%d/%m/%Y %H:%i:%s'),
+          p.FechaPedido
+        )
+      `;
       const sql = `
         SELECT p.*, tp.Tipo as TipoPedidoNombre
         FROM pedidos p
         LEFT JOIN tipos_pedidos tp ON p.Id_TipoPedido = tp.id
         WHERE p.Id_Cial = ? 
-        AND MONTH(p.FechaPedido) = ? 
-        AND YEAR(p.FechaPedido) = ?
+        AND MONTH(${fechaExpr}) = ? 
+        AND YEAR(${fechaExpr}) = ?
         AND LOWER(COALESCE(p.EstadoPedido, '')) NOT IN ('anulado', 'pendiente', 'cancelado')
-        ORDER BY p.FechaPedido
+        ORDER BY ${fechaExpr}
       `;
       return await crm.query(sql, [comercialId, mes, año]);
     } catch (error) {
@@ -561,6 +575,15 @@ class CalculadorComisiones {
 
       // La marca real vive en `marcas.Nombre` (o `Marcas`), no en `articulos.Marca` en la mayoría de instalaciones.
       const marcaNorm = String(marca || '').trim().toUpperCase();
+      const fechaExpr = `
+        COALESCE(
+          STR_TO_DATE(p.FechaPedido, '%Y-%m-%d'),
+          STR_TO_DATE(p.FechaPedido, '%Y-%m-%d %H:%i:%s'),
+          STR_TO_DATE(p.FechaPedido, '%d/%m/%Y'),
+          STR_TO_DATE(p.FechaPedido, '%d/%m/%Y %H:%i:%s'),
+          p.FechaPedido
+        )
+      `;
       const sqlLower = `
         SELECT SUM(pa.Subtotal) as total
         FROM pedidos p
@@ -568,8 +591,8 @@ class CalculadorComisiones {
         INNER JOIN articulos a ON pa.Id_Articulo = a.id
         LEFT JOIN marcas m ON a.Id_Marca = m.id
         WHERE p.Id_Cial = ?
-          AND YEAR(p.FechaPedido) = ?
-          AND MONTH(p.FechaPedido) BETWEEN ? AND ?
+          AND YEAR(${fechaExpr}) = ?
+          AND MONTH(${fechaExpr}) BETWEEN ? AND ?
           AND UPPER(m.Nombre) = ?
           AND p.EstadoPedido != 'Anulado'
       `;
@@ -584,8 +607,8 @@ class CalculadorComisiones {
           INNER JOIN articulos a ON pa.Id_Articulo = a.id
           LEFT JOIN Marcas m ON a.Id_Marca = m.id
           WHERE p.Id_Cial = ?
-            AND YEAR(p.FechaPedido) = ?
-            AND MONTH(p.FechaPedido) BETWEEN ? AND ?
+            AND YEAR(${fechaExpr}) = ?
+            AND MONTH(${fechaExpr}) BETWEEN ? AND ?
             AND UPPER(m.Nombre) = ?
             AND p.EstadoPedido != 'Anulado'
         `;

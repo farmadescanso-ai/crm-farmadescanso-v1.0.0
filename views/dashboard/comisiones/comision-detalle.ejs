@@ -127,10 +127,10 @@
                             </div>
                             <div class="col-md-3">
                                 <strong>Estado:</strong><br>
-                                <% if (comision.estado === 'Pagada') { %>
-                                <span class="badge bg-success">Pagada</span>
-                                <% } else if (comision.estado === 'Calculada') { %>
-                                <span class="badge bg-info">Calculada</span>
+                                <% if (comision.estado === 'Pagado' || comision.estado === 'Pagada') { %>
+                                <span class="badge bg-success">Pagado</span>
+                                <% } else if (comision.estado === 'Calculado' || comision.estado === 'Calculada') { %>
+                                <span class="badge bg-info">Calculado</span>
                                 <% } else { %>
                                 <span class="badge bg-warning">Pendiente</span>
                                 <% } %>
@@ -194,11 +194,14 @@
                                         <th class="text-end">% Comisión</th>
                                         <th class="text-end">Importe Comisión</th>
                                         <th>Tipo</th>
+                                        <th>Observaciones</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <% detalle.forEach(item => { %>
-                                    <tr>
+                                    <% const obs = String(item.observaciones || ''); %>
+                                    <% const sinConfig = obs.toUpperCase().includes('SIN CONFIG') || Number(item.porcentaje_comision || 0) === 0; %>
+                                    <tr class="<%= sinConfig ? 'table-warning' : '' %>">
                                         <td>
                                             <%= item.pedido_numero || 'N/A' %>
                                             <% if (item.pedido_fecha) { %>
@@ -216,6 +219,7 @@
                                         <td class="text-end"><%= parseFloat(item.porcentaje_comision || 0).toFixed(2) %>%</td>
                                         <td class="text-end fw-bold">€ <%= parseFloat(item.importe_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                         <td><span class="badge bg-secondary"><%= item.tipo_comision || 'Venta' %></span></td>
+                                        <td><small class="text-muted"><%= item.observaciones || '-' %></small></td>
                                     </tr>
                                     <% }) %>
                                 </tbody>
