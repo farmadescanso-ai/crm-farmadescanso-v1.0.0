@@ -789,7 +789,7 @@ router.delete('/presupuestos/:id', async (req, res) => {
 router.get('/comisiones', async (req, res) => {
   try {
     // Si no es admin, solo puede ver sus propias comisiones
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     const comercialId = req.comercialId || req.session.comercialId;
 
     const filters = {
@@ -843,7 +843,7 @@ router.get('/comisiones/:id', async (req, res) => {
       return res.json({ success: true, data: { comision, detalle } });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/comision-detalle', {
       title: `Comisión ${comision.mes}/${comision.año} - Farmadescaso`,
       user: req.comercial || req.session.comercial,
@@ -869,7 +869,7 @@ router.get('/comisiones/:id/liquidacion', async (req, res) => {
       return res.status(404).render('error', { error: 'Comisión no encontrada', message: 'La comisión solicitada no existe' });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     const comercialIdAutenticado = req.comercialId || req.session?.comercialId;
 
     // Si no es admin, solo puede ver su propia liquidación
@@ -1135,7 +1135,7 @@ router.get('/rapeles', async (req, res) => {
       return res.json({ success: true, data: rapeles });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/rapeles', {
       title: 'Rapeles - Farmadescaso',
       user: req.comercial || req.session.comercial,
@@ -1261,7 +1261,7 @@ router.get('/objetivos-marca', async (req, res) => {
       return res.json({ success: true, data: objetivos });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/objetivos-marca', {
       title: 'Objetivos por Marca - Farmadescaso',
       user: req.comercial || req.session.comercial,
@@ -1449,7 +1449,7 @@ router.get('/condiciones-especiales', async (req, res) => {
       return res.json({ success: true, data: condiciones });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     let marcas = await getMarcasList();
     marcas = (marcas || [])
       .map(m => (m || '').toString().trim())
@@ -1595,7 +1595,7 @@ router.get('/rapeles-configuracion', async (req, res) => {
       return res.json({ success: true, data: configuraciones });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/rapeles-configuracion', {
       title: 'Configuración de Rapeles - Farmadescaso',
       user: req.comercial || req.session.comercial,
@@ -1779,7 +1779,7 @@ router.get('/fijos-mensuales', async (req, res) => {
       return res.json({ success: true, data: { comerciales, marcas, fijosMensuales, filters: { año, mes } } });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     console.log(`📊 [FIJOS-MENSUALES] Es admin: ${esAdmin}`);
     
     console.log('📤 [FIJOS-MENSUALES] Renderizando vista...');
@@ -1806,7 +1806,7 @@ router.get('/fijos-mensuales', async (req, res) => {
     
     // Intentar renderizar con datos por defecto para evitar error 500
     try {
-      const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+      const esAdmin = isAdminReq(req);
       res.render('dashboard/comisiones/fijos-mensuales', {
         title: 'Fijos Mensuales - Farmadescaso',
         user: req.comercial || req.session.comercial,
@@ -1961,7 +1961,7 @@ router.get('/config-comisiones-tipo-pedido', async (req, res) => {
       return res.json({ success: true, data: configuraciones });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/config-comisiones-tipo-pedido', {
       title: 'Configuración Comisiones por Tipo Pedido - Farmadescaso',
       user: req.comercial || req.session?.comercial || req.user || {},
@@ -2072,7 +2072,7 @@ router.get('/config-rappel-presupuesto', async (req, res) => {
       return res.json({ success: true, data: configuraciones });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/config-rappel-presupuesto', {
       title: 'Configuración Rappel Presupuesto - Farmadescaso',
       user: req.comercial || req.session.comercial,
@@ -2151,7 +2151,7 @@ router.get('/config-fijo-mensual', async (req, res) => {
       return res.json({ success: true, data: configuraciones });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/config-fijo-mensual', {
       title: 'Configuración Fijo Mensual - Farmadescaso',
       user: req.comercial || req.session.comercial,
@@ -2235,7 +2235,7 @@ router.get('/config-descuento-transporte', async (req, res) => {
       return res.json({ success: true, data: configuraciones });
     }
 
-    const esAdmin = req.user && (req.user.roll?.toLowerCase().includes('administrador') || req.user.Roll?.toLowerCase().includes('administrador'));
+    const esAdmin = isAdminReq(req);
     res.render('dashboard/comisiones/config-descuento-transporte', {
       title: 'Configuración Descuento Transporte - Farmadescaso',
       user: req.comercial || req.session.comercial,
