@@ -20,6 +20,7 @@ deploy/
 # Documentación interna (mantén solo README y documentación importante)
 *.md
 !README.md
+!COMISIONES-VENTAS.md
 !SOLUCION-LOGIN.md
 !SINCRONIZAR-CLIENTES.md
 !VERIFICAR-DESPLIEGUE-VERCEL.md

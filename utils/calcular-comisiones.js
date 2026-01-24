@@ -25,7 +25,15 @@ class CalculadorComisiones {
 
       // Calcular comisiones por línea
       for (const pedido of pedidos) {
-        const lineas = await this.obtenerLineasPedido(pedido.id);
+        const pedidoId = pedido.id || pedido.Id;
+        const pedidoNumero =
+          pedido.NumPedido ||
+          pedido.Numero_Pedido ||
+          pedido['Número_Pedido'] ||
+          pedido['Número Pedido'] ||
+          pedido.numero ||
+          null;
+        const lineas = await this.obtenerLineasPedido(pedidoId, pedidoNumero);
         const tipoPedidoNombre = pedido.TipoPedidoNombre || '';
         
         // Calcular el transporte del pedido (diferencia entre TotalPedido y BaseImponible + TotalIva)
@@ -461,9 +469,12 @@ class CalculadorComisiones {
     }
   }
 
-  async obtenerLineasPedido(pedidoId) {
+  async obtenerLineasPedido(pedidoId, pedidoNumero = null) {
     try {
-      // La tabla pedidos_articulos usa Id_NumPedido para relacionar con pedidos.id
+      // La relación pedido <-> líneas NO es consistente entre instalaciones:
+      // - pedidos_articulos.Id_NumPedido = pedidos.id (numérico)
+      // - pedidos_articulos.NumPedido = pedidos.NumPedido (string)
+      // Por robustez, intentamos ambos.
       // Incluir información de marca del artículo
       // En Linux, el nombre de tabla puede ser case-sensitive: probar `marcas` y luego `Marcas`
       const sqlLower = `
@@ -474,7 +485,21 @@ class CalculadorComisiones {
         WHERE pa.Id_NumPedido = ?
       `;
       try {
-        return await crm.query(sqlLower, [pedidoId]);
+        const rows = await crm.query(sqlLower, [pedidoId]);
+        if (rows && rows.length > 0) return rows;
+        // Fallback por NumPedido si tenemos el número del pedido
+        if (pedidoNumero) {
+          const sqlLowerNum = `
+            SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
+            FROM pedidos_articulos pa
+            INNER JOIN articulos a ON pa.Id_Articulo = a.id
+            LEFT JOIN marcas m ON a.Id_Marca = m.id
+            WHERE pa.NumPedido = ?
+          `;
+          const rowsNum = await crm.query(sqlLowerNum, [pedidoNumero]);
+          return rowsNum || [];
+        }
+        return rows || [];
       } catch (_) {
         const sqlUpper = `
           SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
@@ -483,7 +508,20 @@ class CalculadorComisiones {
           LEFT JOIN Marcas m ON a.Id_Marca = m.id
           WHERE pa.Id_NumPedido = ?
         `;
-        return await crm.query(sqlUpper, [pedidoId]);
+        const rows = await crm.query(sqlUpper, [pedidoId]);
+        if (rows && rows.length > 0) return rows;
+        if (pedidoNumero) {
+          const sqlUpperNum = `
+            SELECT pa.*, a.Id_Marca, m.Nombre as MarcaNombre
+            FROM pedidos_articulos pa
+            INNER JOIN articulos a ON pa.Id_Articulo = a.id
+            LEFT JOIN Marcas m ON a.Id_Marca = m.id
+            WHERE pa.NumPedido = ?
+          `;
+          const rowsNum = await crm.query(sqlUpperNum, [pedidoNumero]);
+          return rowsNum || [];
+        }
+        return rows || [];
       }
     } catch (error) {
       console.error('❌ Error obteniendo líneas de pedido:', error);
