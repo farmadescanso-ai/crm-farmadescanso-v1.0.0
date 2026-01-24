@@ -194,6 +194,11 @@
                         <thead>
                             <tr>
                                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                <th class="text-center">
+                                    <input type="checkbox" id="chkSelectAllComisiones" aria-label="Seleccionar todas las comisiones">
+                                </th>
+                                <% } %>
+                                <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
                                 <th>Comercial</th>
                                 <% } %>
                                 <th>Mes/Año</th>
@@ -208,6 +213,19 @@
                             <% if (comisiones && comisiones.length > 0) { %>
                             <% comisiones.forEach(comision => { %>
                             <tr>
+                                <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                <td class="text-center">
+                                    <input
+                                      type="checkbox"
+                                      class="chkComisionRow"
+                                      value="<%= comision.id %>"
+                                      data-comercial-id="<%= comision.comercial_id %>"
+                                      data-mes="<%= comision.mes %>"
+                                      data-año="<%= comision.año %>"
+                                      aria-label="Seleccionar comisión <%= (comision.mes && comision.mes > 0) ? (['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][comision.mes-1] + '/' + comision.año) : (comision.año) %>"
+                                    >
+                                </td>
+                                <% } %>
                                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
                                 <td><%= comision.comercial_nombre || '-' %></td>
                                 <% } %>
@@ -252,7 +270,7 @@
                             <% }) %>
                             <% } else { %>
                             <tr>
-                                <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '7' : '6' %>" class="text-center text-muted py-4">
+                                <td colspan="<%= (typeof esAdmin !== 'undefined' && esAdmin) ? '8' : '6' %>" class="text-center text-muted py-4">
                                     <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
                                     No hay comisiones registradas
                                 </td>
@@ -261,6 +279,14 @@
                         </tbody>
                     </table>
                 </div>
+                <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                    <button class="btn btn-outline-dark" id="btnLiquidarSeleccionadas" disabled>
+                        <i class="fas fa-file-invoice-dollar me-1"></i>Liquidar seleccionadas
+                    </button>
+                    <small class="text-muted" id="txtSeleccionInfo">0 seleccionadas</small>
+                </div>
+                <% } %>
             </div>
         </div>
     </main>
@@ -323,6 +349,46 @@
                 alert('Error al recalcular: ' + (error.message || 'desconocido'));
             }
         }
+
+        // Selección múltiple para liquidación de varios meses
+        document.addEventListener('DOMContentLoaded', function() {
+            const chkAll = document.getElementById('chkSelectAllComisiones');
+            const btnLiquidar = document.getElementById('btnLiquidarSeleccionadas');
+            const txtInfo = document.getElementById('txtSeleccionInfo');
+            const rows = Array.from(document.querySelectorAll('.chkComisionRow'));
+            if (!btnLiquidar || rows.length === 0) return;
+
+            const updateUI = () => {
+                const selected = rows.filter(r => r.checked);
+                if (txtInfo) txtInfo.textContent = `${selected.length} seleccionadas`;
+                btnLiquidar.disabled = selected.length === 0;
+                if (chkAll) chkAll.checked = selected.length > 0 && selected.length === rows.length;
+            };
+
+            if (chkAll) {
+                chkAll.addEventListener('change', () => {
+                    rows.forEach(r => { r.checked = chkAll.checked; });
+                    updateUI();
+                });
+            }
+
+            rows.forEach(r => r.addEventListener('change', updateUI));
+
+            btnLiquidar.addEventListener('click', () => {
+                const selected = rows.filter(r => r.checked);
+                if (selected.length === 0) return;
+                const comercialIds = [...new Set(selected.map(r => String(r.dataset.comercialId || '')))].filter(Boolean);
+                if (comercialIds.length > 1) {
+                    alert('Para liquidar varios meses a la vez, selecciona comisiones de un único comercial.');
+                    return;
+                }
+                const ids = selected.map(r => r.value).join(',');
+                const url = `/dashboard/comisiones/comisiones/liquidacion-multiple?ids=${encodeURIComponent(ids)}`;
+                window.open(url, '_blank', 'noopener');
+            });
+
+            updateUI();
+        });
     </script>
 <script src="/js/go-to-top.js"></script>
     <!-- Go to Top Button -->

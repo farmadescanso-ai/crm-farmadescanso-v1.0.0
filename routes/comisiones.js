@@ -945,6 +945,121 @@ router.get('/comisiones/:id/liquidacion', async (req, res) => {
   }
 });
 
+// Documento de liquidación múltiple (varios meses/IDs a la vez)
+router.get('/comisiones/liquidacion-multiple', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    const comercialIdAutenticado = req.comercialId || req.session?.comercialId;
+
+    const idsRaw = (req.query.ids || '').toString();
+    const ids = idsRaw
+      .split(',')
+      .map(s => parseInt(s.trim(), 10))
+      .filter(n => Number.isFinite(n) && n > 0);
+
+    if (ids.length === 0) {
+      return res.status(400).render('error', { error: 'Parámetros inválidos', message: 'Debes indicar ids válidos en ?ids=1,2,3' });
+    }
+    if (ids.length > 24) {
+      return res.status(400).render('error', { error: 'Demasiadas comisiones', message: 'Selecciona como máximo 24 meses.' });
+    }
+
+    // Cargar comisiones
+    const comisiones = [];
+    for (const id of ids) {
+      const c = await comisionesCRM.getComisionById(id);
+      if (c) comisiones.push(c);
+    }
+
+    if (comisiones.length === 0) {
+      return res.status(404).render('error', { error: 'Comisiones no encontradas', message: 'No se encontró ninguna comisión con esos IDs.' });
+    }
+
+    // Permisos: admin o el propio comercial (todas deben ser suyas)
+    if (!esAdmin && comercialIdAutenticado) {
+      const ok = comisiones.every(c => Number(c.comercial_id) === Number(comercialIdAutenticado));
+      if (!ok) {
+        return res.status(403).render('error', { error: 'Sin permisos', message: 'No tienes permisos para ver esta liquidación múltiple.' });
+      }
+    } else if (!esAdmin && !comercialIdAutenticado) {
+      return res.status(403).render('error', { error: 'Sin permisos', message: 'Sesión inválida.' });
+    }
+
+    // Requerir mismo comercial para un solo documento (evita mezclar comerciales)
+    const comercialIds = [...new Set(comisiones.map(c => Number(c.comercial_id)).filter(n => Number.isFinite(n) && n > 0))];
+    if (comercialIds.length !== 1) {
+      return res.status(400).render('error', { error: 'Selección inválida', message: 'Selecciona comisiones de un único comercial.' });
+    }
+    const comercialId = comercialIds[0];
+    const comercialNombre = comisiones[0].comercial_nombre || `Comercial #${comercialId}`;
+
+    // Ordenar por año/mes
+    comisiones.sort((a, b) => (Number(a.año) - Number(b.año)) || (Number(a.mes) - Number(b.mes)));
+
+    // Construir filas de ventas (una tabla con columna periodo)
+    const filas = [];
+    const fijosPorComision = []; // [{comision_id, año, mes, items:[{marca,importe}], total}]
+    let totalBase = 0;
+    let totalComVentas = 0;
+    let totalFijo = 0;
+
+    for (const c of comisiones) {
+      const ventas = await comisionesCRM.getComisionLiquidacionVentasPedidoMarca(c.id);
+      const fijosMarca = await comisionesCRM.getFijosMensualesMarcaPeriodo({
+        comercial_id: c.comercial_id,
+        año: c.año,
+        mes: c.mes,
+        activo: 1
+      });
+
+      const fijoMap = new Map();
+      for (const f of (fijosMarca || [])) {
+        const marcaId = Number(f.marca_id);
+        if (!Number.isFinite(marcaId) || marcaId <= 0) continue;
+        fijoMap.set(marcaId, { marca_id: marcaId, marca_nombre: f.marca_nombre || String(marcaId), importe: Number(f.importe || 0) });
+      }
+      const fijoItems = [...fijoMap.values()].sort((x, y) => String(x.marca_nombre).localeCompare(String(y.marca_nombre), 'es'));
+      const fijoTotal = fijoItems.reduce((sum, r) => sum + Number(r.importe || 0), 0);
+      totalFijo += fijoTotal;
+      fijosPorComision.push({ comision_id: c.id, año: c.año, mes: c.mes, items: fijoItems, total: fijoTotal });
+
+      for (const r of (ventas || [])) {
+        const base = Number(r.base_venta || 0);
+        const comV = Number(r.comision_ventas || 0);
+        totalBase += base;
+        totalComVentas += comV;
+        filas.push({
+          comision_id: c.id,
+          año: c.año,
+          mes: c.mes,
+          cliente_nombre: r.cliente_nombre || 'SIN_CLIENTE',
+          pedido_numero: r.pedido_numero,
+          pedido_fecha: r.pedido_fecha,
+          marca_nombre: r.marca_nombre || 'SIN_MARCA',
+          base_venta: base,
+          comision_ventas: comV,
+          pct_efectivo: base > 0 ? (comV / base) * 100 : 0
+        });
+      }
+    }
+
+    // Render
+    res.render('dashboard/comisiones/liquidacion-comisiones-ventas-multiple', {
+      title: `Liquidación múltiple ${comercialNombre} - Farmadescaso`,
+      user: req.comercial || req.session?.comercial,
+      esAdmin,
+      comercial: { id: comercialId, nombre: comercialNombre },
+      comisiones,
+      filas,
+      fijosPorComision,
+      totales: { total_base: totalBase, total_comision_ventas: totalComVentas, total_fijo: totalFijo }
+    });
+  } catch (error) {
+    console.error('❌ Error generando liquidación múltiple:', error);
+    res.status(500).render('error', { error: 'Error generando liquidación múltiple', message: error.message });
+  }
+});
+
 // Calcular comisión mensual
 router.post('/comisiones/calcular', async (req, res) => {
   try {
