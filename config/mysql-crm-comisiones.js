@@ -2455,8 +2455,8 @@ class ComisionesCRM {
 
       // SIEMPRE buscar configuración específica de marca (OBLIGATORIO)
       if (!marca) {
-        console.warn(`⚠️ [CONFIG] No se proporcionó marca para obtener porcentaje comisión ${nombreTipoBuscar} en ${año}, usando valor por defecto`);
-        return nombreTipoBuscar === 'Transfer' ? 5 : 10;
+        console.warn(`⚠️ [CONFIG] No se proporcionó marca para obtener porcentaje comisión (${nombreTipoBuscar}) en ${año}. No se aplicará comisión (0%) hasta configurar la marca.`);
+        return null;
       }
 
       // Prioridad de búsqueda:
@@ -2533,12 +2533,11 @@ class ComisionesCRM {
       }
 
       // NO buscar configuración general - requerir marca específica
-      console.warn(`⚠️ [CONFIG] No se encontró configuración para marca ${marca}, tipo ${nombreTipoBuscar} en ${año}, usando valores por defecto`);
-      return nombreTipoBuscar === 'Transfer' ? 5 : 10;
+      console.warn(`⚠️ [CONFIG] No se encontró configuración para marca ${marca}, tipo ${nombreTipoBuscar} (ID: ${tipoPedidoId}) en ${año}. No se aplicará comisión (0%) hasta configurar.`);
+      return null;
     } catch (error) {
       console.error(`❌ Error obteniendo porcentaje comisión: ${error.message}`);
-      // Valores por defecto
-      return tipoPedido && tipoPedido.toLowerCase().includes('transfer') ? 5 : 10;
+      return null;
     }
   }
 

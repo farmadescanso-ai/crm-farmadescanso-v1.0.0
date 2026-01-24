@@ -124,10 +124,10 @@ Se busca con esta prioridad:
 3) Fallback: `marca + tipo_pedido_id + año_aplicable IS NULL`
 4) Fallback final: `marca + nombre_tipo_pedido + año_aplicable IS NULL`
 
-Si no se encuentra configuración, se aplica un default:
+Si no se encuentra configuración, **NO se aplica comisión por defecto**:
 
-- Transfer: 5%
-- Directo/otros: 10% (según implementación actual)
+- Se registra un **aviso** (warning) indicando que falta configuración para ese pedido/línea (marca/tipo/año).
+- La línea se calcula con **0%** hasta que se configure `config_comisiones_tipo_pedido`.
 
 Checklist SQL:
 

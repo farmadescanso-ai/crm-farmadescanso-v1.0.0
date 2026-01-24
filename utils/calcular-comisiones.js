@@ -36,6 +36,11 @@ class CalculadorComisiones {
         const lineas = await this.obtenerLineasPedido(pedidoId, pedidoNumero);
         const tipoPedidoNombre = pedido.TipoPedidoNombre || '';
         
+        if (!lineas || lineas.length === 0) {
+          console.warn(`⚠️ [COMISIONES][SIN_LINEAS] Pedido ${pedidoId} (${pedidoNumero || 'sin_num'}) no tiene líneas. No se puede calcular comisión por ventas para este pedido.`);
+          continue;
+        }
+        
         // Calcular el transporte del pedido (diferencia entre TotalPedido y BaseImponible + TotalIva)
         const totalPedido = parseFloat(pedido.TotalPedido || pedido.total || 0);
         const baseImponiblePedido = parseFloat(pedido.BaseImponible || 0);
@@ -90,12 +95,30 @@ class CalculadorComisiones {
             porcentajeComision = parseFloat(condicionEspecial.porcentaje_comision || porcentajeComision);
           }
 
+          // Si no hay configuración (y no aplica condición especial), NO aplicar comisión por defecto.
+          // Se deja 0% y se emite aviso para que el admin configure config_comisiones_tipo_pedido.
+          if (!condicionEspecial) {
+            const pctNum = Number(porcentajeComision);
+            if (!Number.isFinite(pctNum)) {
+              console.warn(
+                `⚠️ [COMISIONES][SIN_CONFIG] Sin % comisión configurado. ` +
+                `pedido=${pedidoId} articulo=${linea.articulo_id || linea.Id_Articulo} ` +
+                `marca=${marcaNombre || 'NULL'} tipo=${tipoPedidoNombre || 'NULL'} (id=${tipoPedidoId || 'NULL'}) año=${año}`
+              );
+              porcentajeComision = 0;
+            } else {
+              porcentajeComision = pctNum;
+            }
+          }
+
           const importeComision = (baseImponible * porcentajeComision) / 100;
           totalComision += importeComision;
 
           let observaciones = condicionEspecial 
             ? `Condición especial: ${condicionEspecial.descripcion || 'Comisión fija del ' + porcentajeComision + '% sobre Base Imponible para todos los artículos y comerciales'}`
-            : `Tipo de pedido: ${pedido.TipoPedidoNombre || 'No especificado'} (${porcentajeComision}%)`;
+            : (porcentajeComision === 0
+                ? `SIN CONFIG % comisión (marca/tipo/año). Tipo: ${pedido.TipoPedidoNombre || 'No especificado'} (0%)`
+                : `Tipo de pedido: ${pedido.TipoPedidoNombre || 'No especificado'} (${porcentajeComision}%)`);
           
           // Agregar información sobre descuento de transporte si aplica
           if (descuentoTransporte > 0) {
