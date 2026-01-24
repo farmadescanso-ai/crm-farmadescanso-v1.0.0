@@ -136,5 +136,6 @@ scripts/configurar-usuario-mysql-remoto.sql
 # Whitelist: scripts de migración/estructura que SÍ queremos versionar
 !scripts/alter-fijos-mensuales-marca-add-periodo.sql
 !scripts/create-estadoComisiones.sql
+!scripts/alter-comisiones-add-pagos-por-concepto.sql
 !scripts/recalcular-rapeles-trimestre.js
 !scripts/recalcular-comisiones-segun-pedido.js

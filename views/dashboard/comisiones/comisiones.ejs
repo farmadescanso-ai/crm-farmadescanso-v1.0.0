@@ -242,8 +242,8 @@
                                         <i class="fas fa-rotate-right"></i>
                                     </button>
                                     <% } %>
-                                    <% if ((comision.estado !== 'Pagado' && comision.estado !== 'Pagada') && (typeof esAdmin !== 'undefined' && esAdmin)) { %>
-                                    <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Marcar como Pagado">
+                                    <% if ((typeof esAdmin !== 'undefined' && esAdmin)) { %>
+                                    <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Registrar pago (Ventas/Fijo)">
                                         <i class="fas fa-check"></i>
                                     </button>
                                     <% } %>
@@ -276,14 +276,17 @@
         });
 
         async function marcarComoPagada(id) {
-            if (!confirm('¿Marcar esta comisión como pagada?')) return;
+            const concepto = prompt('¿Qué concepto quieres marcar como pagado? Escribe: ventas, fijo o ambos', 'ventas');
+            if (!concepto) return;
+            const fecha = new Date().toISOString().split('T')[0];
+            if (!confirm(`¿Marcar como pagado "${concepto}" con fecha ${fecha}?`)) return;
 
             try {
                 const response = await fetch(`/dashboard/comisiones/comisiones/${id}/pagar`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ fecha_pago: new Date().toISOString().split('T')[0] })
+                    body: JSON.stringify({ concepto: String(concepto).toLowerCase(), fecha_pago: fecha })
                 });
 
                 const data = await response.json();

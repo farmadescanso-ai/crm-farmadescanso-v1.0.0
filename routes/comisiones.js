@@ -877,53 +877,65 @@ router.get('/comisiones/:id/liquidacion', async (req, res) => {
       return res.status(403).render('error', { error: 'Sin permisos', message: 'No tienes permisos para ver esta liquidación' });
     }
 
-    const filas = await comisionesCRM.getComisionLiquidacionVentas(id);
+    const filas = await comisionesCRM.getComisionLiquidacionVentasPedidoMarca(id);
+    const fijosMarca = await comisionesCRM.getFijosMensualesMarcaPeriodo({
+      comercial_id: comision.comercial_id,
+      año: comision.año,
+      mes: comision.mes,
+      activo: 1
+    });
 
-    // Agrupar por cliente
-    const porClienteMap = new Map();
+    const fijoPorMarca = new Map();
+    let totalFijoMarcas = 0;
+    for (const f of (fijosMarca || [])) {
+      const marcaId = Number(f.marca_id);
+      const imp = Number(f.importe || 0);
+      if (!Number.isFinite(marcaId) || marcaId <= 0) continue;
+      fijoPorMarca.set(marcaId, {
+        marca_id: marcaId,
+        marca_nombre: f.marca_nombre || String(marcaId),
+        importe: imp
+      });
+    }
+    totalFijoMarcas = [...fijoPorMarca.values()].reduce((sum, r) => sum + Number(r.importe || 0), 0);
+
+    // Normalizar filas para tabla (pedido + marca)
     let totalVenta = 0;
     let totalComisionVentas = 0;
-
-    for (const r of (filas || [])) {
-      const clienteId = r.cliente_id ?? null;
-      const clienteNombre = r.cliente_nombre || 'SIN_CLIENTE';
-      const key = `${clienteId ?? 'null'}:${clienteNombre}`; // estable
-      if (!porClienteMap.has(key)) {
-        porClienteMap.set(key, {
-          cliente_id: clienteId,
-          cliente_nombre: clienteNombre,
-          pedidos: [],
-          subtotal_venta: 0,
-          subtotal_comision: 0
-        });
-      }
-      const item = porClienteMap.get(key);
-      const impVenta = Number(r.importe_venta || 0);
-      const impCom = Number(r.importe_comision || 0);
-      item.pedidos.push({
+    const ventasPedidoMarca = (filas || []).map(r => {
+      const base = Number(r.base_venta || 0);
+      const comV = Number(r.comision_ventas || 0);
+      totalVenta += base;
+      totalComisionVentas += comV;
+      const pctEfectivo = base > 0 ? (comV / base) * 100 : 0;
+      const marcaId = r.marca_id != null ? Number(r.marca_id) : null;
+      const fijoMarcaRow = (marcaId && fijoPorMarca.has(marcaId)) ? fijoPorMarca.get(marcaId) : null;
+      return {
+        cliente_id: r.cliente_id ?? null,
+        cliente_nombre: r.cliente_nombre || 'SIN_CLIENTE',
         pedido_id: r.pedido_id,
         pedido_numero: r.pedido_numero,
         pedido_fecha: r.pedido_fecha,
         pedido_estado: r.pedido_estado,
-        importe_venta: impVenta,
-        importe_comision: impCom
-      });
-      item.subtotal_venta += impVenta;
-      item.subtotal_comision += impCom;
-      totalVenta += impVenta;
-      totalComisionVentas += impCom;
-    }
-
-    const porCliente = [...porClienteMap.values()].sort((a, b) => String(a.cliente_nombre).localeCompare(String(b.cliente_nombre), 'es'));
+        marca_id: marcaId,
+        marca_nombre: r.marca_nombre || (marcaId ? String(marcaId) : 'SIN_MARCA'),
+        base_venta: base,
+        comision_ventas: comV,
+        pct_efectivo: pctEfectivo,
+        fijo_marca: fijoMarcaRow ? Number(fijoMarcaRow.importe || 0) : 0
+      };
+    });
 
     res.render('dashboard/comisiones/liquidacion-comisiones-ventas', {
       title: `Liquidación Comisiones Ventas ${comision.mes}/${comision.año} - Farmadescaso`,
       user: req.comercial || req.session?.comercial,
       comision,
-      porCliente,
+      ventasPedidoMarca,
+      fijosPorMarca: [...fijoPorMarca.values()].sort((a, b) => String(a.marca_nombre).localeCompare(String(b.marca_nombre), 'es')),
       totales: {
         total_venta: totalVenta,
-        total_comision_ventas: totalComisionVentas
+        total_comision_ventas: totalComisionVentas,
+        total_fijo_marca: totalFijoMarcas
       },
       esAdmin
     });
@@ -969,24 +981,76 @@ router.post('/comisiones/calcular', async (req, res) => {
 // Marcar comisión como pagada
 router.post('/comisiones/:id/pagar', async (req, res) => {
   try {
+    if (!isAdminReq(req)) {
+      return res.status(403).json({ success: false, error: 'Solo administradores' });
+    }
     const id = parseInt(req.params.id);
     const fechaPago = req.body.fecha_pago || new Date().toISOString().split('T')[0];
+    const conceptoRaw = (req.body.concepto || 'ambos').toString().toLowerCase();
     const pagadoPor = req.comercialId || req.session.comercialId || null;
 
-    await comisionesCRM.saveComision({
-      id: id,
-      // Estado canónico (masculino) para integrar con estadoComisiones
-      // (getComisiones soporta compatibilidad Pagada/Pagado)
-      estado: 'Pagado',
-      fecha_pago: fechaPago,
-      pagado_por: pagadoPor
-    });
+    // Leer comisión para decidir estado global y bloqueos
+    const actual = await comisionesCRM.getComisionById(id);
+    if (!actual) {
+      return res.status(404).json({ success: false, error: 'Comisión no encontrada' });
+    }
+
+    const hasPagoConceptoCols = await comisionesCRM._hasComisionesPagoConceptoColumns?.() ?? false;
+
+    // Si la BD no tiene columnas por concepto, solo soportamos "ambos" (compat)
+    const concepto = hasPagoConceptoCols ? conceptoRaw : 'ambos';
+
+    const patch = { id };
+    if (concepto === 'ventas') {
+      if (actual.fecha_pago_ventas) {
+        return res.status(409).json({ success: false, error: 'La comisión de ventas ya está marcada como pagada.' });
+      }
+      patch.fecha_pago_ventas = fechaPago;
+      patch.pagado_ventas_por = pagadoPor;
+    } else if (concepto === 'fijo') {
+      if (actual.fecha_pago_fijo) {
+        return res.status(409).json({ success: false, error: 'El fijo mensual ya está marcado como pagado.' });
+      }
+      patch.fecha_pago_fijo = fechaPago;
+      patch.pagado_fijo_por = pagadoPor;
+    } else {
+      // ambos (comportamiento anterior)
+      patch.fecha_pago = fechaPago;
+      patch.pagado_por = pagadoPor;
+      patch.estado = 'Pagado';
+      if (hasPagoConceptoCols) {
+        if (!actual.fecha_pago_ventas) patch.fecha_pago_ventas = fechaPago;
+        if (!actual.fecha_pago_fijo) patch.fecha_pago_fijo = fechaPago;
+        if (!actual.pagado_ventas_por) patch.pagado_ventas_por = pagadoPor;
+        if (!actual.pagado_fijo_por) patch.pagado_fijo_por = pagadoPor;
+      }
+    }
+
+    // Estado global: Pagado solo cuando ambos conceptos están pagados (si existen columnas)
+    if (hasPagoConceptoCols && concepto !== 'ambos') {
+      const nextVentas = patch.fecha_pago_ventas || actual.fecha_pago_ventas || null;
+      const nextFijo = patch.fecha_pago_fijo || actual.fecha_pago_fijo || null;
+      if (nextVentas && nextFijo) {
+        patch.estado = 'Pagado';
+        patch.fecha_pago = fechaPago; // por compat: última fecha pagada
+        patch.pagado_por = pagadoPor;
+      } else {
+        // Mantener como Calculado (si estaba pendiente, subir a Calculado)
+        const estadoCur = String(actual.estado || '').toLowerCase();
+        if (!estadoCur.includes('pagad') && !estadoCur.includes('calcul')) {
+          patch.estado = 'Calculado';
+        }
+      }
+    }
+
+    await comisionesCRM.saveComision(patch);
 
     // Mantener tabla estadoComisiones sincronizada (si existe en BD)
     try {
+      const estadoParaTabla = patch.estado || actual.estado || 'Calculado';
       await comisionesCRM.saveEstadoComision({
         comision_id: id,
-        estado: 'Pagado',
+        estado: estadoParaTabla,
         fecha_estado: `${fechaPago} 00:00:00`,
         actualizado_por: pagadoPor ?? null
       });
@@ -994,7 +1058,7 @@ router.post('/comisiones/:id/pagar', async (req, res) => {
       console.warn(`⚠️ [estadoComisiones] No se pudo upsert estado (no crítico): ${e.message}`);
     }
 
-    res.json({ success: true, message: 'Comisión marcada como pagada' });
+    res.json({ success: true, message: 'Pago registrado', data: { concepto, fecha_pago: fechaPago } });
   } catch (error) {
     console.error('❌ Error marcando comisión como pagada:', error);
     res.status(500).json({ success: false, error: error.message });

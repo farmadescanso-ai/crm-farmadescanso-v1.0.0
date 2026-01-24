@@ -927,6 +927,9 @@ class ComisionesCRM {
    */
   async saveComision(comisionData) {
     try {
+      // Detectar si existen columnas de pago por concepto (ventas/fijo) para no romper despliegues sin migración
+      const hasPagoConceptoCols = await this._hasComisionesPagoConceptoColumns();
+
       // Si viene ID, actualizar directamente por ID (evita pasar undefined en el SELECT por clave compuesta)
       if (comisionData && comisionData.id !== undefined && comisionData.id !== null) {
         const id = Number(comisionData.id);
@@ -965,6 +968,25 @@ class ComisionesCRM {
           updates.push('fecha_pago = ?');
           // Normalizar vacío -> NULL (pero nunca undefined)
           params.push(comisionData.fecha_pago || null);
+        }
+        // Pagos separados por concepto (si la BD lo soporta)
+        if (hasPagoConceptoCols) {
+          if (comisionData.fecha_pago_ventas !== undefined) {
+            updates.push('fecha_pago_ventas = ?');
+            params.push(comisionData.fecha_pago_ventas || null);
+          }
+          if (comisionData.pagado_ventas_por !== undefined) {
+            updates.push('pagado_ventas_por = ?');
+            params.push(comisionData.pagado_ventas_por ?? null);
+          }
+          if (comisionData.fecha_pago_fijo !== undefined) {
+            updates.push('fecha_pago_fijo = ?');
+            params.push(comisionData.fecha_pago_fijo || null);
+          }
+          if (comisionData.pagado_fijo_por !== undefined) {
+            updates.push('pagado_fijo_por = ?');
+            params.push(comisionData.pagado_fijo_por ?? null);
+          }
         }
         if (comisionData.observaciones !== undefined) {
           updates.push('observaciones = ?');
@@ -1038,6 +1060,25 @@ class ComisionesCRM {
           updates.push('fecha_pago = ?');
           params.push(comisionData.fecha_pago);
         }
+        // Pagos separados por concepto (si la BD lo soporta)
+        if (hasPagoConceptoCols) {
+          if (comisionData.fecha_pago_ventas !== undefined) {
+            updates.push('fecha_pago_ventas = ?');
+            params.push(comisionData.fecha_pago_ventas || null);
+          }
+          if (comisionData.pagado_ventas_por !== undefined) {
+            updates.push('pagado_ventas_por = ?');
+            params.push(comisionData.pagado_ventas_por ?? null);
+          }
+          if (comisionData.fecha_pago_fijo !== undefined) {
+            updates.push('fecha_pago_fijo = ?');
+            params.push(comisionData.fecha_pago_fijo || null);
+          }
+          if (comisionData.pagado_fijo_por !== undefined) {
+            updates.push('pagado_fijo_por = ?');
+            params.push(comisionData.pagado_fijo_por ?? null);
+          }
+        }
         if (comisionData.observaciones !== undefined) {
           updates.push('observaciones = ?');
           params.push(comisionData.observaciones);
@@ -1088,6 +1129,25 @@ class ComisionesCRM {
     } catch (error) {
       console.error('❌ Error guardando comisión:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Detectar si la tabla `comisiones` tiene columnas para pago por concepto.
+   * (Compatibilidad: en producción puede tardar en aplicarse el ALTER TABLE.)
+   */
+  async _hasComisionesPagoConceptoColumns() {
+    this._cache = this._cache || {};
+    if (this._cache.comisionesHasPagoConceptoColumns !== undefined) {
+      return this._cache.comisionesHasPagoConceptoColumns;
+    }
+    try {
+      await this.query('SELECT fecha_pago_ventas, fecha_pago_fijo FROM comisiones WHERE 1=0');
+      this._cache.comisionesHasPagoConceptoColumns = true;
+      return true;
+    } catch (_) {
+      this._cache.comisionesHasPagoConceptoColumns = false;
+      return false;
     }
   }
 
@@ -1178,6 +1238,65 @@ class ComisionesCRM {
     } catch (error) {
       console.error('❌ Error obteniendo liquidación de comisión ventas:', error.message);
       throw error;
+    }
+  }
+
+  /**
+   * Detalle para liquidación de comisiones de VENTAS, agregado por pedido + marca (y cliente).
+   * Devuelve filas con: cliente, pedido, marca, base_venta, comision_venta.
+   */
+  async getComisionLiquidacionVentasPedidoMarca(comisionId) {
+    const cdTable = await this._getComisionesDetalleTable();
+    const nombreCol = await this._getClienteNombreColumn();
+    const clienteNombreExpr = `cl.\`${String(nombreCol).replace(/`/g, '')}\``;
+
+    const run = async (marcasTable, articulosTable) => {
+      const sql = `
+        SELECT
+          p.Id_Cliente AS cliente_id,
+          ${clienteNombreExpr} AS cliente_nombre,
+          p.id AS pedido_id,
+          p.NumPedido AS pedido_numero,
+          p.FechaPedido AS pedido_fecha,
+          p.EstadoPedido AS pedido_estado,
+          m.id AS marca_id,
+          m.Nombre AS marca_nombre,
+          SUM(cd.importe_venta) AS base_venta,
+          SUM(cd.importe_comision) AS comision_ventas
+        FROM ${cdTable} cd
+        LEFT JOIN pedidos p ON cd.pedido_id = p.id
+        LEFT JOIN clientes cl ON (cl.id = p.Id_Cliente OR cl.Id = p.Id_Cliente)
+        LEFT JOIN ${articulosTable} a ON (a.id = cd.articulo_id OR a.Id = cd.articulo_id)
+        LEFT JOIN ${marcasTable} m ON (m.id = a.Id_Marca OR m.Id = a.Id_Marca)
+        WHERE cd.comision_id = ?
+          AND (cd.tipo_comision IS NULL OR cd.tipo_comision = 'Venta')
+          AND cd.pedido_id IS NOT NULL
+        GROUP BY
+          p.Id_Cliente,
+          cliente_nombre,
+          p.id,
+          p.NumPedido,
+          p.FechaPedido,
+          p.EstadoPedido,
+          m.id,
+          m.Nombre
+        ORDER BY cliente_nombre ASC, p.FechaPedido ASC, p.id ASC, m.Nombre ASC
+      `;
+      return await this.query(sql, [Number(comisionId)]);
+    };
+
+    try {
+      return await run('marcas', 'articulos');
+    } catch (e1) {
+      try {
+        return await run('Marcas', 'articulos');
+      } catch (e2) {
+        try {
+          return await run('marcas', 'Articulos');
+        } catch (e3) {
+          return await run('Marcas', 'Articulos');
+        }
+      }
     }
   }
 
