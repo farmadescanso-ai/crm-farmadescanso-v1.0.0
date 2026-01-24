@@ -657,6 +657,168 @@ class ComisionesCRM {
   // COMISIONES
   // =====================================================
 
+  // =====================================================
+  // ESTADO COMISIONES (tabla estadoComisiones)
+  // =====================================================
+
+  /**
+   * Listar estados de comisiones (join con comisiones + comerciales)
+   */
+  async getEstadoComisiones(filters = {}) {
+    try {
+      let sql = `
+        SELECT ec.*,
+               c.comercial_id, c.mes, c.año,
+               c.total_ventas, c.total_comision,
+               co.Nombre AS comercial_nombre
+        FROM estadoComisiones ec
+        INNER JOIN comisiones c ON c.id = ec.comision_id
+        LEFT JOIN comerciales co ON co.id = c.comercial_id
+        WHERE 1=1
+      `;
+      const params = [];
+
+      if (filters.comision_id) {
+        sql += ' AND ec.comision_id = ?';
+        params.push(filters.comision_id);
+      }
+      if (filters.estado) {
+        sql += ' AND ec.estado = ?';
+        params.push(filters.estado);
+      }
+      if (filters.comercial_id) {
+        sql += ' AND c.comercial_id = ?';
+        params.push(filters.comercial_id);
+      }
+      if (filters.mes) {
+        sql += ' AND c.mes = ?';
+        params.push(filters.mes);
+      }
+      if (filters.año) {
+        sql += ' AND c.año = ?';
+        params.push(filters.año);
+      }
+
+      sql += `
+        ORDER BY
+          co.Nombre ASC,
+          c.año DESC,
+          CASE
+            WHEN c.mes IS NULL OR c.mes = 0 THEN 13
+            ELSE c.mes
+          END ASC,
+          ec.fecha_estado DESC
+      `;
+
+      return await this.query(sql, params);
+    } catch (error) {
+      console.error('❌ Error obteniendo estadoComisiones:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Obtener estado de comisión por ID (tabla estadoComisiones.id)
+   */
+  async getEstadoComisionById(id) {
+    try {
+      const rows = await this.query('SELECT * FROM estadoComisiones WHERE id = ? LIMIT 1', [id]);
+      return rows[0] || null;
+    } catch (error) {
+      console.error('❌ Error obteniendo estadoComision:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Crear/actualizar estado por comision_id (upsert)
+   * - Si viene id: UPDATE por id
+   * - Si no viene id: INSERT ... ON DUPLICATE KEY UPDATE por comision_id
+   */
+  async saveEstadoComision(data) {
+    try {
+      if (!data || data.comision_id === undefined || data.comision_id === null) {
+        throw new Error('saveEstadoComision requiere comision_id');
+      }
+      const comisionId = Number(data.comision_id);
+      if (!Number.isFinite(comisionId) || comisionId <= 0) {
+        throw new Error(`comision_id inválido: ${data.comision_id}`);
+      }
+
+      const estado = (data.estado || 'Pendiente');
+      const fechaEstado = data.fecha_estado || null;
+      const actualizadoPor = data.actualizado_por ?? null;
+      const notas = data.notas ?? null;
+
+      if (data.id !== undefined && data.id !== null) {
+        const id = Number(data.id);
+        if (!Number.isFinite(id) || id <= 0) {
+          throw new Error(`id inválido: ${data.id}`);
+        }
+
+        const updates = [];
+        const params = [];
+        if (data.comision_id !== undefined) {
+          updates.push('comision_id = ?');
+          params.push(comisionId);
+        }
+        if (data.estado !== undefined) {
+          updates.push('estado = ?');
+          params.push(estado);
+        }
+        if (data.fecha_estado !== undefined) {
+          updates.push('fecha_estado = ?');
+          params.push(fechaEstado || new Date());
+        }
+        if (data.actualizado_por !== undefined) {
+          updates.push('actualizado_por = ?');
+          params.push(actualizadoPor);
+        }
+        if (data.notas !== undefined) {
+          updates.push('notas = ?');
+          params.push(notas);
+        }
+        if (updates.length === 0) return { id };
+        params.push(id);
+        await this.execute(`UPDATE estadoComisiones SET ${updates.join(', ')} WHERE id = ?`, params);
+        return { id, ...data };
+      }
+
+      const sql = `
+        INSERT INTO estadoComisiones (comision_id, estado, fecha_estado, actualizado_por, notas)
+        VALUES (?, ?, COALESCE(?, CURRENT_TIMESTAMP), ?, ?)
+        ON DUPLICATE KEY UPDATE
+          estado = VALUES(estado),
+          fecha_estado = COALESCE(VALUES(fecha_estado), CURRENT_TIMESTAMP),
+          actualizado_por = VALUES(actualizado_por),
+          notas = VALUES(notas),
+          actualizado_en = CURRENT_TIMESTAMP
+      `;
+      await this.execute(sql, [comisionId, estado, fechaEstado, actualizadoPor, notas]);
+
+      // devolver el row actual
+      const row = await this.query('SELECT * FROM estadoComisiones WHERE comision_id = ? LIMIT 1', [comisionId]);
+      return row[0] || { comision_id: comisionId, estado };
+    } catch (error) {
+      console.error('❌ Error guardando estadoComision:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Eliminar estadoComisiones por id (tabla estadoComisiones.id)
+   */
+  async deleteEstadoComision(id) {
+    try {
+      const sql = 'DELETE FROM estadoComisiones WHERE id = ?';
+      await this.execute(sql, [id]);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error eliminando estadoComision:', error.message);
+      throw error;
+    }
+  }
+
   /**
    * Obtener todas las comisiones
    */
@@ -685,8 +847,17 @@ class ComisionesCRM {
         params.push(filters.año);
       }
       if (filters.estado) {
-        sql += ' AND c.estado = ?';
-        params.push(filters.estado);
+        const est = String(filters.estado);
+        // Compatibilidad: algunos registros históricos usan "Calculada/Pagada" (femenino)
+        // mientras que en otras partes se usa "Calculado/Pagado".
+        if (est === 'Pagado' || est === 'Pagada') {
+          sql += " AND c.estado IN ('Pagado','Pagada')";
+        } else if (est === 'Calculado' || est === 'Calculada') {
+          sql += " AND c.estado IN ('Calculado','Calculada')";
+        } else {
+          sql += ' AND c.estado = ?';
+          params.push(est);
+        }
       }
 
       // Orden deseado en UI:

@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+  <link href="/css/colors.css" rel="stylesheet">
+  <link href="/css/dashboard.css" rel="stylesheet">
+  <%- include('../../partials/navbar-styles') %>
+</head>
+<body>
+  <%- include('../../partials/navbar-dashboard') %>
+
+  <div class="container-fluid mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+      <h1 class="h3 mb-0">
+        <i class="fas fa-traffic-light me-2 text-success"></i>Estado de Comisiones
+      </h1>
+    </div>
+
+    <div class="card mb-3">
+      <div class="card-body">
+        <form method="GET" action="/dashboard/comisiones/estado-comisiones" class="row g-3">
+          <div class="col-md-3">
+            <label class="form-label">Comercial</label>
+            <select name="comercial_id" class="form-select">
+              <option value="">Todos</option>
+              <% (comerciales || []).forEach(c => { %>
+                <option value="<%= c.id || c.Id %>" <%= String(filters?.comercial_id || '') === String(c.id || c.Id) ? 'selected' : '' %>>
+                  <%= c.Nombre || c.nombre %>
+                </option>
+              <% }) %>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Mes</label>
+            <select name="mes" class="form-select">
+              <option value="">Todos</option>
+              <% for (let i = 1; i <= 12; i++) { %>
+                <option value="<%= i %>" <%= String(filters?.mes || '') === String(i) ? 'selected' : '' %>>
+                  <%= ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][i-1] %>
+                </option>
+              <% } %>
+            </select>
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Año</label>
+            <input type="number" name="año" class="form-control" value="<%= filters?.año || '' %>" min="2020" max="2035">
+          </div>
+
+          <div class="col-md-2">
+            <label class="form-label">Estado</label>
+            <select name="estado" class="form-select">
+              <option value="">Todos</option>
+              <option value="Pendiente" <%= filters?.estado === 'Pendiente' ? 'selected' : '' %>>Pendiente</option>
+              <option value="Calculado" <%= filters?.estado === 'Calculado' ? 'selected' : '' %>>Calculado</option>
+              <option value="Pagado" <%= filters?.estado === 'Pagado' ? 'selected' : '' %>>Pagado</option>
+            </select>
+          </div>
+
+          <div class="col-md-3">
+            <label class="form-label">Comisión ID</label>
+            <input type="number" name="comision_id" class="form-control" value="<%= filters?.comision_id || '' %>" min="1">
+          </div>
+
+          <div class="col-md-2 d-flex align-items-end">
+            <button class="btn btn-outline-primary w-100" type="submit">
+              <i class="fas fa-filter me-1"></i>Filtrar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead class="table-light">
+              <tr>
+                <th>Comercial</th>
+                <th>Periodo</th>
+                <th class="text-end">Ventas</th>
+                <th class="text-end">Total Comisión</th>
+                <th>Estado</th>
+                <th>Notas</th>
+                <th class="text-end">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (!rows || rows.length === 0) { %>
+                <tr>
+                  <td colspan="7" class="text-center text-muted py-4">No hay resultados.</td>
+                </tr>
+              <% } else { %>
+                <% rows.forEach(r => { %>
+                  <tr data-id="<%= r.id %>" data-comision-id="<%= r.comision_id %>">
+                    <td><%= r.comercial_nombre || ('#' + (r.comercial_id || '')) %></td>
+                    <td><%= (r.mes ? String(r.mes).padStart(2,'0') : '—') %>/<%= r.año %> (ID <%= r.comision_id %>)</td>
+                    <td class="text-end">€ <%= Number(r.total_ventas || 0).toLocaleString('es-ES',{minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                    <td class="text-end fw-semibold">€ <%= Number(r.total_comision || 0).toLocaleString('es-ES',{minimumFractionDigits:2, maximumFractionDigits:2}) %></td>
+                    <td style="min-width: 180px;">
+                      <select class="form-select form-select-sm estado-select">
+                        <option value="Pendiente" <%= r.estado === 'Pendiente' ? 'selected' : '' %>>Pendiente</option>
+                        <option value="Calculado" <%= r.estado === 'Calculado' ? 'selected' : '' %>>Calculado</option>
+                        <option value="Pagado" <%= r.estado === 'Pagado' ? 'selected' : '' %>>Pagado</option>
+                      </select>
+                    </td>
+                    <td style="min-width: 220px;">
+                      <input class="form-control form-control-sm notas-input" value="<%= (r.notas || '') %>" placeholder="Notas...">
+                    </td>
+                    <td class="text-end" style="min-width: 160px;">
+                      <button class="btn btn-sm btn-success btn-guardar">
+                        <i class="fas fa-save me-1"></i>Guardar
+                      </button>
+                      <button class="btn btn-sm btn-outline-danger btn-eliminar" title="Eliminar estado (se puede re-crear)">
+                        <i class="fas fa-trash"></i>
+                      </button>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    async function postJSON(url, payload) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    async function del(url) {
+      const res = await fetch(url, { method: 'DELETE', headers: { 'Accept': 'application/json' } });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      return data;
+    }
+
+    document.querySelectorAll('.btn-guardar').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tr = btn.closest('tr');
+        const comisionId = tr.dataset.comisionId;
+        const estado = tr.querySelector('.estado-select').value;
+        const notas = tr.querySelector('.notas-input').value;
+        btn.disabled = true;
+        try {
+          await postJSON('/dashboard/comisiones/estado-comisiones', {
+            comision_id: Number(comisionId),
+            estado,
+            notas
+          });
+          window.location.reload();
+        } catch (e) {
+          alert(`No se pudo guardar: ${e.message}`);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+
+    document.querySelectorAll('.btn-eliminar').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const tr = btn.closest('tr');
+        const id = tr.dataset.id;
+        if (!confirm('¿Seguro que deseas eliminar este estado?')) return;
+        btn.disabled = true;
+        try {
+          await del(`/dashboard/comisiones/estado-comisiones/${id}`);
+          window.location.reload();
+        } catch (e) {
+          alert(`No se pudo eliminar: ${e.message}`);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+

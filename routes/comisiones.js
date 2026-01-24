@@ -969,14 +969,126 @@ router.post('/comisiones/:id/pagar', async (req, res) => {
 
     await comisionesCRM.saveComision({
       id: id,
-      estado: 'Pagada',
+      // Estado canónico (masculino) para integrar con estadoComisiones
+      // (getComisiones soporta compatibilidad Pagada/Pagado)
+      estado: 'Pagado',
       fecha_pago: fechaPago,
       pagado_por: pagadoPor
     });
 
+    // Mantener tabla estadoComisiones sincronizada (si existe en BD)
+    try {
+      await comisionesCRM.saveEstadoComision({
+        comision_id: id,
+        estado: 'Pagado',
+        fecha_estado: `${fechaPago} 00:00:00`,
+        actualizado_por: pagadoPor ?? null
+      });
+    } catch (e) {
+      console.warn(`⚠️ [estadoComisiones] No se pudo upsert estado (no crítico): ${e.message}`);
+    }
+
     res.json({ success: true, message: 'Comisión marcada como pagada' });
   } catch (error) {
     console.error('❌ Error marcando comisión como pagada:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
+ * =====================================================
+ * ESTADO COMISIONES (CRUD)
+ * =====================================================
+ */
+
+// Listar estados (solo admin)
+router.get('/estado-comisiones', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    if (!esAdmin) {
+      return res.status(403).render('error', { error: 'Sin permisos', message: 'Solo administradores' });
+    }
+
+    const filters = {
+      comercial_id: req.query.comercial_id ? parseInt(req.query.comercial_id) : null,
+      mes: req.query.mes ? parseInt(req.query.mes) : null,
+      año: req.query.año ? parseInt(req.query.año) : null,
+      estado: req.query.estado || null,
+      comision_id: req.query.comision_id ? parseInt(req.query.comision_id) : null
+    };
+
+    const [rows, comerciales] = await Promise.all([
+      comisionesCRM.getEstadoComisiones(filters),
+      crm.getComerciales()
+    ]);
+
+    if (req.accepts('json') && !req.accepts('html')) {
+      return res.json({ success: true, data: rows });
+    }
+
+    res.render('dashboard/comisiones/estado-comisiones', {
+      title: 'Estado Comisiones - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      esAdmin: true,
+      rows,
+      comerciales,
+      filters
+    });
+  } catch (error) {
+    console.error('❌ Error listando estadoComisiones:', error);
+    if (req.accepts('json') && !req.accepts('html')) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    res.status(500).render('error', { error: 'Error listando estados', message: error.message });
+  }
+});
+
+// Crear/actualizar estado (solo admin)
+router.post('/estado-comisiones', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    if (!esAdmin) {
+      return res.status(403).json({ success: false, error: 'Solo administradores' });
+    }
+
+    const comision_id = parseInt(req.body.comision_id);
+    const estado = (req.body.estado || '').toString().trim() || 'Pendiente';
+    const notas = req.body.notas !== undefined ? String(req.body.notas) : null;
+    const actualizado_por = req.comercialId || req.session.comercialId || null;
+
+    const saved = await comisionesCRM.saveEstadoComision({
+      comision_id,
+      estado,
+      actualizado_por,
+      notas
+    });
+
+    // Mantener comisiones.estado sincronizada (compatibilidad)
+    const estadoEnComisiones =
+      estado === 'Calculado' ? 'Calculada' :
+      estado === 'Pagado' ? 'Pagada' :
+      'Pendiente';
+    await comisionesCRM.saveComision({ id: comision_id, estado: estadoEnComisiones });
+
+    res.json({ success: true, data: saved });
+  } catch (error) {
+    console.error('❌ Error guardando estadoComision:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Eliminar estado (solo admin)
+router.delete('/estado-comisiones/:id', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    if (!esAdmin) {
+      return res.status(403).json({ success: false, error: 'Solo administradores' });
+    }
+    const id = parseInt(req.params.id);
+    await comisionesCRM.deleteEstadoComision(id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error('❌ Error eliminando estadoComision:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });

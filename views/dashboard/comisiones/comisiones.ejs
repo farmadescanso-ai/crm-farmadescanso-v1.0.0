@@ -173,8 +173,8 @@
                         <select name="estado" class="form-select">
                             <option value="">Todos</option>
                             <option value="Pendiente" <%= filters.estado === 'Pendiente' ? 'selected' : '' %>>Pendiente</option>
-                            <option value="Calculada" <%= filters.estado === 'Calculada' ? 'selected' : '' %>>Calculada</option>
-                            <option value="Pagada" <%= filters.estado === 'Pagada' ? 'selected' : '' %>>Pagada</option>
+                            <option value="Calculado" <%= (filters.estado === 'Calculado' || filters.estado === 'Calculada') ? 'selected' : '' %>>Calculado</option>
+                            <option value="Pagado" <%= (filters.estado === 'Pagado' || filters.estado === 'Pagada') ? 'selected' : '' %>>Pagado</option>
                         </select>
                     </div>
                     <div class="col-md-2 d-flex align-items-end">
@@ -222,10 +222,10 @@
                                 <td class="text-end">€ <%= parseFloat(comision.comision_ventas || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-end fw-bold">€ <%= parseFloat(comision.total_comision || 0).toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-center">
-                                    <% if (comision.estado === 'Pagada') { %>
-                                    <span class="badge bg-success">Pagada</span>
-                                    <% } else if (comision.estado === 'Calculada') { %>
-                                    <span class="badge bg-info">Calculada</span>
+                                    <% if (comision.estado === 'Pagado' || comision.estado === 'Pagada') { %>
+                                    <span class="badge bg-success">Pagado</span>
+                                    <% } else if (comision.estado === 'Calculado' || comision.estado === 'Calculada') { %>
+                                    <span class="badge bg-info">Calculado</span>
                                     <% } else { %>
                                     <span class="badge bg-warning">Pendiente</span>
                                     <% } %>
@@ -237,8 +237,8 @@
                                     <a href="/dashboard/comisiones/comisiones/<%= comision.id %>/liquidacion" class="btn btn-sm btn-outline-dark" title="Documento de liquidación (Comisiones de Ventas)" target="_blank" rel="noopener">
                                         <i class="fas fa-file-invoice-dollar"></i>
                                     </a>
-                                    <% if (comision.estado !== 'Pagada' && (typeof esAdmin !== 'undefined' && esAdmin)) { %>
-                                    <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Marcar como Pagada">
+                                    <% if ((comision.estado !== 'Pagado' && comision.estado !== 'Pagada') && (typeof esAdmin !== 'undefined' && esAdmin)) { %>
+                                    <button class="btn btn-sm btn-outline-success" onclick="marcarComoPagada(<%= comision.id %>)" title="Marcar como Pagado">
                                         <i class="fas fa-check"></i>
                                     </button>
                                     <% } %>

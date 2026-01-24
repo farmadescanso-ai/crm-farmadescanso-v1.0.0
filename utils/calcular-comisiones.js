@@ -386,6 +386,18 @@ class CalculadorComisiones {
 
       const comision = await comisionesCRM.saveComision(comisionData);
 
+      // Mantener tabla estadoComisiones sincronizada (si existe en BD)
+      try {
+        await comisionesCRM.saveEstadoComision({
+          comision_id: comision.id,
+          estado: 'Calculado',
+          actualizado_por: calculadoPor ?? null
+        });
+      } catch (e) {
+        // No bloquear el cálculo si la tabla aún no existe o falla el FK
+        console.warn(`⚠️ [estadoComisiones] No se pudo upsert estado (no crítico): ${e.message}`);
+      }
+
       // Eliminar detalles antiguos si existe la comisión (para actualizaciones)
       if (comision.id) {
         try {
