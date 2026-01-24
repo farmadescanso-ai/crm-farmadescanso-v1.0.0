@@ -1115,6 +1115,19 @@ const getUserIsAdmin = (req) => {
   return isAdmin(req);
 };
 
+// Hacer disponibles user/esAdmin en TODAS las vistas (navbar y partials)
+// Evita que el menú admin dependa de que cada ruta pase "esAdmin" manualmente.
+app.use((req, res, next) => {
+  try {
+    res.locals.user = req.comercial || req.session?.comercial || req.user || null;
+    res.locals.esAdmin = getUserIsAdmin(req);
+  } catch (_) {
+    res.locals.user = req.comercial || req.session?.comercial || req.user || null;
+    res.locals.esAdmin = false;
+  }
+  next();
+});
+
 const requireAdmin = (req, res, next) => {
   try {
     console.log(`🔍 [REQUIRE_ADMIN] Verificando acceso para: ${req.path}`);
