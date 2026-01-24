@@ -2119,8 +2119,8 @@ class ComisionesCRM {
                c.Email as comercial_email,
                m.Nombre as marca_nombre
         FROM fijos_mensuales_marca fmm
-        INNER JOIN comerciales c ON fmm.comercial_id = c.id
-        INNER JOIN marcas m ON fmm.marca_id = m.id
+        LEFT JOIN comerciales c ON (fmm.comercial_id = c.id OR fmm.comercial_id = c.Id)
+        LEFT JOIN marcas m ON (fmm.marca_id = m.id OR fmm.marca_id = m.Id)
         WHERE 1=1
       `;
       
@@ -2139,7 +2139,7 @@ class ComisionesCRM {
         params.push(filters.activo ? 1 : 0);
       }
 
-      sql += ' ORDER BY c.Nombre, m.Nombre';
+      sql += ' ORDER BY COALESCE(c.Nombre, \'\'), COALESCE(m.Nombre, \'\')';
 
       const result = await this.query(sql, params);
       return Array.isArray(result) ? result : [];
@@ -2155,8 +2155,8 @@ class ComisionesCRM {
                  c.Email as comercial_email,
                  m.Nombre as marca_nombre
           FROM fijos_mensuales_marca fmm
-          INNER JOIN comerciales c ON fmm.comercial_id = c.id
-          INNER JOIN marcas m ON fmm.marca_id = m.id
+          LEFT JOIN comerciales c ON (fmm.comercial_id = c.id OR fmm.comercial_id = c.Id)
+          LEFT JOIN marcas m ON (fmm.marca_id = m.id OR fmm.marca_id = m.Id)
           WHERE 1=1
         `;
         
@@ -2173,7 +2173,7 @@ class ComisionesCRM {
           sqlFallback += ' AND fmm.activo = ?';
           params.push(filters.activo ? 1 : 0);
         }
-        sqlFallback += ' ORDER BY c.Nombre, m.Nombre';
+        sqlFallback += ' ORDER BY COALESCE(c.Nombre, \'\'), COALESCE(m.Nombre, \'\')';
         
         const result = await this.query(sqlFallback, params);
         return Array.isArray(result) ? result : [];
@@ -2213,8 +2213,8 @@ class ComisionesCRM {
                c.Email as comercial_email,
                m.Nombre as marca_nombre
         FROM fijos_mensuales_marca fmm
-        INNER JOIN comerciales c ON fmm.comercial_id = c.id
-        INNER JOIN marcas m ON fmm.marca_id = m.id
+        LEFT JOIN comerciales c ON (fmm.comercial_id = c.id OR fmm.comercial_id = c.Id)
+        LEFT JOIN marcas m ON (fmm.marca_id = m.id OR fmm.marca_id = m.Id)
         WHERE 1=1
       `;
       const params = [];
@@ -2245,7 +2245,7 @@ class ComisionesCRM {
         params.push(filters.activo ? 1 : 0);
       }
 
-      sql += ' ORDER BY c.Nombre, fmm.año DESC, fmm.mes ASC, m.Nombre';
+      sql += ' ORDER BY COALESCE(c.Nombre, \'\'), fmm.año DESC, fmm.mes ASC, COALESCE(m.Nombre, \'\')';
 
       const rows = await this.query(sql, params);
 
@@ -2382,8 +2382,8 @@ class ComisionesCRM {
                c.Nombre as comercial_nombre,
                m.Nombre as marca_nombre
         FROM fijos_mensuales_marca fmm
-        INNER JOIN comerciales c ON fmm.comercial_id = c.id
-        INNER JOIN marcas m ON fmm.marca_id = m.id
+        LEFT JOIN comerciales c ON (fmm.comercial_id = c.id OR fmm.comercial_id = c.Id)
+        LEFT JOIN marcas m ON (fmm.marca_id = m.id OR fmm.marca_id = m.Id)
         WHERE fmm.comercial_id = ? AND fmm.marca_id = ?
         LIMIT 1
       `;
