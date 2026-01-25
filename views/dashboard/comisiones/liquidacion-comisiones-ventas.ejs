@@ -32,6 +32,38 @@
       thead { display: table-header-group; }
       tfoot { display: table-footer-group; }
       tr { page-break-inside: avoid; break-inside: avoid; }
+
+      /* Resumen de totales: SIEMPRE en horizontal en A4 */
+      .resumen-totales {
+        display: flex !important;
+        flex-wrap: nowrap !important;
+        gap: 8mm !important;
+        align-items: stretch !important;
+      }
+      .resumen-totales > .col-md-4 {
+        width: auto !important;
+        flex: 1 1 0 !important;
+      }
+      .resumen-totales .card {
+        height: 100% !important;
+      }
+      .resumen-totales .card-body {
+        padding: 8px 10px !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        min-height: 34mm !important; /* igual altura en las 3 cajas */
+      }
+      .resumen-totales .text-muted {
+        font-size: 10px !important;
+      }
+      .resumen-totales .h4 {
+        font-size: 14px !important;
+        line-height: 1.15 !important;
+      }
+      .resumen-totales .small {
+        font-size: 10px !important;
+      }
     }
     .table thead th { white-space: nowrap; }
     .badge-pill { border-radius: 999px; }
@@ -123,7 +155,7 @@
         </div>
 
         <!-- RESUMEN IMPORTES -->
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mb-3 resumen-totales">
           <div class="col-md-4">
             <div class="card border-info">
               <div class="card-body text-center">
