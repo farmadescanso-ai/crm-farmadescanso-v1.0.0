@@ -46,6 +46,7 @@
       /* Logo incrustado en el encabezado (sin aumentar altura) */
       .doc-box--header { position: relative; }
       .doc-box--header .doc-logo-inline {
+        display: block !important;
         position: absolute;
         top: 2px;
         left: 50%;
@@ -76,6 +77,8 @@
     .liquidacion-completa { border-color: #198754 !important; }
     .liquidacion-parcial { border-color: #fd7e14 !important; } /* bootstrap orange */
     .doc-box { border: 1px solid #dee2e6; border-radius: .5rem; padding: 1rem; background: #fff; }
+    /* En pantalla NO mostrar el logo (solo impresión) */
+    .doc-logo-inline { display: none; }
     .doc-title { letter-spacing: .04em; }
     .doc-meta dt { font-weight: 600; color: #6c757d; }
     .doc-meta dd { margin-bottom: .25rem; }
