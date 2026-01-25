@@ -12,12 +12,26 @@
   <%- include('../../partials/navbar-styles') %>
   <style>
     @media print {
+      @page {
+        size: A4;
+        margin: 12mm;
+      }
       .no-print { display: none !important; }
       nav, .navbar, .sidebar, .main-header { display: none !important; }
       body { background: #fff !important; }
+      .container-fluid, .main-content { padding: 0 !important; margin: 0 !important; }
       .card { border: none !important; box-shadow: none !important; }
-      .table { font-size: 12px; }
+      .table { font-size: 11px; }
       a[href]:after { content: "" !important; }
+
+      /* Mejor control de saltos de página */
+      .doc-box { break-inside: avoid; page-break-inside: avoid; }
+      .card { break-inside: avoid; page-break-inside: avoid; }
+      .table-responsive { overflow: visible !important; }
+      table { page-break-inside: auto; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
+      tr { page-break-inside: avoid; break-inside: avoid; }
     }
     .table thead th { white-space: nowrap; }
     .badge-pill { border-radius: 999px; }
@@ -30,6 +44,7 @@
     .doc-meta dt { font-weight: 600; color: #6c757d; }
     .doc-meta dd { margin-bottom: .25rem; }
     .firma-linea { border-top: 1px solid #adb5bd; margin-top: 2.25rem; padding-top: .5rem; }
+    .page-break { page-break-before: always; break-before: page; }
   </style>
 </head>
 <body>
