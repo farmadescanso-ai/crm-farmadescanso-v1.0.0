@@ -43,6 +43,22 @@
       .main-content .py-3 { padding-top: 8px !important; padding-bottom: 8px !important; }
       .main-content .pb-2 { padding-bottom: 6px !important; }
 
+      /* Logo incrustado en el encabezado (sin aumentar altura) */
+      .doc-box--header { position: relative; }
+      .doc-box--header .doc-logo-inline {
+        position: absolute;
+        top: 2px;
+        left: 50%;
+        transform: translateX(-50%);
+        height: 22px;
+        width: auto;
+        object-fit: contain;
+        opacity: 0.28;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .doc-box--header .doc-header-content { position: relative; z-index: 1; }
+
       /* Resumen de totales: SIEMPRE en horizontal en A4 */
       .resumen-totales { display: none !important; } /* en print se usa la tabla */
       .resumen-totales-print { display: block !important; }
@@ -103,7 +119,9 @@
         %>
 
         <!-- CABECERA TIPO ALBARÁN -->
-        <div class="doc-box mb-3">
+        <div class="doc-box doc-box--header mb-3">
+          <img class="doc-logo-inline" src="/images/logos/farmadescanso-gemavip.jpg" alt="Farmadescanso y Gemavip">
+          <div class="doc-header-content">
           <div class="row g-3 align-items-start">
             <div class="col-lg-6">
               <div class="d-flex align-items-start gap-3">
@@ -139,6 +157,7 @@
                 </dd>
               </dl>
             </div>
+          </div>
           </div>
         </div>
 
