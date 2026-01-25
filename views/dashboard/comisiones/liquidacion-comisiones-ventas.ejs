@@ -22,7 +22,7 @@
       body { background: #fff !important; }
       .container-fluid { padding: 0 !important; margin: 0 !important; }
       /* Reservar espacio para el membrete (sin depender del margen @page) */
-      .main-content { padding: 78px 0 0 0 !important; margin: 0 !important; }
+      .main-content { padding: 110px 0 0 0 !important; margin: 0 !important; }
       .card { border: none !important; box-shadow: none !important; }
       .table { font-size: 11px; }
       a[href]:after { content: "" !important; }
@@ -34,13 +34,13 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 70px;
+        height: 110px; /* alto total del encabezado */
         align-items: center;
         justify-content: center;
-        padding: 15px 12mm 0 12mm; /* dejar 15px arriba */
+        padding: 15px 12mm 15px 12mm; /* 15px arriba y 15px abajo */
       }
       .doc-letterhead img {
-        max-height: 50px;
+        max-height: 80px; /* icono/logo más grande */
         width: auto;
         object-fit: contain;
       }
