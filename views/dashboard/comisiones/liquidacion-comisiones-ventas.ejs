@@ -12,15 +12,16 @@
   <%- include('../../partials/navbar-styles') %>
   <style>
     :root {
-      --letterhead-h: 90px;
-      /* 90px - 15px (arriba) - 2px (abajo) = 73px */
-      --letterhead-logo-h: 73px;
+      /* Altura del logo del membrete (ajustable) */
+      --letterhead-logo-h: 72px;
+      /* Encabezado = alto logo + 2px arriba + 2px abajo */
+      --letterhead-h: calc(var(--letterhead-logo-h) + 4px);
     }
     @media print {
       @page {
         size: A4;
-        /* Margen superior solicitado */
-        margin: 15px 12mm 12mm 12mm;
+        /* Márgenes compactos para intentar encajar en 1 página cuando sea posible */
+        margin: 10mm 12mm 10mm 12mm;
       }
       .no-print { display: none !important; }
       nav, .navbar, .sidebar, .main-header { display: none !important; }
@@ -42,7 +43,7 @@
         height: var(--letterhead-h);
         align-items: center;
         justify-content: center;
-        padding: 15px 12mm 2px 12mm; /* 15px arriba y 2px abajo */
+        padding: 2px 12mm 2px 12mm; /* 2px arriba y 2px abajo */
       }
       .doc-letterhead img {
         height: var(--letterhead-logo-h);
