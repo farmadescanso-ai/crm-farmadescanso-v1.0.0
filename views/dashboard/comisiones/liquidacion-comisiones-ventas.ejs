@@ -13,6 +13,7 @@
   <style>
     @media print {
       .no-print { display: none !important; }
+      nav, .navbar, .sidebar, .main-header { display: none !important; }
       body { background: #fff !important; }
       .card { border: none !important; box-shadow: none !important; }
       .table { font-size: 12px; }
@@ -24,26 +25,27 @@
     .importe-pendiente { color: #6c757d !important; } /* bootstrap secondary */
     .liquidacion-completa { border-color: #198754 !important; }
     .liquidacion-parcial { border-color: #fd7e14 !important; } /* bootstrap orange */
+    .doc-box { border: 1px solid #dee2e6; border-radius: .5rem; padding: 1rem; background: #fff; }
+    .doc-title { letter-spacing: .04em; }
+    .doc-meta dt { font-weight: 600; color: #6c757d; }
+    .doc-meta dd { margin-bottom: .25rem; }
+    .firma-linea { border-top: 1px solid #adb5bd; margin-top: 2.25rem; padding-top: .5rem; }
   </style>
 </head>
 <body>
-  <%- include('../../partials/navbar-dashboard') %>
+  <div class="no-print">
+    <%- include('../../partials/navbar-dashboard') %>
+  </div>
 
   <div class="container-fluid">
     <div class="row">
       <main class="col-12 px-md-4 main-content">
-        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom no-print">
           <div>
-            <h1 class="h3 mb-1">
-              <i class="fas fa-file-invoice-dollar me-2 text-primary"></i>
-              Liquidación de Comisiones de Ventas
-            </h1>
-            <div class="text-muted">
-              Comercial: <strong><%= comision.comercial_nombre || '-' %></strong>
-              · Periodo: <strong><%= ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(comision.mes || 1) - 1] %>/<%= comision.año %></strong>
-            </div>
+            <h1 class="h4 mb-0"><i class="fas fa-file-invoice-dollar me-2 text-primary"></i>Vista previa — Liquidación</h1>
+            <div class="text-muted small">Formato “albarán” (imprimible).</div>
           </div>
-          <div class="no-print d-flex gap-2">
+          <div class="d-flex gap-2">
             <a class="btn btn-outline-secondary" href="/dashboard/comisiones/comisiones/<%= comision.id %>">
               <i class="fas fa-arrow-left me-1"></i>Volver
             </a>
@@ -61,13 +63,56 @@
           const fijoPagado = hasConceptCols ? (!!comision.fecha_pago_fijo || fijoImporte === 0) : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
           const liquidacionCompleta = ventasPagadas && fijoPagado;
           const liquidacionParcial = !liquidacionCompleta && (ventasPagadas || fijoPagado);
+          const docNumero = `LC-${comision.id}-${String(comision.año)}${String(comision.mes).padStart(2,'0')}-${String(comision.comercial_id || '').padStart(2,'0')}`;
+          const fechaEmision = new Date().toLocaleDateString('es-ES');
         %>
 
+        <!-- CABECERA TIPO ALBARÁN -->
+        <div class="doc-box mb-3">
+          <div class="row g-3 align-items-start">
+            <div class="col-lg-6">
+              <div class="d-flex align-items-start gap-3">
+                <div style="width:48px;height:48px;border-radius:10px;background:#e7f1ff;display:flex;align-items:center;justify-content:center;">
+                  <i class="fas fa-file-signature text-primary"></i>
+                </div>
+                <div>
+                  <div class="text-uppercase fw-bold doc-title">Liquidación de Comisiones</div>
+                  <div class="text-muted">Documento justificativo para revisión y emisión de factura por el comercial.</div>
+                  <div class="mt-2">
+                    <% if (liquidacionCompleta) { %>
+                      <span class="badge bg-success">LIQUIDADA</span>
+                    <% } else if (liquidacionParcial) { %>
+                      <span class="badge bg-warning text-dark">PARCIAL</span>
+                    <% } else { %>
+                      <span class="badge bg-secondary">PENDIENTE</span>
+                    <% } %>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="col-lg-6">
+              <dl class="row mb-0 doc-meta">
+                <dt class="col-5">Nº Documento</dt>
+                <dd class="col-7 fw-semibold"><%= docNumero %></dd>
+                <dt class="col-5">Fecha emisión</dt>
+                <dd class="col-7"><%= fechaEmision %></dd>
+                <dt class="col-5">Comercial</dt>
+                <dd class="col-7"><%= comision.comercial_nombre || '-' %> (ID <%= comision.comercial_id %>)</dd>
+                <dt class="col-5">Periodo</dt>
+                <dd class="col-7">
+                  <%= ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'][Number(comision.mes || 1) - 1] %>/<%= comision.año %>
+                </dd>
+              </dl>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESUMEN IMPORTES -->
         <div class="row g-3 mb-3">
           <div class="col-md-4">
             <div class="card border-info">
               <div class="card-body text-center">
-                <div class="text-muted">Total ventas (según detalle)</div>
+                <div class="text-muted">Base imponible (ventas)</div>
                 <div class="h4 text-info mb-0">
                   € <%= Number(totales.total_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                 </div>
@@ -77,29 +122,22 @@
           <div class="col-md-4">
             <div class="card border-primary">
               <div class="card-body text-center">
-                <div class="text-muted">Total comisión ventas (según detalle)</div>
-                <div class="h4 text-primary mb-0 fw-bold">
+                <div class="text-muted">Comisión ventas</div>
+                <div class="h4 mb-0 fw-bold <%= ventasPagadas ? 'text-success' : 'text-primary' %>">
                   € <%= Number(totales.total_comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                 </div>
+                <div class="small text-muted mt-1">Estado: <%= ventasPagadas ? 'Pagado' : 'Pendiente' %></div>
               </div>
             </div>
           </div>
           <div class="col-md-4">
-            <div class="card <%= liquidacionCompleta ? 'liquidacion-completa' : (liquidacionParcial ? 'liquidacion-parcial' : 'border-warning') %>">
+            <div class="card border-warning">
               <div class="card-body text-center">
-                <div class="text-muted">Total comisión del mes (global)</div>
-                <div class="h4 mb-0 <%= liquidacionCompleta ? 'text-success' : (liquidacionParcial ? 'text-warning' : 'text-warning') %>">
-                  € <%= Number(comision.total_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                <div class="text-muted">Fijo mensual</div>
+                <div class="h4 mb-0 fw-bold <%= fijoPagado ? 'text-success' : 'text-warning' %>">
+                  € <%= Number(totales.total_fijo_marca || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
                 </div>
-                <div class="mt-1">
-                  <% if (liquidacionCompleta) { %>
-                    <span class="badge bg-success">Liquidada (todo pagado)</span>
-                  <% } else if (liquidacionParcial) { %>
-                    <span class="badge bg-warning text-dark">Liquidación parcial</span>
-                  <% } else { %>
-                    <span class="badge bg-secondary">Pendiente</span>
-                  <% } %>
-                </div>
+                <div class="small text-muted mt-1">Estado: <%= fijoPagado ? 'Pagado' : 'Pendiente' %></div>
               </div>
             </div>
           </div>
@@ -110,8 +148,8 @@
             <div class="row g-3 align-items-start">
               <div class="col-lg-7">
                 <p class="mb-0 text-muted">
-                  Documento de liquidación en formato tabla para justificar la emisión de factura(s) de comisión.
-                  Incluye <strong>ventas por pedido y marca</strong> y, si aplica, el <strong>fijo mensual por marca</strong>.
+                  Este albarán de liquidación muestra el desglose de <strong>comisiones de ventas</strong> por marca y el <strong>fijo mensual</strong>.
+                  Importes mostrados <strong>sin IVA</strong>. La factura la emitirá el comercial según su régimen fiscal.
                 </p>
               </div>
               <div class="col-lg-5">
@@ -276,6 +314,22 @@
                 </table>
               </div>
             <% } %>
+          </div>
+        </div>
+
+        <!-- FIRMAS (tipo albarán) -->
+        <div class="row g-3 mt-3">
+          <div class="col-md-6">
+            <div class="doc-box">
+              <div class="fw-semibold">Conforme comercial</div>
+              <div class="firma-linea text-muted small">Firma y fecha</div>
+            </div>
+          </div>
+          <div class="col-md-6">
+            <div class="doc-box">
+              <div class="fw-semibold">Conforme administración</div>
+              <div class="firma-linea text-muted small">Firma y fecha</div>
+            </div>
           </div>
         </div>
 
