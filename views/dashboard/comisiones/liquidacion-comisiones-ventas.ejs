@@ -14,13 +14,15 @@
     @media print {
       @page {
         size: A4;
-        /* Reservar cabecera para membrete (logo) sin “comerse” el contenido del documento */
-        margin: 26mm 12mm 12mm 12mm;
+        /* Margen superior solicitado */
+        margin: 15px 12mm 12mm 12mm;
       }
       .no-print { display: none !important; }
       nav, .navbar, .sidebar, .main-header { display: none !important; }
       body { background: #fff !important; }
-      .container-fluid, .main-content { padding: 0 !important; margin: 0 !important; }
+      .container-fluid { padding: 0 !important; margin: 0 !important; }
+      /* Reservar espacio para el membrete (sin depender del margen @page) */
+      .main-content { padding: 78px 0 0 0 !important; margin: 0 !important; }
       .card { border: none !important; box-shadow: none !important; }
       .table { font-size: 11px; }
       a[href]:after { content: "" !important; }
@@ -32,13 +34,13 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 22mm;
+        height: 70px;
         align-items: center;
         justify-content: center;
-        padding: 4mm 12mm 0 12mm;
+        padding: 15px 12mm 0 12mm; /* dejar 15px arriba */
       }
       .doc-letterhead img {
-        max-height: 18mm;
+        max-height: 50px;
         width: auto;
         object-fit: contain;
       }
