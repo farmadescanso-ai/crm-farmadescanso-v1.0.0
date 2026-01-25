@@ -11,7 +11,11 @@
   <link href="/css/dashboard.css" rel="stylesheet">
   <%- include('../../partials/navbar-styles') %>
   <style>
-    :root { --letterhead-logo-h: 80px; }
+    :root {
+      --letterhead-h: 90px;
+      /* 90px - 15px (arriba) - 2px (abajo) = 73px */
+      --letterhead-logo-h: 73px;
+    }
     @media print {
       @page {
         size: A4;
@@ -23,7 +27,7 @@
       body { background: #fff !important; }
       .container-fluid { padding: 0 !important; margin: 0 !important; }
       /* Reservar espacio para el membrete (sin depender del margen @page) */
-      .main-content { padding: calc(var(--letterhead-logo-h) + 30px) 0 0 0 !important; margin: 0 !important; }
+      .main-content { padding: var(--letterhead-h) 0 0 0 !important; margin: 0 !important; }
       .card { border: none !important; box-shadow: none !important; }
       .table { font-size: 11px; }
       a[href]:after { content: "" !important; }
@@ -35,10 +39,10 @@
         top: 0;
         left: 0;
         right: 0;
-        height: calc(var(--letterhead-logo-h) + 30px); /* 30px + alto del logo */
+        height: var(--letterhead-h);
         align-items: center;
         justify-content: center;
-        padding: 15px 12mm 15px 12mm; /* 15px arriba y 15px abajo */
+        padding: 15px 12mm 2px 12mm; /* 15px arriba y 2px abajo */
       }
       .doc-letterhead img {
         height: var(--letterhead-logo-h);
