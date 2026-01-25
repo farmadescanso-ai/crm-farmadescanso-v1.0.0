@@ -38,6 +38,8 @@
       .main-content .mt-3 { margin-top: 8px !important; }
       .main-content .py-3 { padding-top: 8px !important; padding-bottom: 8px !important; }
       .main-content .pb-2 { padding-bottom: 6px !important; }
+      .doc-logos { margin-bottom: 6px !important; }
+      .doc-logos img { max-height: 34px !important; }
 
       /* Resumen de totales: SIEMPRE en horizontal en A4 */
       .resumen-totales { display: none !important; } /* en print se usa la tabla */
@@ -56,6 +58,8 @@
     .liquidacion-completa { border-color: #198754 !important; }
     .liquidacion-parcial { border-color: #fd7e14 !important; } /* bootstrap orange */
     .doc-box { border: 1px solid #dee2e6; border-radius: .5rem; padding: 1rem; background: #fff; }
+    .doc-logos { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 10px; }
+    .doc-logos img { max-height: 44px; width: auto; object-fit: contain; }
     .doc-title { letter-spacing: .04em; }
     .doc-meta dt { font-weight: 600; color: #6c757d; }
     .doc-meta dd { margin-bottom: .25rem; }
@@ -100,6 +104,10 @@
 
         <!-- CABECERA TIPO ALBARÁN -->
         <div class="doc-box mb-3">
+          <div class="doc-logos">
+            <img src="/images/logo.png" alt="Farmadescanso">
+            <img src="/images/logos/gemavip.png" alt="Gemavip">
+          </div>
           <div class="row g-3 align-items-start">
             <div class="col-lg-6">
               <div class="d-flex align-items-start gap-3">
