@@ -15,10 +15,74 @@
             color: #198754 !important; /* bootstrap success */
             font-weight: 700;
         }
+        .pagar-opcion {
+            cursor: pointer;
+            transition: background-color .15s ease, border-color .15s ease;
+        }
+        .pagar-opcion:hover {
+            background-color: #f8f9fa;
+            border-color: #0d6efd;
+        }
+        .pagar-opcion:has(input:checked) {
+            background-color: #e7f1ff;
+            border-color: #0d6efd;
+        }
     </style>
 </head>
 <body>
     <%- include('../../partials/navbar-dashboard') %>
+
+    <!-- Modal: Pagar comisión (Ventas / Fijo / Ambas) -->
+    <div class="modal fade" id="modalPagarComision" tabindex="-1" aria-labelledby="modalPagarComisionLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header" style="background: #f8f9fa;">
+                    <h5 class="modal-title" id="modalPagarComisionLabel">
+                        <i class="fas fa-receipt me-2 text-primary"></i>Registrar pago
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="pagarComisionId" value="">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Concepto</label>
+                        <div class="d-flex flex-column gap-2">
+                            <label class="pagar-opcion border rounded p-2 d-flex align-items-center gap-2">
+                                <input class="form-check-input m-0" type="radio" name="pagarConcepto" value="ventas" checked>
+                                <span class="fw-semibold">Ventas</span>
+                                <span class="text-muted small ms-auto">Marca como pagada la comisión de ventas</span>
+                            </label>
+                            <label class="pagar-opcion border rounded p-2 d-flex align-items-center gap-2">
+                                <input class="form-check-input m-0" type="radio" name="pagarConcepto" value="fijo">
+                                <span class="fw-semibold">Fijo</span>
+                                <span class="text-muted small ms-auto">Marca como pagado el fijo mensual</span>
+                            </label>
+                            <label class="pagar-opcion border rounded p-2 d-flex align-items-center gap-2">
+                                <input class="form-check-input m-0" type="radio" name="pagarConcepto" value="ambos">
+                                <span class="fw-semibold">Ambas</span>
+                                <span class="text-muted small ms-auto">Marca como pagados ambos conceptos</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold">Fecha de pago</label>
+                        <input type="date" id="pagarFecha" class="form-control" value="<%= new Date().toISOString().split('T')[0] %>">
+                        <div class="form-text">Por defecto, la fecha de hoy.</div>
+                    </div>
+
+                    <div class="alert alert-danger d-none mt-3 mb-0" id="pagarError" role="alert"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-success" id="btnConfirmarPago">
+                        <i class="fas fa-check me-1"></i>Registrar pago
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <div class="container-fluid">
         <div class="row">
@@ -336,31 +400,61 @@
             }
         });
 
-        async function marcarComoPagada(id) {
-            const concepto = prompt('¿Qué concepto quieres marcar como pagado? Escribe: ventas, fijo o ambos', 'ventas');
-            if (!concepto) return;
-            const fecha = new Date().toISOString().split('T')[0];
-            if (!confirm(`¿Marcar como pagado "${concepto}" con fecha ${fecha}?`)) return;
-
-            try {
-                const response = await fetch(`/dashboard/comisiones/comisiones/${id}/pagar`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'include',
-                    body: JSON.stringify({ concepto: String(concepto).toLowerCase(), fecha_pago: fecha })
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error: ' + (data.error || 'No se pudo marcar como pagada'));
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Error al marcar como pagada');
-            }
+        function abrirModalPago(id) {
+            const modalEl = document.getElementById('modalPagarComision');
+            const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            document.getElementById('pagarComisionId').value = String(id);
+            document.getElementById('pagarError').classList.add('d-none');
+            document.getElementById('pagarError').textContent = '';
+            // Reset fecha a hoy (útil si se abre varias veces)
+            const hoy = new Date().toISOString().split('T')[0];
+            const fechaInput = document.getElementById('pagarFecha');
+            if (fechaInput && !fechaInput.value) fechaInput.value = hoy;
+            modal.show();
         }
+
+        async function marcarComoPagada(id) {
+            // Compat: mantener el nombre usado en onclick existente
+            abrirModalPago(id);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const btn = document.getElementById('btnConfirmarPago');
+            if (!btn) return;
+            btn.addEventListener('click', async () => {
+                const id = document.getElementById('pagarComisionId').value;
+                const concepto = (document.querySelector('input[name="pagarConcepto"]:checked')?.value || 'ventas').toLowerCase();
+                const fecha = document.getElementById('pagarFecha')?.value || new Date().toISOString().split('T')[0];
+                const errEl = document.getElementById('pagarError');
+
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Registrando...';
+
+                try {
+                    const res = await fetch(`/dashboard/comisiones/comisiones/${id}/pagar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ concepto, fecha_pago: fecha })
+                    });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok || data.success === false) {
+                        throw new Error(data.error || `HTTP ${res.status}`);
+                    }
+                    location.reload();
+                } catch (e) {
+                    if (errEl) {
+                        errEl.textContent = e.message;
+                        errEl.classList.remove('d-none');
+                    } else {
+                        alert(`Error: ${e.message}`);
+                    }
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i>Registrar pago';
+                }
+            });
+        });
 
         async function recalcularComision(comercialId, mes, año) {
             const confirmado = confirm(`¿Recalcular comisiones del ${String(mes).padStart(2,'0')}/${año} para el comercial #${comercialId}?`);
