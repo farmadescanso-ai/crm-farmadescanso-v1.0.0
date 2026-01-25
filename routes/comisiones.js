@@ -1167,13 +1167,35 @@ router.post('/comisiones/:id(\\d+)/pagar', async (req, res) => {
       }
     }
 
-    // Estado global: Pagado solo cuando ambos conceptos están pagados (si existen columnas)
+    // Estado global: si lo pendiente es 0 => Pagado.
+    // Reglas:
+    // - Un concepto con importe 0 se considera "cubierto" aunque no tenga fecha_pago_x.
+    // - Si tras registrar el pago del concepto seleccionado no queda nada pendiente, marcar como Pagado.
     if (hasPagoConceptoCols && concepto !== 'ambos') {
-      const nextVentas = patch.fecha_pago_ventas || actual.fecha_pago_ventas || null;
-      const nextFijo = patch.fecha_pago_fijo || actual.fecha_pago_fijo || null;
-      if (nextVentas && nextFijo) {
+      const ventasImporte = Number(actual.comision_ventas || 0) > 0
+        ? Number(actual.comision_ventas || 0)
+        : Number(actual.comision_ventas_detalle || 0);
+      const fijoImporte = Number(actual.fijo_mensual || 0);
+
+      const nextVentasFecha = patch.fecha_pago_ventas || actual.fecha_pago_ventas || null;
+      const nextFijoFecha = patch.fecha_pago_fijo || actual.fecha_pago_fijo || null;
+
+      // Si el importe es 0, podemos sellar la fecha para evitar estados "parciales" visuales.
+      if (ventasImporte === 0 && !nextVentasFecha) {
+        patch.fecha_pago_ventas = fechaPago;
+        patch.pagado_ventas_por = pagadoPor;
+      }
+      if (fijoImporte === 0 && !nextFijoFecha) {
+        patch.fecha_pago_fijo = fechaPago;
+        patch.pagado_fijo_por = pagadoPor;
+      }
+
+      const ventasCubiertas = ventasImporte === 0 || !!(patch.fecha_pago_ventas || actual.fecha_pago_ventas);
+      const fijoCubierto = fijoImporte === 0 || !!(patch.fecha_pago_fijo || actual.fecha_pago_fijo);
+
+      if (ventasCubiertas && fijoCubierto) {
         patch.estado = 'Pagado';
-        patch.fecha_pago = fechaPago; // por compat: última fecha pagada
+        patch.fecha_pago = fechaPago; // por compat: última fecha que cerró la comisión
         patch.pagado_por = pagadoPor;
       } else {
         // Mantener como Calculado (si estaba pendiente, subir a Calculado)

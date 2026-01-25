@@ -225,8 +225,10 @@
                             <% comisiones.forEach(comision => { %>
                             <% 
                                 const hasConceptCols = ('fecha_pago_ventas' in comision) || ('fecha_pago_fijo' in comision);
-                                const ventasPagadas = hasConceptCols ? !!comision.fecha_pago_ventas : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
-                                const fijoPagado = hasConceptCols ? !!comision.fecha_pago_fijo : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
+                                const ventasImporte = (Number(comision.comision_ventas || 0) > 0) ? Number(comision.comision_ventas || 0) : Number(comision.comision_ventas_detalle || 0);
+                                const fijoImporte = Number(comision.fijo_mensual || 0);
+                                const ventasPagadas = hasConceptCols ? (!!comision.fecha_pago_ventas || ventasImporte === 0) : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
+                                const fijoPagado = hasConceptCols ? (!!comision.fecha_pago_fijo || fijoImporte === 0) : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
                                 const totalPagado = ventasPagadas && fijoPagado;
                                 const parcialPagado = !totalPagado && (ventasPagadas || fijoPagado);
                             %>
