@@ -22,6 +22,8 @@
     .badge-pill { border-radius: 999px; }
     .importe-pagado { color: #198754 !important; } /* bootstrap success */
     .importe-pendiente { color: #6c757d !important; } /* bootstrap secondary */
+    .liquidacion-completa { border-color: #198754 !important; }
+    .liquidacion-parcial { border-color: #fd7e14 !important; } /* bootstrap orange */
   </style>
 </head>
 <body>
@@ -51,6 +53,14 @@
           </div>
         </div>
 
+        <%
+          const hasConceptCols = ('fecha_pago_ventas' in comision) || ('fecha_pago_fijo' in comision);
+          const ventasPagadas = hasConceptCols ? !!comision.fecha_pago_ventas : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
+          const fijoPagado = hasConceptCols ? !!comision.fecha_pago_fijo : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
+          const liquidacionCompleta = ventasPagadas && fijoPagado;
+          const liquidacionParcial = !liquidacionCompleta && (ventasPagadas || fijoPagado);
+        %>
+
         <div class="row g-3 mb-3">
           <div class="col-md-4">
             <div class="card border-info">
@@ -73,11 +83,20 @@
             </div>
           </div>
           <div class="col-md-4">
-            <div class="card border-warning">
+            <div class="card <%= liquidacionCompleta ? 'liquidacion-completa' : (liquidacionParcial ? 'liquidacion-parcial' : 'border-warning') %>">
               <div class="card-body text-center">
                 <div class="text-muted">Total comisión del mes (global)</div>
-                <div class="h4 text-warning mb-0">
+                <div class="h4 mb-0 <%= liquidacionCompleta ? 'text-success' : (liquidacionParcial ? 'text-warning' : 'text-warning') %>">
                   € <%= Number(comision.total_comision || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                </div>
+                <div class="mt-1">
+                  <% if (liquidacionCompleta) { %>
+                    <span class="badge bg-success">Liquidada (todo pagado)</span>
+                  <% } else if (liquidacionParcial) { %>
+                    <span class="badge bg-warning text-dark">Liquidación parcial</span>
+                  <% } else { %>
+                    <span class="badge bg-secondary">Pendiente</span>
+                  <% } %>
                 </div>
               </div>
             </div>
@@ -99,14 +118,12 @@
                   <div class="d-flex flex-wrap gap-2 align-items-center">
                     <div>
                       <div class="small text-muted">Ventas</div>
-                      <% const ventasPagadas = !!(comision.fecha_pago_ventas || (comision.estado === 'Pagado' || comision.estado === 'Pagada')); %>
                       <span class="badge <%= ventasPagadas ? 'bg-success' : 'bg-secondary' %> badge-pill">
                         <%= ventasPagadas ? ('Pagado' + (comision.fecha_pago_ventas ? ' · ' + comision.fecha_pago_ventas : '')) : 'Pendiente' %>
                       </span>
                     </div>
                     <div>
                       <div class="small text-muted">Fijo</div>
-                      <% const fijoPagado = !!(comision.fecha_pago_fijo || (comision.estado === 'Pagado' || comision.estado === 'Pagada')); %>
                       <span class="badge <%= fijoPagado ? 'bg-success' : 'bg-secondary' %> badge-pill">
                         <%= fijoPagado ? ('Pagado' + (comision.fecha_pago_fijo ? ' · ' + comision.fecha_pago_fijo : '')) : 'Pendiente' %>
                       </span>

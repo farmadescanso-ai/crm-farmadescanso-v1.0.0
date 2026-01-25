@@ -224,9 +224,11 @@
                             <% if (comisiones && comisiones.length > 0) { %>
                             <% comisiones.forEach(comision => { %>
                             <% 
-                                const ventasPagadas = !!(comision.fecha_pago_ventas || (comision.estado === 'Pagado' || comision.estado === 'Pagada'));
-                                const fijoPagado = !!(comision.fecha_pago_fijo || (comision.estado === 'Pagado' || comision.estado === 'Pagada'));
+                                const hasConceptCols = ('fecha_pago_ventas' in comision) || ('fecha_pago_fijo' in comision);
+                                const ventasPagadas = hasConceptCols ? !!comision.fecha_pago_ventas : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
+                                const fijoPagado = hasConceptCols ? !!comision.fecha_pago_fijo : (comision.estado === 'Pagado' || comision.estado === 'Pagada');
                                 const totalPagado = ventasPagadas && fijoPagado;
+                                const parcialPagado = !totalPagado && (ventasPagadas || fijoPagado);
                             %>
                             <tr>
                                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
@@ -264,8 +266,10 @@
                                 <td class="text-end <%= ventasPagadas ? 'importe-pagado' : '' %>">€ <%= ventasVal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-end fw-bold <%= totalPagado ? 'importe-pagado' : '' %>">€ <%= totalVal.toLocaleString('es-ES', {minimumFractionDigits: 2, maximumFractionDigits: 2}) %></td>
                                 <td class="text-center">
-                                    <% if (comision.estado === 'Pagado' || comision.estado === 'Pagada') { %>
+                                    <% if (totalPagado) { %>
                                     <span class="badge bg-success">Pagado</span>
+                                    <% } else if (parcialPagado) { %>
+                                    <span class="badge bg-warning text-dark">Parcial</span>
                                     <% } else if (comision.estado === 'Calculado' || comision.estado === 'Calculada') { %>
                                     <span class="badge bg-info">Calculado</span>
                                     <% } else { %>
