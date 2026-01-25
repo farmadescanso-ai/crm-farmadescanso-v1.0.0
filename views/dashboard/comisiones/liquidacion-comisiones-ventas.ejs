@@ -11,12 +11,7 @@
   <link href="/css/dashboard.css" rel="stylesheet">
   <%- include('../../partials/navbar-styles') %>
   <style>
-    :root {
-      /* Altura del logo del membrete (ajustable) */
-      /* Encabezado total: 60px (2px arriba + logo + 2px abajo) */
-      --letterhead-h: 60px;
-      --letterhead-logo-h: 56px;
-    }
+    :root { }
     @media print {
       @page {
         size: A4;
@@ -27,30 +22,11 @@
       nav, .navbar, .sidebar, .main-header { display: none !important; }
       body { background: #fff !important; }
       .container-fluid { padding: 0 !important; margin: 0 !important; }
-      /* Reservar espacio para el membrete (sin depender del margen @page) */
-      .main-content { padding: var(--letterhead-h) 0 0 0 !important; margin: 0 !important; }
+      /* Sin membrete: no reservar espacio extra */
+      .main-content { padding: 0 !important; margin: 0 !important; }
       .card { border: none !important; box-shadow: none !important; }
       .table { font-size: 11px; }
       a[href]:after { content: "" !important; }
-
-      /* Cabecera fija (membrete) */
-      .doc-letterhead {
-        display: flex !important;
-        position: fixed !important;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: var(--letterhead-h);
-        align-items: center;
-        justify-content: center;
-        padding: 2px 12mm 2px 12mm; /* 2px arriba y 2px abajo */
-      }
-      .doc-letterhead img {
-        height: var(--letterhead-logo-h);
-        max-height: var(--letterhead-logo-h);
-        width: auto;
-        object-fit: contain;
-      }
 
       /* Mejor control de saltos de página */
       .doc-box { break-inside: avoid; page-break-inside: avoid; }
@@ -84,7 +60,6 @@
     .liquidacion-completa { border-color: #198754 !important; }
     .liquidacion-parcial { border-color: #fd7e14 !important; } /* bootstrap orange */
     .doc-box { border: 1px solid #dee2e6; border-radius: .5rem; padding: 1rem; background: #fff; }
-    .doc-letterhead { display: none; } /* Solo impresión */
     .doc-title { letter-spacing: .04em; }
     .doc-meta dt { font-weight: 600; color: #6c757d; }
     .doc-meta dd { margin-bottom: .25rem; }
@@ -93,11 +68,6 @@
   </style>
 </head>
 <body>
-  <!-- Membrete (solo impresión) -->
-  <div class="doc-letterhead">
-    <img src="/images/logos/farmadescanso-gemavip.jpg" alt="Farmadescanso y Gemavip">
-  </div>
-
   <div class="no-print">
     <%- include('../../partials/navbar-dashboard') %>
   </div>
