@@ -40,36 +40,14 @@
       .main-content .pb-2 { padding-bottom: 6px !important; }
 
       /* Resumen de totales: SIEMPRE en horizontal en A4 */
-      .resumen-totales {
-        display: flex !important;
-        flex-wrap: nowrap !important;
-        gap: 8mm !important;
-        align-items: stretch !important;
-      }
-      .resumen-totales > .col-md-4 {
-        width: auto !important;
-        flex: 1 1 0 !important;
-      }
-      .resumen-totales .card {
-        height: 100% !important;
-      }
-      .resumen-totales .card-body {
-        padding: 8px 10px !important;
-        display: flex !important;
-        flex-direction: column !important;
-        justify-content: center !important;
-        min-height: 34mm !important; /* igual altura en las 3 cajas */
-      }
-      .resumen-totales .text-muted {
-        font-size: 10px !important;
-      }
-      .resumen-totales .h4 {
-        font-size: 14px !important;
-        line-height: 1.15 !important;
-      }
-      .resumen-totales .small {
-        font-size: 10px !important;
-      }
+      .resumen-totales { display: none !important; } /* en print se usa la tabla */
+      .resumen-totales-print { display: block !important; }
+      .resumen-totales-print { break-inside: avoid; page-break-inside: avoid; }
+      .resumen-totales-print table { width: 100%; border-collapse: collapse; }
+      .resumen-totales-print th, .resumen-totales-print td { border: 1px solid #dee2e6; padding: 6px 8px; vertical-align: middle; }
+      .resumen-totales-print th { background: #f8f9fa; font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+      .resumen-totales-print .importe { font-size: 14px; font-weight: 700; }
+      .resumen-totales-print .estado { font-size: 10px; color: #6c757d; }
     }
     .table thead th { white-space: nowrap; }
     .badge-pill { border-radius: 999px; }
@@ -160,7 +138,7 @@
           </div>
         </div>
 
-        <!-- RESUMEN IMPORTES -->
+        <!-- RESUMEN IMPORTES (pantalla) -->
         <div class="row g-3 mb-3 resumen-totales">
           <div class="col-md-4">
             <div class="card border-info">
@@ -194,6 +172,34 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- RESUMEN IMPORTES (impresión A4): tabla horizontal, sin saltos salvo necesidad -->
+        <div class="resumen-totales-print mb-3" style="display:none;">
+          <table aria-label="Resumen de importes">
+            <thead>
+              <tr>
+                <th>Base imponible (ventas)</th>
+                <th>Comisión ventas</th>
+                <th>Fijo mensual</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-center">
+                  <div class="importe text-info">€ <%= Number(totales.total_venta || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+                </td>
+                <td class="text-center">
+                  <div class="importe <%= ventasPagadas ? 'text-success' : 'text-primary' %>">€ <%= Number(totales.total_comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+                  <div class="estado">Estado: <%= ventasPagadas ? 'Pagado' : 'Pendiente' %></div>
+                </td>
+                <td class="text-center">
+                  <div class="importe <%= fijoPagado ? 'text-success' : 'text-warning' %>">€ <%= Number(totales.total_fijo_marca || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></div>
+                  <div class="estado">Estado: <%= fijoPagado ? 'Pagado' : 'Pendiente' %></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <div class="card mb-3 no-print">
