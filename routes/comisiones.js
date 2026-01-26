@@ -837,6 +837,124 @@ router.get('/comisiones', async (req, res) => {
   }
 });
 
+/**
+ * =====================================================
+ * RECIBOS (COMISIONES VENTAS PAGADAS)
+ * =====================================================
+ */
+
+// Listado: recibos por comercial y día (ventas)
+router.get('/comisiones/recibos-ventas', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    const comercialIdAuth = req.comercialId || req.session?.comercialId;
+
+    const filters = {
+      comercial_id: esAdmin ? (req.query.comercial_id || null) : comercialIdAuth,
+      desde: req.query.desde || null,
+      hasta: req.query.hasta || null
+    };
+
+    const recibos = await comisionesCRM.getRecibosVentasPorComercialDia(filters);
+    const comerciales = await crm.getComerciales();
+
+    if (req.accepts('json') && !req.accepts('html')) {
+      return res.json({ success: true, data: { recibos, filters } });
+    }
+
+    res.render('dashboard/comisiones/recibos-ventas', {
+      title: 'Recibos - Comisiones Ventas',
+      user: req.comercial || req.session?.comercial,
+      esAdmin,
+      comerciales: comerciales || [],
+      recibos: recibos || [],
+      filters,
+      comercialIdAutenticado: comercialIdAuth
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo recibos de ventas:', error);
+    if (req.accepts('json')) {
+      return res.status(500).json({ success: false, error: error.message });
+    }
+    res.status(500).render('error', { error: 'Error obteniendo recibos', message: error.message });
+  }
+});
+
+// Detalle: un recibo (comercial + fecha)
+router.get('/comisiones/recibos-ventas/:comercialId(\\d+)/:fecha(\\d{4}-\\d{2}-\\d{2})', async (req, res) => {
+  try {
+    const esAdmin = isAdminReq(req);
+    const comercialIdAuth = req.comercialId || req.session?.comercialId;
+
+    const comercialId = Number(req.params.comercialId);
+    const fecha = String(req.params.fecha);
+
+    if (!esAdmin && comercialIdAuth && Number(comercialIdAuth) !== Number(comercialId)) {
+      return res.status(403).render('error', { error: 'Sin permisos', message: 'No tienes permisos para ver este recibo.' });
+    }
+
+    const comisiones = await comisionesCRM.getReciboVentasDetalle({ comercial_id: comercialId, fecha_pago: fecha });
+    if (!comisiones || comisiones.length === 0) {
+      return res.status(404).render('error', { error: 'Recibo no encontrado', message: 'No hay pagos de ventas para ese comercial y día.' });
+    }
+
+    // Construir desglose por pedido/marca para todas las comisiones del recibo
+    const filas = [];
+    let totalBase = 0;
+    let totalCom = 0;
+    for (const c of comisiones) {
+      const ventas = await comisionesCRM.getComisionLiquidacionVentasPedidoMarca(c.id);
+      for (const r of (ventas || [])) {
+        const base = Number(r.base_venta || 0);
+        const comV = Number(r.comision_ventas || 0);
+        totalBase += base;
+        totalCom += comV;
+        filas.push({
+          comision_id: c.id,
+          año: c.año,
+          mes: c.mes,
+          pedido_numero: r.pedido_numero,
+          pedido_fecha: r.pedido_fecha,
+          cliente_nombre: r.cliente_nombre,
+          marca_nombre: r.marca_nombre,
+          base_venta: base,
+          comision_ventas: comV,
+          pct_efectivo: base > 0 ? (comV / base) * 100 : 0
+        });
+      }
+    }
+
+    // Totales por “display” (si no hay detalle, caer en agregados de la cabecera de comisiones)
+    const totalBaseCabecera = comisiones.reduce((s, c) => {
+      const base = Number(c.total_ventas || 0) > 0 ? Number(c.total_ventas || 0) : Number(c.total_ventas_detalle || 0);
+      return s + base;
+    }, 0);
+    const totalComCabecera = comisiones.reduce((s, c) => {
+      const com = Number(c.comision_ventas || 0) > 0 ? Number(c.comision_ventas || 0) : Number(c.comision_ventas_detalle || 0);
+      return s + com;
+    }, 0);
+
+    const comercialNombre = comisiones[0].comercial_nombre || `Comercial #${comercialId}`;
+
+    res.render('dashboard/comisiones/recibo-ventas-detalle', {
+      title: `Recibo ventas ${comercialNombre} - ${fecha}`,
+      user: req.comercial || req.session?.comercial,
+      esAdmin,
+      comercial: { id: comercialId, nombre: comercialNombre },
+      fecha_pago: fecha,
+      comisiones,
+      filas,
+      totales: {
+        total_base: filas.length ? totalBase : totalBaseCabecera,
+        total_comision: filas.length ? totalCom : totalComCabecera
+      }
+    });
+  } catch (error) {
+    console.error('❌ Error obteniendo detalle de recibo ventas:', error);
+    res.status(500).render('error', { error: 'Error obteniendo recibo', message: error.message });
+  }
+});
+
 // Ver detalle de comisión
 router.get('/comisiones/:id(\\d+)', async (req, res) => {
   try {

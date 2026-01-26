@@ -62,6 +62,16 @@ class ComisionesCRM {
     return this._cache.marcasTable;
   }
 
+  _normalizeISODateOnly(value) {
+    if (!value) return null;
+    const s = String(value).trim();
+    // Aceptar YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // Si viene con hora, cortar
+    if (/^\d{4}-\d{2}-\d{2}T/.test(s)) return s.slice(0, 10);
+    return s;
+  }
+
   async _getComisionesDetalleTable() {
     if (this._cache.comisionesDetalleTable) return this._cache.comisionesDetalleTable;
     try {
@@ -1003,6 +1013,112 @@ class ComisionesCRM {
       console.error('❌ Error obteniendo comisiones:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Recibos de COMISIONES DE VENTAS pagadas, agrupados por comercial + día de pago.
+   * Nota compatibilidad:
+   * - Si existen columnas por concepto: usa fecha_pago_ventas / pagado_ventas_por
+   * - Si no: usa fecha_pago / pagado_por (modo compatibilidad)
+   */
+  async getRecibosVentasPorComercialDia(filters = {}) {
+    const cdTable = await this._getComisionesDetalleTable();
+    const hasPagoConceptoCols = await this._hasComisionesPagoConceptoColumns();
+    const fechaCol = hasPagoConceptoCols ? 'c.fecha_pago_ventas' : 'c.fecha_pago';
+    const pagadoPorCol = hasPagoConceptoCols ? 'c.pagado_ventas_por' : 'c.pagado_por';
+
+    const desde = this._normalizeISODateOnly(filters.desde);
+    const hasta = this._normalizeISODateOnly(filters.hasta);
+
+    let sql = `
+      SELECT
+        c.comercial_id,
+        co.Nombre AS comercial_nombre,
+        DATE(${fechaCol}) AS fecha_pago,
+        COUNT(*) AS meses_pagados,
+        SUM(CASE
+          WHEN COALESCE(c.total_ventas, 0) > 0 THEN COALESCE(c.total_ventas, 0)
+          ELSE COALESCE(dv.total_ventas_detalle, 0)
+        END) AS base_total_ventas,
+        SUM(CASE
+          WHEN COALESCE(c.comision_ventas, 0) > 0 THEN COALESCE(c.comision_ventas, 0)
+          ELSE COALESCE(dv.comision_ventas_detalle, 0)
+        END) AS comision_total_ventas,
+        GROUP_CONCAT(DISTINCT ${pagadoPorCol} SEPARATOR ', ') AS pagado_por
+      FROM comisiones c
+      LEFT JOIN (
+        SELECT
+          comision_id,
+          SUM(COALESCE(importe_venta, 0)) AS total_ventas_detalle,
+          SUM(COALESCE(importe_comision, 0)) AS comision_ventas_detalle
+        FROM ${cdTable}
+        WHERE (tipo_comision IS NULL OR tipo_comision = 'Venta')
+        GROUP BY comision_id
+      ) dv ON dv.comision_id = c.id
+      LEFT JOIN comerciales co ON (c.comercial_id = co.id OR c.comercial_id = co.Id)
+      WHERE ${fechaCol} IS NOT NULL
+    `;
+    const params = [];
+
+    if (filters.comercial_id !== undefined && filters.comercial_id !== null && filters.comercial_id !== '') {
+      sql += ' AND c.comercial_id = ?';
+      params.push(Number(filters.comercial_id));
+    }
+    if (desde) {
+      sql += ` AND DATE(${fechaCol}) >= ?`;
+      params.push(desde);
+    }
+    if (hasta) {
+      sql += ` AND DATE(${fechaCol}) <= ?`;
+      params.push(hasta);
+    }
+
+    sql += `
+      GROUP BY c.comercial_id, co.Nombre, DATE(${fechaCol})
+      ORDER BY DATE(${fechaCol}) DESC, co.Nombre ASC
+    `;
+
+    return await this.query(sql, params);
+  }
+
+  /**
+   * Detalle de un recibo de ventas (comercial + día).
+   * Devuelve comisiones incluidas y el desglose de ventas por pedido/marca.
+   */
+  async getReciboVentasDetalle({ comercial_id, fecha_pago }) {
+    const cdTable = await this._getComisionesDetalleTable();
+    const hasPagoConceptoCols = await this._hasComisionesPagoConceptoColumns();
+    const fechaCol = hasPagoConceptoCols ? 'c.fecha_pago_ventas' : 'c.fecha_pago';
+
+    const fecha = this._normalizeISODateOnly(fecha_pago);
+    if (!fecha) throw new Error('fecha_pago es requerida (YYYY-MM-DD)');
+
+    const sql = `
+      SELECT
+        c.*,
+        COALESCE(dv.total_ventas_detalle, 0) AS total_ventas_detalle,
+        COALESCE(dv.comision_ventas_detalle, 0) AS comision_ventas_detalle,
+        co.Nombre AS comercial_nombre,
+        co.Email AS comercial_email
+      FROM comisiones c
+      LEFT JOIN (
+        SELECT
+          comision_id,
+          SUM(COALESCE(importe_venta, 0)) AS total_ventas_detalle,
+          SUM(COALESCE(importe_comision, 0)) AS comision_ventas_detalle
+        FROM ${cdTable}
+        WHERE (tipo_comision IS NULL OR tipo_comision = 'Venta')
+        GROUP BY comision_id
+      ) dv ON dv.comision_id = c.id
+      LEFT JOIN comerciales co ON (c.comercial_id = co.id OR c.comercial_id = co.Id)
+      WHERE c.comercial_id = ?
+        AND ${fechaCol} IS NOT NULL
+        AND DATE(${fechaCol}) = ?
+      ORDER BY c.año DESC, c.mes ASC, c.id ASC
+    `;
+
+    const comisiones = await this.query(sql, [Number(comercial_id), fecha]);
+    return comisiones;
   }
 
   /**
