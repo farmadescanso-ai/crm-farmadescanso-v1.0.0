@@ -796,15 +796,27 @@ router.get('/comisiones', async (req, res) => {
       comercial_id: esAdmin ? (req.query.comercial_id || null) : comercialId, // Si no es admin, forzar su ID
       mes: req.query.mes ? parseInt(req.query.mes) : null,
       año: req.query.año ? parseInt(req.query.año) : new Date().getFullYear(),
-      estado: req.query.estado || null
+      estado: req.query.estado || null,
+      marca_id: req.query.marca_id ? parseInt(req.query.marca_id) : null
     };
 
     const comisiones = await comisionesCRM.getComisiones(filters);
     const comerciales = await crm.getComerciales();
+    // Marcas para filtro (robusto a case de tabla)
+    let marcas = [];
+    try {
+      try {
+        marcas = await crm.query('SELECT id, Nombre FROM marcas ORDER BY Nombre');
+      } catch (_) {
+        marcas = await crm.query('SELECT id, Nombre FROM Marcas ORDER BY Nombre');
+      }
+    } catch (_) {
+      marcas = [];
+    }
 
     // Solo devolver JSON si se solicita explícitamente (no acepta HTML)
     if (req.accepts('json') && !req.accepts('html')) {
-      return res.json({ success: true, data: comisiones });
+      return res.json({ success: true, data: { comisiones, marcas } });
     }
 
     res.render('dashboard/comisiones/comisiones', {
@@ -812,6 +824,7 @@ router.get('/comisiones', async (req, res) => {
       user: req.comercial || req.session.comercial,
       comisiones: comisiones,
       comerciales: comerciales,
+      marcas: marcas || [],
       filters: filters,
       esAdmin: esAdmin
     });

@@ -20,8 +20,46 @@ class ComisionesCRM {
       articulosHasMarcaColumn: null,
       fijosMensualesMarcaHasPeriodoColumns: null,
       clientesNombreCol: null,
-      comisionesDetalleTable: null
+      comisionesDetalleTable: null,
+      articulosTable: null,
+      marcasTable: null
     };
+  }
+
+  async _getArticulosTable() {
+    if (this._cache.articulosTable) return this._cache.articulosTable;
+    try {
+      if (await this.tableExists('articulos')) {
+        this._cache.articulosTable = 'articulos';
+        return this._cache.articulosTable;
+      }
+      if (await this.tableExists('Articulos')) {
+        this._cache.articulosTable = 'Articulos';
+        return this._cache.articulosTable;
+      }
+    } catch (_) {
+      // ignore
+    }
+    this._cache.articulosTable = 'articulos';
+    return this._cache.articulosTable;
+  }
+
+  async _getMarcasTable() {
+    if (this._cache.marcasTable) return this._cache.marcasTable;
+    try {
+      if (await this.tableExists('marcas')) {
+        this._cache.marcasTable = 'marcas';
+        return this._cache.marcasTable;
+      }
+      if (await this.tableExists('Marcas')) {
+        this._cache.marcasTable = 'Marcas';
+        return this._cache.marcasTable;
+      }
+    } catch (_) {
+      // ignore
+    }
+    this._cache.marcasTable = 'marcas';
+    return this._cache.marcasTable;
   }
 
   async _getComisionesDetalleTable() {
@@ -845,7 +883,9 @@ class ComisionesCRM {
   async getComisiones(filters = {}) {
     try {
       const cdTable = await this._getComisionesDetalleTable();
-      let sql = `
+
+      const buildQuery = (marcasTable, articulosTable) => {
+        let sql = `
         SELECT c.*,
                COALESCE(dv.total_ventas_detalle, 0) AS total_ventas_detalle,
                COALESCE(dv.comision_ventas_detalle, 0) AS comision_ventas_detalle,
@@ -866,33 +906,52 @@ class ComisionesCRM {
         LEFT JOIN comerciales co ON c.comercial_id = co.id
         WHERE 1=1
       `;
-      const params = [];
+        const params = [];
 
-      if (filters.comercial_id) {
-        sql += ' AND c.comercial_id = ?';
-        params.push(filters.comercial_id);
-      }
-      if (filters.mes) {
-        sql += ' AND c.mes = ?';
-        params.push(filters.mes);
-      }
-      if (filters.año) {
-        sql += ' AND c.año = ?';
-        params.push(filters.año);
-      }
-      if (filters.estado) {
-        const est = String(filters.estado);
-        // Compatibilidad: algunos registros históricos usan "Calculada/Pagada" (femenino)
-        // mientras que en otras partes se usa "Calculado/Pagado".
-        if (est === 'Pagado' || est === 'Pagada') {
-          sql += " AND c.estado IN ('Pagado','Pagada')";
-        } else if (est === 'Calculado' || est === 'Calculada') {
-          sql += " AND c.estado IN ('Calculado','Calculada')";
-        } else {
-          sql += ' AND c.estado = ?';
-          params.push(est);
+        if (filters.comercial_id) {
+          sql += ' AND c.comercial_id = ?';
+          params.push(filters.comercial_id);
         }
-      }
+        if (filters.mes) {
+          sql += ' AND c.mes = ?';
+          params.push(filters.mes);
+        }
+        if (filters.año) {
+          sql += ' AND c.año = ?';
+          params.push(filters.año);
+        }
+        if (filters.estado) {
+          const est = String(filters.estado);
+          // Compatibilidad: algunos registros históricos usan "Calculada/Pagada" (femenino)
+          // mientras que en otras partes se usa "Calculado/Pagado".
+          if (est === 'Pagado' || est === 'Pagada') {
+            sql += " AND c.estado IN ('Pagado','Pagada')";
+          } else if (est === 'Calculado' || est === 'Calculada') {
+            sql += " AND c.estado IN ('Calculado','Calculada')";
+          } else {
+            sql += ' AND c.estado = ?';
+            params.push(est);
+          }
+        }
+
+        // Filtro por marca (usa detalle -> artículos -> marcas)
+        if (filters.marca_id !== undefined && filters.marca_id !== null && filters.marca_id !== '') {
+          const marcaId = Number(filters.marca_id);
+          if (Number.isFinite(marcaId) && marcaId > 0) {
+            sql += `
+              AND EXISTS (
+                SELECT 1
+                FROM ${cdTable} cd2
+                LEFT JOIN ${articulosTable} a2 ON (a2.id = cd2.articulo_id OR a2.Id = cd2.articulo_id)
+                LEFT JOIN ${marcasTable} m2 ON (m2.id = a2.Id_Marca OR m2.Id = a2.Id_Marca)
+                WHERE cd2.comision_id = c.id
+                  AND (cd2.tipo_comision IS NULL OR cd2.tipo_comision = 'Venta')
+                  AND m2.id = ?
+              )
+            `;
+            params.push(marcaId);
+          }
+        }
 
       // Orden deseado en UI:
       // - Por comercial (A→Z)
@@ -908,7 +967,38 @@ class ComisionesCRM {
           END ASC
       `;
 
-      return await this.query(sql, params);
+        return { sql, params };
+      };
+
+      // Sin marca -> query directa (más rápida)
+      if (filters.marca_id === undefined || filters.marca_id === null || filters.marca_id === '') {
+        const { sql, params } = buildQuery(await this._getMarcasTable(), await this._getArticulosTable());
+        return await this.query(sql, params);
+      }
+
+      // Con marca -> probar combinaciones por case (Linux puede ser case-sensitive en nombres de tabla)
+      const combos = [
+        { marcas: 'marcas', articulos: 'articulos' },
+        { marcas: 'Marcas', articulos: 'articulos' },
+        { marcas: 'marcas', articulos: 'Articulos' },
+        { marcas: 'Marcas', articulos: 'Articulos' }
+      ];
+
+      let lastErr = null;
+      for (const c of combos) {
+        try {
+          const { sql, params } = buildQuery(c.marcas, c.articulos);
+          return await this.query(sql, params);
+        } catch (e) {
+          lastErr = e;
+          const msg = String(e?.message || '').toLowerCase();
+          // Si falla por tabla inexistente, intentamos la siguiente combinación.
+          if (msg.includes("doesn't exist") || msg.includes('no such table')) continue;
+          // Otros errores: no ocultarlos.
+          throw e;
+        }
+      }
+      throw lastErr || new Error('No se pudo aplicar el filtro por marca (tablas no encontradas)');
     } catch (error) {
       console.error('❌ Error obteniendo comisiones:', error.message);
       throw error;

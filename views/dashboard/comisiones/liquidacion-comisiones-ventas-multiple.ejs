@@ -14,10 +14,35 @@
     @media print {
       .no-print { display: none !important; }
       body { background: #fff !important; }
+      /* A4 + márgenes similares a la liquidación individual */
+      @page { size: A4; margin: 10mm; }
       .card { border: none !important; box-shadow: none !important; }
-      .table { font-size: 12px; }
+      .container-fluid { padding: 0 !important; }
+      .main-content { padding: 0 !important; }
+      .table { font-size: 11px; }
+      thead { display: table-header-group; }
+      tfoot { display: table-footer-group; }
       a[href]:after { content: "" !important; }
+
+      /* Reducir espacios entre bloques en impresión */
+      .mb-3 { margin-bottom: 10px !important; }
+      .pb-2 { padding-bottom: 6px !important; }
+      .pt-3 { padding-top: 6px !important; }
+
+      /* Cabecera de impresión (compacta) */
+      .print-only { display: block !important; }
+      .print-header { display: block !important; position: relative; padding: 0 0 6px 0; margin: 0 0 8px 0; }
+      .print-header h1 { font-size: 16px !important; margin: 0; }
+      .print-header .meta { font-size: 11px; color: #444; }
+      .doc-logo-inline { display: block !important; position: absolute; top: 0; left: 50%; transform: translateX(-50%); height: 22px; width: auto; opacity: .28; pointer-events: none; }
+
+      /* En impresión, usar tabla compacta de totales */
+      .totals-cards { display: none !important; }
+      .totals-print { page-break-inside: avoid; break-inside: avoid; }
     }
+    /* En pantalla no mostrar los elementos exclusivos de impresión */
+    .print-only { display: none; }
+    .doc-logo-inline { display: none; }
     .table thead th { white-space: nowrap; }
   </style>
 </head>
@@ -27,6 +52,17 @@
   <div class="container-fluid">
     <div class="row">
       <main class="col-12 px-md-4 main-content">
+        <!-- Cabecera SOLO para impresión -->
+        <div class="print-only print-header">
+          <img class="doc-logo-inline" src="/images/logos/farmadescanso-gemavip.jpg" alt="Farmadescanso / Gemavip">
+          <h1>Liquidación Comisiones (múltiple)</h1>
+          <div class="meta">
+            Comercial: <strong><%= comercial.nombre %></strong>
+            · Meses: <strong><%= (comisiones || []).length %></strong>
+            · Fecha: <strong><%= new Date().toLocaleDateString('es-ES') %></strong>
+          </div>
+        </div>
+
         <div class="d-flex justify-content-between align-items-center pt-3 pb-2 mb-3 border-bottom">
           <div>
             <h1 class="h3 mb-1">
@@ -48,7 +84,7 @@
           </div>
         </div>
 
-        <div class="row g-3 mb-3">
+        <div class="row g-3 mb-3 totals-cards">
           <div class="col-md-4">
             <div class="card border-info">
               <div class="card-body text-center">
@@ -79,6 +115,34 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <!-- Totales SOLO para impresión (horizontal, compacto) -->
+        <div class="print-only totals-print mb-3">
+          <table class="table table-sm table-bordered align-middle mb-0" style="width: 100%;">
+            <tbody>
+              <tr>
+                <th style="width: 34%;">Base imponible (ventas)</th>
+                <td class="text-end" style="width: 33%;">
+                  € <%= Number(totales.total_base || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                </td>
+                <th style="width: 33%;">Comisión ventas</th>
+                <td class="text-end">
+                  € <%= Number(totales.total_comision_ventas || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                </td>
+              </tr>
+              <tr>
+                <th>Fijo mensual (por marca)</th>
+                <td class="text-end">
+                  € <%= Number(totales.total_fijo || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %>
+                </td>
+                <th>% efectivo (ventas)</th>
+                <td class="text-end">
+                  <%= (Number(totales.total_base || 0) > 0 ? (Number(totales.total_comision_ventas || 0) / Number(totales.total_base || 1)) * 100 : 0).toFixed(2) %>%
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
 
         <div class="card mb-3">
