@@ -8043,10 +8043,14 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         const chosen = pickFirst(candidates, clientesCols);
         return chosen ? `c.\`${chosen}\` AS \`${alias}\`` : `NULL AS \`${alias}\``;
       };
-      const pickOrderAlias = () => {
-        // Alias “Nombre_Razon_Social” siempre existe (aunque sea NULL) porque lo forzamos en el SELECT
-        return 'Nombre_Razon_Social';
+      const pickExpr = (candidates) => {
+        const chosen = pickFirst(candidates, clientesCols);
+        return chosen ? `c.\`${chosen}\`` : 'NULL';
       };
+
+      const exprNombre = pickExpr(['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social']);
+      const exprDni = pickExpr(['DNI_CIF', 'dni_cif', 'NIF', 'nif']);
+      const exprEmail = pickExpr(['Email', 'email']);
 
       const sqlLocal = `
         SELECT
@@ -8067,12 +8071,12 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         WHERE ${whereLocal.join(' AND ')}
         ORDER BY
           CASE
-            WHEN LOWER(IFNULL(${pickOrderAlias()},'')) LIKE ? THEN 0
-            WHEN LOWER(IFNULL(DNI_CIF,'')) LIKE ? THEN 1
-            WHEN LOWER(IFNULL(Email,'')) LIKE ? THEN 2
+            WHEN LOWER(IFNULL(${exprNombre},'')) LIKE ? THEN 0
+            WHEN LOWER(IFNULL(${exprDni},'')) LIKE ? THEN 1
+            WHEN LOWER(IFNULL(${exprEmail},'')) LIKE ? THEN 2
             ELSE 3
           END,
-          ${pickOrderAlias()} ASC
+          LOWER(IFNULL(${exprNombre},'')) ASC
         LIMIT ${limitLocal}
       `;
 
@@ -8112,7 +8116,9 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('❌ Error buscando clientes:', error);
     console.error('❌ Stack:', error.stack);
-    res.status(500).json({ error: 'Error al buscar clientes', clientes: [] });
+    const msg = String(error?.sqlMessage || error?.message || 'Error desconocido');
+    // No devolvemos el SQL completo, solo una pista corta para depurar desde el navegador.
+    res.status(500).json({ error: 'Error al buscar clientes', details: msg.slice(0, 250), clientes: [] });
   }
 });
 
