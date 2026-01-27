@@ -36,6 +36,26 @@ class MySQLCRM {
     this._schemaEnsured = false;
   }
 
+  async _getFormasPagoTableName() {
+    this._cache = this._cache || {};
+    if (this._cache.formasPagoTableName !== undefined) return this._cache.formasPagoTableName;
+    try {
+      const rows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'formas_pago'
+         LIMIT 1`
+      );
+      const name = rows?.[0]?.name || null;
+      this._cache.formasPagoTableName = name;
+      return name;
+    } catch (_) {
+      this._cache.formasPagoTableName = null;
+      return null;
+    }
+  }
+
   async ensureComercialesReunionesNullable() {
     // Ejecutar solo una vez por ciclo de vida (importante en serverless).
     if (this._schemaEnsured) return;
@@ -1829,9 +1849,25 @@ class MySQLCRM {
   // FORMAS_PAGO
   async getFormasPago() {
     try {
-      const sql = 'SELECT * FROM formas_pago ORDER BY id ASC';
-      const rows = await this.query(sql);
-      return rows;
+      const table = await this._getFormasPagoTableName();
+      if (!table) {
+        console.warn('⚠️ [FORMAS-PAGO] La tabla de formas de pago no existe (formas_pago/Formas_Pago).');
+        return [];
+      }
+
+      let rows = [];
+      try {
+        rows = await this.query(`SELECT * FROM ${table} ORDER BY id ASC`);
+      } catch (e1) {
+        // Algunas instalaciones pueden usar Id en vez de id
+        rows = await this.query(`SELECT * FROM ${table} ORDER BY Id ASC`).catch(() => []);
+      }
+      // Normalizar etiqueta para vistas (cliente-editar usa "Nombre" en algunos sitios)
+      return (rows || []).map(r => ({
+        ...r,
+        id: r?.id ?? r?.Id ?? r?.ID ?? null,
+        Nombre: r?.Nombre ?? r?.FormaPago ?? r?.formaPago ?? r?.nombre ?? null
+      }));
     } catch (error) {
       console.error('❌ Error obteniendo formas de pago:', error.message);
       return [];
@@ -1840,8 +1876,14 @@ class MySQLCRM {
 
   async getFormaPagoById(id) {
     try {
-      const sql = 'SELECT * FROM formas_pago WHERE id = ? LIMIT 1';
-      const rows = await this.query(sql, [id]);
+      const table = await this._getFormasPagoTableName();
+      if (!table) return null;
+      let rows;
+      try {
+        rows = await this.query(`SELECT * FROM ${table} WHERE id = ? LIMIT 1`, [id]);
+      } catch (e1) {
+        rows = await this.query(`SELECT * FROM ${table} WHERE Id = ? LIMIT 1`, [id]);
+      }
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
       console.error('❌ Error obteniendo forma de pago por ID:', error.message);
@@ -1851,7 +1893,9 @@ class MySQLCRM {
 
   async getFormaPagoByNombre(nombre) {
     try {
-      const sql = 'SELECT * FROM formas_pago WHERE FormaPago = ? OR FormaPago LIKE ? LIMIT 1';
+      const table = await this._getFormasPagoTableName();
+      if (!table) return null;
+      const sql = `SELECT * FROM ${table} WHERE FormaPago = ? OR FormaPago LIKE ? LIMIT 1`;
       const nombreExacto = nombre.trim();
       const nombreLike = `%${nombreExacto}%`;
       const rows = await this.query(sql, [nombreExacto, nombreLike]);
@@ -1864,11 +1908,13 @@ class MySQLCRM {
 
   async createFormaPago(payload) {
     try {
+      const table = await this._getFormasPagoTableName();
+      if (!table) throw new Error('La tabla de formas de pago no existe (formas_pago/Formas_Pago).');
       const fields = Object.keys(payload).map(key => `\`${key}\``).join(', ');
       const placeholders = Object.keys(payload).map(() => '?').join(', ');
       const values = Object.values(payload);
       
-      const sql = `INSERT INTO formas_pago (${fields}) VALUES (${placeholders})`;
+      const sql = `INSERT INTO ${table} (${fields}) VALUES (${placeholders})`;
       const result = await this.query(sql, values);
       return { insertId: result.insertId || result.insertId };
     } catch (error) {
@@ -1879,12 +1925,19 @@ class MySQLCRM {
 
   async updateFormaPago(id, payload) {
     try {
+      const table = await this._getFormasPagoTableName();
+      if (!table) throw new Error('La tabla de formas de pago no existe (formas_pago/Formas_Pago).');
       const fields = Object.keys(payload).map(key => `\`${key}\` = ?`).join(', ');
       const values = Object.values(payload);
       values.push(id);
       
-      const sql = `UPDATE formas_pago SET ${fields} WHERE id = ?`;
-      await this.query(sql, values);
+      try {
+        const sql = `UPDATE ${table} SET ${fields} WHERE id = ?`;
+        await this.query(sql, values);
+      } catch (e1) {
+        const sql = `UPDATE ${table} SET ${fields} WHERE Id = ?`;
+        await this.query(sql, values);
+      }
       return { affectedRows: 1 };
     } catch (error) {
       console.error('❌ Error actualizando forma de pago:', error.message);
@@ -1894,8 +1947,13 @@ class MySQLCRM {
 
   async deleteFormaPago(id) {
     try {
-      const sql = 'DELETE FROM formas_pago WHERE id = ?';
-      await this.query(sql, [id]);
+      const table = await this._getFormasPagoTableName();
+      if (!table) throw new Error('La tabla de formas de pago no existe (formas_pago/Formas_Pago).');
+      try {
+        await this.query(`DELETE FROM ${table} WHERE id = ?`, [id]);
+      } catch (e1) {
+        await this.query(`DELETE FROM ${table} WHERE Id = ?`, [id]);
+      }
       return { affectedRows: 1 };
     } catch (error) {
       console.error('❌ Error eliminando forma de pago:', error.message);

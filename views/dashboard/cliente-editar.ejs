@@ -287,9 +287,11 @@
                                     <% const formaPagoId = formaPago.id || formaPago.Id; %>
                                     <% const clienteFormaPagoId = cliente ? (cliente.Id_FormaPago || cliente.id_FormaPago) : null; %>
                                     <option value="<%= formaPagoId %>" <%= (clienteFormaPagoId && String(clienteFormaPagoId) === String(formaPagoId)) ? 'selected' : '' %>>
-                                        <%= formaPago.Nombre %>
+                                        <%= formaPago.FormaPago || formaPago.Nombre || formaPago.formaPago || 'Sin nombre' %>
                                     </option>
                                 <% }); %>
+                            <% } else { %>
+                                <option value="" disabled>No se pudieron cargar las formas de pago</option>
                             <% } %>
                         </select>
                     </div>
