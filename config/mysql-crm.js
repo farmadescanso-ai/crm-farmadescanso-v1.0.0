@@ -45,6 +45,7 @@ class MySQLCRM {
          FROM information_schema.tables
          WHERE table_schema = DATABASE()
            AND LOWER(table_name) = 'formas_pago'
+         ORDER BY (table_name = 'formas_pago') DESC, table_name ASC
          LIMIT 1`
       );
       const name = rows?.[0]?.name || null;
@@ -3075,6 +3076,7 @@ class MySQLCRM {
          FROM information_schema.tables
          WHERE table_schema = DATABASE()
            AND LOWER(table_name) = 'codigos_postales'
+         ORDER BY (table_name = 'codigos_postales') DESC, table_name ASC
          LIMIT 1`
       );
       const name = rows?.[0]?.name || null;
@@ -3095,6 +3097,7 @@ class MySQLCRM {
          FROM information_schema.tables
          WHERE table_schema = DATABASE()
            AND LOWER(table_name) = 'comerciales_codigos_postales_marcas'
+         ORDER BY (table_name = 'comerciales_codigos_postales_marcas') DESC, table_name ASC
          LIMIT 1`
       );
       const name = rows?.[0]?.name || null;
@@ -3115,6 +3118,7 @@ class MySQLCRM {
          FROM information_schema.tables
          WHERE table_schema = DATABASE()
            AND LOWER(table_name) = 'comerciales'
+         ORDER BY (table_name = 'comerciales') DESC, table_name ASC
          LIMIT 1`
       );
       const name = rows?.[0]?.name || 'Comerciales';
@@ -3135,6 +3139,7 @@ class MySQLCRM {
          FROM information_schema.tables
          WHERE table_schema = DATABASE()
            AND LOWER(table_name) = 'marcas'
+         ORDER BY (table_name = 'marcas') DESC, table_name ASC
          LIMIT 1`
       );
       const name = rows?.[0]?.name || 'Marcas';
