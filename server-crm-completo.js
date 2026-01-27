@@ -5401,7 +5401,9 @@ app.get('/dashboard/ajustes/asignaciones-comerciales', requireAuth, requireAdmin
     }
     
     try {
-      marcas = await crm.query('SELECT * FROM Marcas ORDER BY Nombre ASC');
+      // Robustez: en algunos entornos la tabla puede ser `marcas` (minúscula)
+      marcas = await crm.query('SELECT * FROM Marcas ORDER BY Nombre ASC')
+        .catch(() => crm.query('SELECT * FROM marcas ORDER BY Nombre ASC'));
       console.log(`✅ [ASIGNACIONES] Marcas cargadas: ${marcas ? marcas.length : 0}`);
     } catch (error) {
       console.error('❌ [ASIGNACIONES] Error cargando marcas:', error.message);

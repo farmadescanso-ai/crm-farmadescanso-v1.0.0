@@ -153,7 +153,8 @@
                             <select class="form-select" name="idCodigoPostal" id="filtroCodigoPostal">
                                 <option value="">Todos</option>
                                 <% codigosPostales.forEach(cp => { %>
-                                <option value="<%= cp.id %>" <%= filtros.idCodigoPostal == cp.id ? 'selected' : '' %>><%= cp.CodigoPostal %> - <%= cp.Localidad %></option>
+                                <% const cpId = cp.id || cp.Id; %>
+                                <option value="<%= cpId %>" <%= filtros.idCodigoPostal == cpId ? 'selected' : '' %>><%= cp.CodigoPostal %> - <%= cp.Localidad %></option>
                                 <% }); %>
                             </select>
                         </div>
@@ -282,7 +283,8 @@
                                 <select class="form-select" name="Id_CodigoPostal" id="Id_CodigoPostal" required>
                                     <option value="">Seleccionar...</option>
                                     <% codigosPostales.forEach(cp => { %>
-                                    <option value="<%= cp.id %>"><%= cp.CodigoPostal %> - <%= cp.Localidad %> (<%= cp.Provincia %>)</option>
+                                    <% const cpId = cp.id || cp.Id; %>
+                                    <option value="<%= cpId %>"><%= cp.CodigoPostal %> - <%= cp.Localidad %> (<%= cp.Provincia %>)</option>
                                     <% }); %>
                                 </select>
                             </div>
@@ -358,7 +360,8 @@
                                 <label class="form-label">Códigos Postales <span class="text-danger">*</span></label>
                                 <select class="form-select" name="Ids_CodigosPostales" id="Ids_CodigosPostales" multiple size="10" style="height: 200px;">
                                     <% codigosPostales.forEach(cp => { %>
-                                    <option value="<%= cp.id %>"><%= cp.CodigoPostal %> - <%= cp.Localidad %> (<%= cp.Provincia %>)</option>
+                                    <% const cpId = cp.id || cp.Id; %>
+                                    <option value="<%= cpId %>"><%= cp.CodigoPostal %> - <%= cp.Localidad %> (<%= cp.Provincia %>)</option>
                                     <% }); %>
                                 </select>
                                 <small class="text-muted">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar múltiples códigos postales</small>

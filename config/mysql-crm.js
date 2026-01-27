@@ -3005,28 +3005,45 @@ class MySQLCRM {
   }
 
   // =====================================================
+  // Helpers internos (tablas con case variable)
+  // =====================================================
+  async _getCodigosPostalesTableName() {
+    // Cache simple en la instancia
+    this._cache = this._cache || {};
+    if (this._cache.codigosPostalesTableName !== undefined) return this._cache.codigosPostalesTableName;
+    try {
+      const rows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'codigos_postales'
+         LIMIT 1`
+      );
+      const name = rows?.[0]?.name || null;
+      this._cache.codigosPostalesTableName = name;
+      return name;
+    } catch (_) {
+      this._cache.codigosPostalesTableName = null;
+      return null;
+    }
+  }
+
+  // =====================================================
   // MÉTODOS CRUD PARA CÓDIGOS POSTALES
   // =====================================================
 
   async getCodigosPostales(filtros = {}) {
     try {
-      // Verificar si la tabla existe antes de consultar
-      const tableExists = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM information_schema.tables 
-        WHERE table_schema = DATABASE() 
-        AND table_name = 'Codigos_Postales'
-      `);
-      
-      if (!tableExists || tableExists.length === 0 || tableExists[0].count === 0) {
-        console.warn('⚠️ [CODIGOS-POSTALES] La tabla Codigos_Postales no existe. Ejecuta el script crear-tabla-codigos-postales.sql');
+      const codigosPostalesTable = await this._getCodigosPostalesTableName();
+      if (!codigosPostalesTable) {
+        console.warn('⚠️ [CODIGOS-POSTALES] La tabla de códigos postales no existe (Codigos_Postales/codigos_postales).');
         return [];
       }
       
       let sql = `
         SELECT cp.*, p.Nombre AS NombreProvincia, p.Codigo AS CodigoProvincia
-        FROM Codigos_Postales cp
-        LEFT JOIN provincias p ON cp.Id_Provincia = p.id
+        FROM ${codigosPostalesTable} cp
+        LEFT JOIN provincias p ON (cp.Id_Provincia = p.id OR cp.Id_Provincia = p.Id)
         WHERE 1=1
       `;
       const params = [];
@@ -3073,10 +3090,12 @@ class MySQLCRM {
 
   async getCodigoPostalById(id) {
     try {
+      const codigosPostalesTable = await this._getCodigosPostalesTableName();
+      if (!codigosPostalesTable) return null;
       const sql = `
         SELECT cp.*, p.Nombre AS NombreProvincia, p.Codigo AS CodigoProvincia
-        FROM Codigos_Postales cp
-        LEFT JOIN provincias p ON cp.Id_Provincia = p.id
+        FROM ${codigosPostalesTable} cp
+        LEFT JOIN provincias p ON (cp.Id_Provincia = p.id OR cp.Id_Provincia = p.Id)
         WHERE cp.id = ?
       `;
       const rows = await this.query(sql, [id]);
@@ -3132,6 +3151,10 @@ class MySQLCRM {
 
   async updateCodigoPostal(id, data) {
     try {
+      const codigosPostalesTable = await this._getCodigosPostalesTableName();
+      if (!codigosPostalesTable) {
+        throw new Error('La tabla de códigos postales no existe (Codigos_Postales/codigos_postales).');
+      }
       const campos = [];
       const params = [];
 
@@ -3173,7 +3196,7 @@ class MySQLCRM {
       }
 
       params.push(id);
-      const sql = `UPDATE Codigos_Postales SET ${campos.join(', ')} WHERE id = ?`;
+      const sql = `UPDATE ${codigosPostalesTable} SET ${campos.join(', ')} WHERE id = ?`;
       const result = await this.query(sql, params);
       
       return {
@@ -3189,7 +3212,11 @@ class MySQLCRM {
 
   async deleteCodigoPostal(id) {
     try {
-      const sql = 'DELETE FROM Codigos_Postales WHERE id = ?';
+      const codigosPostalesTable = await this._getCodigosPostalesTableName();
+      if (!codigosPostalesTable) {
+        throw new Error('La tabla de códigos postales no existe (Codigos_Postales/codigos_postales).');
+      }
+      const sql = `DELETE FROM ${codigosPostalesTable} WHERE id = ?`;
       const result = await this.query(sql, [id]);
       return {
         success: true,
