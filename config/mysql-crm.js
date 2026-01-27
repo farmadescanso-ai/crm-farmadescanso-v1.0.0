@@ -3086,6 +3086,66 @@ class MySQLCRM {
     }
   }
 
+  async _getAsignacionesCpMarcasTableName() {
+    this._cache = this._cache || {};
+    if (this._cache.asignacionesCpMarcasTableName !== undefined) return this._cache.asignacionesCpMarcasTableName;
+    try {
+      const rows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'comerciales_codigos_postales_marcas'
+         LIMIT 1`
+      );
+      const name = rows?.[0]?.name || null;
+      this._cache.asignacionesCpMarcasTableName = name;
+      return name;
+    } catch (_) {
+      this._cache.asignacionesCpMarcasTableName = null;
+      return null;
+    }
+  }
+
+  async _getComercialesTableName() {
+    this._cache = this._cache || {};
+    if (this._cache.comercialesTableName !== undefined) return this._cache.comercialesTableName;
+    try {
+      const rows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'comerciales'
+         LIMIT 1`
+      );
+      const name = rows?.[0]?.name || 'Comerciales';
+      this._cache.comercialesTableName = name;
+      return name;
+    } catch (_) {
+      this._cache.comercialesTableName = 'Comerciales';
+      return 'Comerciales';
+    }
+  }
+
+  async _getMarcasTableName() {
+    this._cache = this._cache || {};
+    if (this._cache.marcasTableName !== undefined) return this._cache.marcasTableName;
+    try {
+      const rows = await this.query(
+        `SELECT table_name AS name
+         FROM information_schema.tables
+         WHERE table_schema = DATABASE()
+           AND LOWER(table_name) = 'marcas'
+         LIMIT 1`
+      );
+      const name = rows?.[0]?.name || 'Marcas';
+      this._cache.marcasTableName = name;
+      return name;
+    } catch (_) {
+      this._cache.marcasTableName = 'Marcas';
+      return 'Marcas';
+    }
+  }
+
   // =====================================================
   // MÉTODOS CRUD PARA CÓDIGOS POSTALES
   // =====================================================
@@ -3292,18 +3352,18 @@ class MySQLCRM {
 
   async getAsignaciones(filtros = {}) {
     try {
-      // Verificar si la tabla existe antes de consultar
-      const tableExists = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM information_schema.tables 
-        WHERE table_schema = DATABASE() 
-        AND table_name = 'Comerciales_Codigos_Postales_Marcas'
-      `);
-      
-      if (!tableExists || tableExists.length === 0 || tableExists[0].count === 0) {
-        console.warn('⚠️ [ASIGNACIONES] La tabla Comerciales_Codigos_Postales_Marcas no existe. Ejecuta el script crear-tabla-codigos-postales.sql');
+      const asignacionesTable = await this._getAsignacionesCpMarcasTableName();
+      if (!asignacionesTable) {
+        console.warn('⚠️ [ASIGNACIONES] La tabla de asignaciones no existe (Comerciales_Codigos_Postales_Marcas/comerciales_codigos_postales_marcas).');
         return [];
       }
+      const codigosPostalesTable = await this._getCodigosPostalesTableName();
+      if (!codigosPostalesTable) {
+        console.warn('⚠️ [ASIGNACIONES] La tabla de códigos postales no existe (Codigos_Postales/codigos_postales).');
+        return [];
+      }
+      const comercialesTable = await this._getComercialesTableName();
+      const marcasTable = await this._getMarcasTableName();
       
       let sql = `
         SELECT 
@@ -3337,10 +3397,10 @@ class MySQLCRM {
             cp.Localidad
           ) AS Poblacion,
           COALESCE(cp.NumClientes, 0) AS NumClientes
-        FROM Comerciales_Codigos_Postales_Marcas ccp
-        INNER JOIN Comerciales c ON ccp.Id_Comercial = c.id
-        INNER JOIN Codigos_Postales cp ON ccp.Id_CodigoPostal = cp.id
-        INNER JOIN Marcas m ON ccp.Id_Marca = m.id
+        FROM ${asignacionesTable} ccp
+        INNER JOIN ${comercialesTable} c ON (ccp.Id_Comercial = c.id OR ccp.Id_Comercial = c.Id)
+        INNER JOIN ${codigosPostalesTable} cp ON (ccp.Id_CodigoPostal = cp.id OR ccp.Id_CodigoPostal = cp.Id)
+        INNER JOIN ${marcasTable} m ON (ccp.Id_Marca = m.id OR ccp.Id_Marca = m.Id)
         WHERE 1=1
       `;
       const params = [];
@@ -3415,6 +3475,11 @@ class MySQLCRM {
 
   async getAsignacionById(id) {
     try {
+      const asignacionesTable = await this._getAsignacionesCpMarcasTableName();
+      const codigosPostalesTable = await this._getCodigosPostalesTableName();
+      const comercialesTable = await this._getComercialesTableName();
+      const marcasTable = await this._getMarcasTableName();
+      if (!asignacionesTable || !codigosPostalesTable) return null;
       const sql = `
         SELECT 
           ccp.*,
@@ -3424,10 +3489,10 @@ class MySQLCRM {
           cp.Localidad,
           cp.Provincia,
           m.Nombre AS NombreMarca
-        FROM Comerciales_Codigos_Postales_Marcas ccp
-        INNER JOIN Comerciales c ON ccp.Id_Comercial = c.id
-        INNER JOIN Codigos_Postales cp ON ccp.Id_CodigoPostal = cp.id
-        INNER JOIN Marcas m ON ccp.Id_Marca = m.id
+        FROM ${asignacionesTable} ccp
+        INNER JOIN ${comercialesTable} c ON (ccp.Id_Comercial = c.id OR ccp.Id_Comercial = c.Id)
+        INNER JOIN ${codigosPostalesTable} cp ON (ccp.Id_CodigoPostal = cp.id OR ccp.Id_CodigoPostal = cp.Id)
+        INNER JOIN ${marcasTable} m ON (ccp.Id_Marca = m.id OR ccp.Id_Marca = m.Id)
         WHERE ccp.id = ?
       `;
       const rows = await this.query(sql, [id]);
@@ -3451,20 +3516,13 @@ class MySQLCRM {
         throw new Error('Id_Marca es obligatorio');
       }
 
-      // Verificar si la tabla existe
-      const tableExists = await this.query(`
-        SELECT COUNT(*) as count 
-        FROM information_schema.tables 
-        WHERE table_schema = DATABASE() 
-        AND table_name = 'Comerciales_Codigos_Postales_Marcas'
-      `);
-      
-      if (!tableExists || tableExists.length === 0 || tableExists[0].count === 0) {
-        throw new Error('La tabla Comerciales_Codigos_Postales_Marcas no existe. Ejecuta el script crear-tabla-codigos-postales.sql primero.');
+      const asignacionesTable = await this._getAsignacionesCpMarcasTableName();
+      if (!asignacionesTable) {
+        throw new Error('La tabla de asignaciones no existe (Comerciales_Codigos_Postales_Marcas/comerciales_codigos_postales_marcas). Ejecuta `scripts/crear-tabla-codigos-postales.sql` en la BD correcta.');
       }
       
       const sql = `
-        INSERT INTO Comerciales_Codigos_Postales_Marcas 
+        INSERT INTO ${asignacionesTable} 
         (Id_Comercial, Id_CodigoPostal, Id_Marca, FechaInicio, FechaFin, Activo, Prioridad, Observaciones, CreadoPor)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
       `;
@@ -3494,6 +3552,10 @@ class MySQLCRM {
 
   async updateAsignacion(id, data) {
     try {
+      const asignacionesTable = await this._getAsignacionesCpMarcasTableName();
+      if (!asignacionesTable) {
+        throw new Error('La tabla de asignaciones no existe (Comerciales_Codigos_Postales_Marcas/comerciales_codigos_postales_marcas).');
+      }
       const campos = [];
       const params = [];
 
@@ -3535,7 +3597,7 @@ class MySQLCRM {
       }
 
       params.push(id);
-      const sql = `UPDATE Comerciales_Codigos_Postales_Marcas SET ${campos.join(', ')} WHERE id = ?`;
+      const sql = `UPDATE ${asignacionesTable} SET ${campos.join(', ')} WHERE id = ?`;
       const result = await this.query(sql, params);
       
       return {
@@ -3551,7 +3613,11 @@ class MySQLCRM {
 
   async deleteAsignacion(id) {
     try {
-      const sql = 'DELETE FROM Comerciales_Codigos_Postales_Marcas WHERE id = ?';
+      const asignacionesTable = await this._getAsignacionesCpMarcasTableName();
+      if (!asignacionesTable) {
+        throw new Error('La tabla de asignaciones no existe (Comerciales_Codigos_Postales_Marcas/comerciales_codigos_postales_marcas).');
+      }
+      const sql = `DELETE FROM ${asignacionesTable} WHERE id = ?`;
       const result = await this.query(sql, [id]);
       return {
         success: true,

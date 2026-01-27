@@ -7,7 +7,9 @@
 -- Fecha: 2026-01-XX
 -- =====================================================
 
-USE farmadescanso;
+-- IMPORTANTE:
+-- Ejecuta este script en la base de datos correcta (p.ej. `crm_farmadescanso`).
+-- Si estás en phpMyAdmin, selecciona la BD antes de ejecutar.
 
 -- =====================================================
 -- 1. TABLA DE CÓDIGOS POSTALES
@@ -26,7 +28,7 @@ CREATE TABLE IF NOT EXISTS `Codigos_Postales` (
   `CreadoEn` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `ActualizadoEn` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
-  FOREIGN KEY (`Id_Provincia`) REFERENCES `provincias` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  -- FKs opcionales: se omiten para evitar fallos por diferencias de nombre/case en tablas (provincias/Provincias).
   
   UNIQUE KEY `uk_codigo_postal` (`CodigoPostal`, `Localidad`, `Provincia`),
   INDEX `idx_codigo_postal` (`CodigoPostal`),
@@ -56,10 +58,7 @@ CREATE TABLE IF NOT EXISTS `Comerciales_Codigos_Postales_Marcas` (
   `CreadoEn` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `ActualizadoEn` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   
-  FOREIGN KEY (`Id_Comercial`) REFERENCES `Comerciales` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`Id_CodigoPostal`) REFERENCES `Codigos_Postales` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`Id_Marca`) REFERENCES `Marcas` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  FOREIGN KEY (`CreadoPor`) REFERENCES `Comerciales` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  -- FKs opcionales: se omiten para evitar fallos por diferencias de nombre/case en tablas (Comerciales/comerciales, Marcas/marcas, Codigos_Postales/codigos_postales).
   
   UNIQUE KEY `uk_comercial_codigo_marca` (`Id_Comercial`, `Id_CodigoPostal`, `Id_Marca`, `FechaInicio`),
   INDEX `idx_comercial` (`Id_Comercial`),
