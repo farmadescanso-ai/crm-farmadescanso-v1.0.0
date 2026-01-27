@@ -5250,7 +5250,13 @@ app.get('/dashboard/ajustes/codigos-postales', requireAuth, requireAdmin, async 
     };
     
     const codigosPostales = await crm.getCodigosPostales(filtros);
-    const provincias = await crm.query('SELECT * FROM provincias ORDER BY Nombre ASC');
+    // Robustez: en algunos entornos la tabla puede ser `Provincias` (mayúscula)
+    let provincias = [];
+    try {
+      provincias = await crm.query('SELECT * FROM provincias ORDER BY Nombre ASC');
+    } catch (_) {
+      provincias = await crm.query('SELECT * FROM Provincias ORDER BY Nombre ASC').catch(() => []);
+    }
     
     res.render('dashboard/ajustes-codigos-postales', {
       title: 'Gestión de Códigos Postales - Farmadescaso',
