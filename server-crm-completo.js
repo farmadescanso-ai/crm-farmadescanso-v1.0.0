@@ -7913,11 +7913,69 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     const comercialIdAutenticado = getComercialId(req);
     const esAdmin = getUserIsAdmin(req);
 
+    // Resolver nombres reales de tablas (por compatibilidad mayúsculas/minúsculas)
+    const resolveTableName = async (lowerName) => {
+      try {
+        const rows = await crm.query(
+          `SELECT table_name
+           FROM information_schema.tables
+           WHERE table_schema = DATABASE()
+             AND LOWER(table_name) = ?
+           ORDER BY (table_name = ?) DESC, table_name ASC
+           LIMIT 1`,
+          [String(lowerName).toLowerCase(), String(lowerName)]
+        );
+        return rows && rows.length ? rows[0].table_name : lowerName;
+      } catch (_) {
+        return lowerName;
+      }
+    };
+
+    const tClientes = await resolveTableName('clientes');
+    const tPedidos = await resolveTableName('pedidos');
+
+    // Detectar columnas reales (clientes/pedidos) para no “romper” en esquemas distintos
+    const clientesColsRows = await crm.query(`SHOW COLUMNS FROM \`${tClientes}\``).catch(() => []);
+    const clientesCols = new Set((clientesColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+
+    const pedidosColsRows = await crm.query(`SHOW COLUMNS FROM \`${tPedidos}\``).catch(() => []);
+    const pedidosCols = new Set((pedidosColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+
+    const pickFirst = (candidates, set) => (candidates || []).find(c => set.has(c)) || null;
+
+    const colComercialClientes = pickFirst(['Id_Cial', 'ComercialId', 'comercialId', 'Id_Comercial', 'id_comercial'], clientesCols);
+    const colTipoCliente = pickFirst(['Id_TipoCliente', 'id_tipo_cliente', 'TipoClienteId', 'tipoClienteId'], clientesCols);
+    const colProvincia = pickFirst(['Id_Provincia', 'id_provincia', 'ProvinciaId', 'provinciaId'], clientesCols);
+    const colOkKo = pickFirst(['OK_KO', 'ok_ko'], clientesCols);
+
+    const colPedidoCliente = pickFirst(['Id_Cliente', 'id_cliente', 'ClienteId', 'clienteId'], pedidosCols);
+
+    // Campos a buscar (solo los que existan en esta BD)
+    const searchCols = [
+      // nombres
+      pickFirst(['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social'], clientesCols),
+      pickFirst(['Nombre_Cial', 'nombre_cial'], clientesCols),
+      // identificación/contacto
+      pickFirst(['DNI_CIF', 'dni_cif', 'NIF', 'nif'], clientesCols),
+      pickFirst(['Email', 'email'], clientesCols),
+      pickFirst(['Telefono', 'telefono'], clientesCols),
+      pickFirst(['Movil', 'movil'], clientesCols),
+      pickFirst(['NumeroFarmacia', 'numero_farmacia', 'Numero_Farmacia'], clientesCols),
+      // dirección
+      pickFirst(['Direccion', 'direccion'], clientesCols),
+      pickFirst(['Poblacion', 'poblacion', 'Localidad', 'localidad'], clientesCols),
+      pickFirst(['CodigoPostal', 'codigo_postal', 'codigoPostal'], clientesCols),
+      // extra
+      pickFirst(['NomContacto', 'nom_contacto', 'Contacto', 'contacto'], clientesCols),
+      pickFirst(['Observaciones', 'observaciones'], clientesCols),
+    ].filter(Boolean);
+
     const where = [];
     const params = [];
 
-    if (!esAdmin && comercialIdAutenticado) {
-      where.push('c.Id_Cial = ?');
+    // Restricción por comercial (no-admin) — detecta la columna real (Id_Cial / ComercialId / comercialId)
+    if (!esAdmin && comercialIdAutenticado && colComercialClientes) {
+      where.push(`c.\`${colComercialClientes}\` = ?`);
       params.push(Number(comercialIdAutenticado));
     }
     
@@ -7937,23 +7995,25 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       : null;
     
     // Admin puede filtrar por comercial; no-admin siempre queda forzado arriba
-    if (esAdmin && Number.isFinite(comercialFiltro) && comercialFiltro > 0) {
-      where.push('c.Id_Cial = ?');
+    if (esAdmin && Number.isFinite(comercialFiltro) && comercialFiltro > 0 && colComercialClientes) {
+      where.push(`c.\`${colComercialClientes}\` = ?`);
       params.push(comercialFiltro);
     }
     
-    if (estado === 'activos') {
-      where.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
-    } else if (estado === 'inactivos') {
-      where.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+    if (colOkKo) {
+      if (estado === 'activos') {
+        where.push(`(c.\`${colOkKo}\` = 1 OR c.\`${colOkKo}\` = '1' OR UPPER(c.\`${colOkKo}\`) = 'OK')`);
+      } else if (estado === 'inactivos') {
+        where.push(`(c.\`${colOkKo}\` = 0 OR c.\`${colOkKo}\` = '0' OR UPPER(c.\`${colOkKo}\`) = 'KO')`);
+      }
     }
     
-    if (Number.isFinite(tipoCliente) && tipoCliente > 0) {
-      where.push('c.Id_TipoCliente = ?');
+    if (Number.isFinite(tipoCliente) && tipoCliente > 0 && colTipoCliente) {
+      where.push(`c.\`${colTipoCliente}\` = ?`);
       params.push(tipoCliente);
     }
-    if (Number.isFinite(provincia) && provincia > 0) {
-      where.push('c.Id_Provincia = ?');
+    if (Number.isFinite(provincia) && provincia > 0 && colProvincia) {
+      where.push(`c.\`${colProvincia}\` = ?`);
       params.push(provincia);
     }
     // Nota: algunas instalaciones tienen PK del cliente como `Id` y otras como `id`.
@@ -7962,56 +8022,57 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       const whereLocal = [...where];
       const paramsLocal = [...params];
 
-      if (conVentas === 'true' || conVentas === '1') {
-        whereLocal.push(`EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.${idCol})`);
-      } else if (conVentas === 'false' || conVentas === '0') {
-        whereLocal.push(`NOT EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.${idCol})`);
+      if (colPedidoCliente) {
+        if (conVentas === 'true' || conVentas === '1') {
+          whereLocal.push(`EXISTS (SELECT 1 FROM \`${tPedidos}\` p WHERE p.\`${colPedidoCliente}\` = c.\`${idCol}\`)`);
+        } else if (conVentas === 'false' || conVentas === '0') {
+          whereLocal.push(`NOT EXISTS (SELECT 1 FROM \`${tPedidos}\` p WHERE p.\`${colPedidoCliente}\` = c.\`${idCol}\`)`);
+        }
       }
 
       const qLikeLocal = qLike;
-      whereLocal.push(`(
-        LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ?
-        OR LOWER(IFNULL(c.Nombre_Cial,'')) LIKE ?
-        OR LOWER(IFNULL(c.DNI_CIF,'')) LIKE ?
-        OR LOWER(IFNULL(c.Email,'')) LIKE ?
-        OR LOWER(IFNULL(c.Telefono,'')) LIKE ?
-        OR LOWER(IFNULL(c.Movil,'')) LIKE ?
-        OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
-        OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
-        OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
-        OR LOWER(IFNULL(c.CodigoPostal,'')) LIKE ?
-        OR LOWER(IFNULL(c.NomContacto,'')) LIKE ?
-        OR LOWER(IFNULL(c.Observaciones,'')) LIKE ?
-      )`);
-      paramsLocal.push(qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal);
+      if (!searchCols.length) {
+        return [];
+      }
+      whereLocal.push(`(${searchCols.map(col => `LOWER(IFNULL(c.\`${col}\`,'')) LIKE ?`).join(' OR ')})`);
+      paramsLocal.push(...searchCols.map(() => qLikeLocal));
 
       const limitLocal = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
 
+      const pickSelect = (alias, candidates) => {
+        const chosen = pickFirst(candidates, clientesCols);
+        return chosen ? `c.\`${chosen}\` AS \`${alias}\`` : `NULL AS \`${alias}\``;
+      };
+      const pickOrderAlias = () => {
+        // Alias “Nombre_Razon_Social” siempre existe (aunque sea NULL) porque lo forzamos en el SELECT
+        return 'Nombre_Razon_Social';
+      };
+
       const sqlLocal = `
         SELECT
-          c.${idCol} AS Id,
-          c.Nombre_Razon_Social,
-          c.Nombre_Cial,
-          c.DNI_CIF,
-          c.Email,
-          c.Telefono,
-          c.Movil,
-          c.Direccion,
-          c.Poblacion,
-          c.CodigoPostal,
-          c.NomContacto,
-          c.Observaciones,
-          c.Tarifa
-        FROM clientes c
+          c.\`${idCol}\` AS Id,
+          ${pickSelect('Nombre_Razon_Social', ['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social'])},
+          ${pickSelect('Nombre_Cial', ['Nombre_Cial', 'nombre_cial'])},
+          ${pickSelect('DNI_CIF', ['DNI_CIF', 'dni_cif', 'NIF', 'nif'])},
+          ${pickSelect('Email', ['Email', 'email'])},
+          ${pickSelect('Telefono', ['Telefono', 'telefono'])},
+          ${pickSelect('Movil', ['Movil', 'movil'])},
+          ${pickSelect('Direccion', ['Direccion', 'direccion'])},
+          ${pickSelect('Poblacion', ['Poblacion', 'poblacion', 'Localidad', 'localidad'])},
+          ${pickSelect('CodigoPostal', ['CodigoPostal', 'codigo_postal', 'codigoPostal'])},
+          ${pickSelect('NomContacto', ['NomContacto', 'nom_contacto', 'Contacto', 'contacto'])},
+          ${pickSelect('Observaciones', ['Observaciones', 'observaciones'])},
+          ${pickSelect('Tarifa', ['Tarifa', 'tarifa', 'Id_Tarifa', 'id_tarifa'])}
+        FROM \`${tClientes}\` c
         WHERE ${whereLocal.join(' AND ')}
         ORDER BY
           CASE
-            WHEN LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ? THEN 0
-            WHEN LOWER(IFNULL(c.DNI_CIF,'')) LIKE ? THEN 1
-            WHEN LOWER(IFNULL(c.Email,'')) LIKE ? THEN 2
+            WHEN LOWER(IFNULL(${pickOrderAlias()},'')) LIKE ? THEN 0
+            WHEN LOWER(IFNULL(DNI_CIF,'')) LIKE ? THEN 1
+            WHEN LOWER(IFNULL(Email,'')) LIKE ? THEN 2
             ELSE 3
           END,
-          c.Nombre_Razon_Social ASC
+          ${pickOrderAlias()} ASC
         LIMIT ${limitLocal}
       `;
 
