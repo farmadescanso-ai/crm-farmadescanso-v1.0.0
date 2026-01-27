@@ -7956,61 +7956,81 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       where.push('c.Id_Provincia = ?');
       params.push(provincia);
     }
-    if (conVentas === 'true' || conVentas === '1') {
-      where.push('EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.Id)');
-    } else if (conVentas === 'false' || conVentas === '0') {
-      where.push('NOT EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.Id)');
+    // Nota: algunas instalaciones tienen PK del cliente como `Id` y otras como `id`.
+    // Construimos la query con una columna idCol y, si falla por "Unknown column", reintentamos.
+    const runSearch = async (idCol) => {
+      const whereLocal = [...where];
+      const paramsLocal = [...params];
+
+      if (conVentas === 'true' || conVentas === '1') {
+        whereLocal.push(`EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.${idCol})`);
+      } else if (conVentas === 'false' || conVentas === '0') {
+        whereLocal.push(`NOT EXISTS (SELECT 1 FROM pedidos p WHERE p.Id_Cliente = c.${idCol})`);
+      }
+
+      const qLikeLocal = qLike;
+      whereLocal.push(`(
+        LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ?
+        OR LOWER(IFNULL(c.Nombre_Cial,'')) LIKE ?
+        OR LOWER(IFNULL(c.DNI_CIF,'')) LIKE ?
+        OR LOWER(IFNULL(c.Email,'')) LIKE ?
+        OR LOWER(IFNULL(c.Telefono,'')) LIKE ?
+        OR LOWER(IFNULL(c.Movil,'')) LIKE ?
+        OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
+        OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
+        OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
+        OR LOWER(IFNULL(c.CodigoPostal,'')) LIKE ?
+        OR LOWER(IFNULL(c.NomContacto,'')) LIKE ?
+        OR LOWER(IFNULL(c.Observaciones,'')) LIKE ?
+      )`);
+      paramsLocal.push(qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal, qLikeLocal);
+
+      const limitLocal = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
+
+      const sqlLocal = `
+        SELECT
+          c.${idCol} AS Id,
+          c.Nombre_Razon_Social,
+          c.Nombre_Cial,
+          c.DNI_CIF,
+          c.Email,
+          c.Telefono,
+          c.Movil,
+          c.Direccion,
+          c.Poblacion,
+          c.CodigoPostal,
+          c.NomContacto,
+          c.Observaciones,
+          c.Tarifa
+        FROM clientes c
+        WHERE ${whereLocal.join(' AND ')}
+        ORDER BY
+          CASE
+            WHEN LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ? THEN 0
+            WHEN LOWER(IFNULL(c.DNI_CIF,'')) LIKE ? THEN 1
+            WHEN LOWER(IFNULL(c.Email,'')) LIKE ? THEN 2
+            ELSE 3
+          END,
+          c.Nombre_Razon_Social ASC
+        LIMIT ${limitLocal}
+      `;
+
+      const rowsLocal = await crm.query(sqlLocal, [...paramsLocal, qPrefix, qPrefix, qPrefix]);
+      return rowsLocal || [];
+    };
+
+    let rows = [];
+    try {
+      rows = await runSearch('Id');
+    } catch (e1) {
+      const msg = String(e1?.sqlMessage || e1?.message || '');
+      const isBadField = e1?.code === 'ER_BAD_FIELD_ERROR' || /Unknown column/i.test(msg);
+      if (!isBadField) throw e1;
+      console.warn('⚠️ [BUSCAR CLIENTES] Reintentando con PK `id` (fallback)...', { msg });
+      rows = await runSearch('id');
     }
-
-    where.push(`(
-      LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ?
-      OR LOWER(IFNULL(c.Nombre_Cial,'')) LIKE ?
-      OR LOWER(IFNULL(c.DNI_CIF,'')) LIKE ?
-      OR LOWER(IFNULL(c.Email,'')) LIKE ?
-      OR LOWER(IFNULL(c.Telefono,'')) LIKE ?
-      OR LOWER(IFNULL(c.Movil,'')) LIKE ?
-      OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
-      OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
-      OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
-      OR LOWER(IFNULL(c.CodigoPostal,'')) LIKE ?
-      OR LOWER(IFNULL(c.NomContacto,'')) LIKE ?
-      OR LOWER(IFNULL(c.Observaciones,'')) LIKE ?
-    )`);
-    params.push(qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike, qLike);
-    
-    const limit = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
-
-    const sql = `
-      SELECT
-        c.Id,
-        c.Nombre_Razon_Social,
-        c.Nombre_Cial,
-        c.DNI_CIF,
-        c.Email,
-        c.Telefono,
-        c.Movil,
-        c.Direccion,
-        c.Poblacion,
-        c.CodigoPostal,
-        c.NomContacto,
-        c.Observaciones,
-        c.Tarifa
-      FROM clientes c
-      WHERE ${where.join(' AND ')}
-      ORDER BY
-        CASE
-          WHEN LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ? THEN 0
-          WHEN LOWER(IFNULL(c.DNI_CIF,'')) LIKE ? THEN 1
-          WHEN LOWER(IFNULL(c.Email,'')) LIKE ? THEN 2
-          ELSE 3
-        END,
-        c.Nombre_Razon_Social ASC
-      LIMIT ${limit}
-    `;
-
-    const rows = await crm.query(sql, [...params, qPrefix, qPrefix, qPrefix]);
     const clientesFiltrados = (rows || []).map(r => ({
-      Id: r.Id,
+      Id: r.Id ?? r.id,
       Nombre_Razon_Social: r.Nombre_Razon_Social,
       Nombre_Cial: r.Nombre_Cial,
       DNI_CIF: r.DNI_CIF,
