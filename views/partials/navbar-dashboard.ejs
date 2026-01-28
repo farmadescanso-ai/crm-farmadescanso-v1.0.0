@@ -13,53 +13,73 @@
         <div class="collapse navbar-collapse" id="navbarNav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'dashboard' ? 'active' : '' %>" href="/dashboard">
-                        <i class="fas fa-tachometer-alt me-1"></i>Dashboard
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'dashboard' ? 'active' : '' %>"
+                       href="/dashboard"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Dashboard" title="Dashboard">
+                        <i class="fas fa-tachometer-alt me-1"></i><span class="nav-label">Dashboard</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'articulos' ? 'active' : '' %>" href="/dashboard/articulos">
-                        <i class="fas fa-boxes me-1"></i>Artículos
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'articulos' ? 'active' : '' %>"
+                       href="/dashboard/articulos"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Artículos" title="Artículos">
+                        <i class="fas fa-boxes me-1"></i><span class="nav-label">Artículos</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes' ? 'active' : '' %>" href="/dashboard/clientes">
-                        <i class="fas fa-users me-1"></i>Clientes
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes' ? 'active' : '' %>"
+                       href="/dashboard/clientes"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes" title="Clientes">
+                        <i class="fas fa-users me-1"></i><span class="nav-label">Clientes</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'pedidos' ? 'active' : '' %>" href="/dashboard/pedidos">
-                        <i class="fas fa-shopping-cart me-1"></i>Pedidos
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'pedidos' ? 'active' : '' %>"
+                       href="/dashboard/pedidos"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Pedidos" title="Pedidos">
+                        <i class="fas fa-shopping-cart me-1"></i><span class="nav-label">Pedidos</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'agenda' ? 'active' : '' %>" href="/dashboard/agenda">
-                        <i class="fas fa-calendar-check me-1"></i>Agenda
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'agenda' ? 'active' : '' %>"
+                       href="/dashboard/agenda"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Agenda" title="Agenda">
+                        <i class="fas fa-calendar-check me-1"></i><span class="nav-label">Agenda</span>
                     </a>
                 </li>
                 <li class="nav-item d-none d-lg-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'cooperativas' ? 'active' : '' %>" href="/dashboard/cooperativas">
-                        <i class="fas fa-handshake me-1"></i><span class="nav-link-text-mobile">Cooperativas</span>
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'cooperativas' ? 'active' : '' %>"
+                       href="/dashboard/cooperativas"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Cooperativas" title="Cooperativas">
+                        <i class="fas fa-handshake me-1"></i><span class="nav-label">Cooperativas</span>
                     </a>
                 </li>
                 <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-cooperativas' ? 'active' : '' %>" href="/dashboard/clientes-cooperativas">
-                        <i class="fas fa-link me-1"></i><span class="nav-link-text-mobile">Clientes-Cooperativas</span>
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-cooperativas' ? 'active' : '' %>"
+                       href="/dashboard/clientes-cooperativas"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes-Cooperativas" title="Clientes-Cooperativas">
+                        <i class="fas fa-link me-1"></i><span class="nav-label">Clientes-Cooperativas</span>
                     </a>
                 </li>
                 <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'formas-pago' ? 'active' : '' %>" href="/dashboard/formas-pago">
-                        <i class="fas fa-credit-card me-1"></i><span class="nav-link-text-mobile">Formas de Pago</span>
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'formas-pago' ? 'active' : '' %>"
+                       href="/dashboard/formas-pago"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Formas de Pago" title="Formas de Pago">
+                        <i class="fas fa-credit-card me-1"></i><span class="nav-label">Formas de Pago</span>
                     </a>
                 </li>
                 <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'especialidades' ? 'active' : '' %>" href="/dashboard/especialidades">
-                        <i class="fas fa-stethoscope me-1"></i><span class="nav-link-text-mobile">Especialidades</span>
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'especialidades' ? 'active' : '' %>"
+                       href="/dashboard/especialidades"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Especialidades" title="Especialidades">
+                        <i class="fas fa-stethoscope me-1"></i><span class="nav-label">Especialidades</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comerciales' ? 'active' : '' %>" href="/dashboard/comerciales">
-                        <i class="fas fa-user-tie me-1"></i>Comerciales
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comerciales' ? 'active' : '' %>"
+                       href="/dashboard/comerciales"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Comerciales" title="Comerciales">
+                        <i class="fas fa-user-tie me-1"></i><span class="nav-label">Comerciales</span>
                     </a>
                 </li>
             </ul>

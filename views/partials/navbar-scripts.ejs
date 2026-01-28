@@ -3,6 +3,19 @@
     document.addEventListener('DOMContentLoaded', function() {
         const sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
+
+        // Tooltips Bootstrap (para mostrar texto al pasar el ratón cuando el navbar está en modo iconos)
+        try {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
+                const tooltipTriggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggers.forEach((el) => {
+                    // Evitar duplicados si algún template re-ejecuta
+                    if (!bootstrap.Tooltip.getInstance(el)) {
+                        new bootstrap.Tooltip(el, { trigger: 'hover focus', boundary: 'window' });
+                    }
+                });
+            }
+        } catch (_) {}
         
         const sidebarOverlay = document.createElement('div');
         sidebarOverlay.className = 'sidebar-overlay';

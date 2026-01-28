@@ -64,9 +64,12 @@
             font-size: 0.9rem;
         }
         
-        /* Ocultar texto de algunos elementos en móviles, solo mostrar iconos */
-        .nav-link-text-mobile {
-            display: none;
+        /* En móvil: el menú colapsado (hamburguesa) debe seguir mostrando texto */
+        .navbar-collapse.show .nav-label {
+            display: inline !important;
+        }
+        .navbar-collapse.show .navbar-nav .nav-link i {
+            margin-right: 0.35rem !important;
         }
         
         /* Mejorar el menú colapsado en móviles */
@@ -96,6 +99,41 @@
         .navbar-nav .nav-link {
             padding: 0.5rem 0.5rem;
             font-size: 0.85rem;
+        }
+    }
+
+    /* =====================================================
+       Navbar superior: modo iconos (evita que el menú ocupe 2 líneas)
+       - Entre LG (>=992) y XL (<1200): ocultar texto y dejar solo iconos
+       - Tooltip muestra el texto al pasar el ratón
+       ===================================================== */
+    @media (min-width: 992px) and (max-width: 1199.98px) {
+        /* Mantener el menú en una sola línea y permitir scroll horizontal si hiciera falta */
+        .navbar .navbar-nav.me-auto {
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .navbar .navbar-nav.me-auto::-webkit-scrollbar {
+            height: 6px;
+        }
+        .navbar .navbar-nav.me-auto::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.35);
+            border-radius: 999px;
+        }
+
+        /* Ocultar texto, dejar iconos */
+        .navbar .navbar-nav.me-auto .nav-link .nav-label {
+            display: none !important;
+        }
+        .navbar .navbar-nav.me-auto .nav-link i {
+            margin-right: 0 !important;
+        }
+        .navbar .navbar-nav.me-auto .nav-link {
+            padding: 0.5rem 0.55rem;
+            white-space: nowrap;
         }
     }
     
