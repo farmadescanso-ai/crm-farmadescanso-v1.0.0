@@ -11,6 +11,35 @@
     <link href="/css/colors.css" rel="stylesheet">
     <link href="/css/dashboard.css" rel="stylesheet">
     <%- include('../partials/navbar-styles') %>
+    <script>
+        // Capturar lo antes posible errores típicos de extensiones del navegador (no son de la app)
+        // Ej: "Cannot use import statement outside a module" / React Router warnings, etc.
+        (function() {
+            window.addEventListener('error', function(e) {
+                try {
+                    const msg = String(e && e.message ? e.message : '');
+                    const file = String(e && e.filename ? e.filename : '');
+                    const isExtension = file.startsWith('chrome-extension://') || file.startsWith('moz-extension://') || file.includes('extension');
+                    const isImportSyntax = msg.includes('Cannot use import statement') || msg.includes('Unexpected token') || msg.includes('import');
+                    if (isImportSyntax && (isExtension || file === '' || file === 'null')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                    }
+                } catch (_) {}
+            }, true);
+
+            window.addEventListener('unhandledrejection', function(e) {
+                try {
+                    const reasonMsg = String(e && e.reason && e.reason.message ? e.reason.message : '');
+                    if (reasonMsg.includes('Cannot use import statement')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                } catch (_) {}
+            });
+        })();
+    </script>
 </head>
 <body>
     <%- include('../partials/navbar-dashboard') %>
@@ -364,28 +393,6 @@
                 <% } %>
     
     <!-- Scripts -->
-    <script>
-        // Manejar errores de módulos no cargados correctamente (probablemente de extensiones del navegador)
-        window.addEventListener('error', function(e) {
-            // Ignorar errores de import de extensiones del navegador
-            if (e.message && (e.message.includes('Cannot use import statement') || 
-                e.message.includes('Unexpected token') && e.filename && e.filename.includes('extension'))) {
-                // Este error probablemente viene de una extensión del navegador
-                // No es un error crítico de nuestra aplicación
-                e.preventDefault();
-                e.stopPropagation();
-                return false;
-            }
-        }, true);
-        
-        // También capturar errores no capturados de promesas
-        window.addEventListener('unhandledrejection', function(e) {
-            if (e.reason && e.reason.message && e.reason.message.includes('Cannot use import statement')) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    </script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.min.js"></script>
     <script src="/js/dashboard.js"></script>

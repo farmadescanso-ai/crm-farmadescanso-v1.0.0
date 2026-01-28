@@ -10,6 +10,24 @@
     <link href="/css/colors.css" rel="stylesheet">
     <link href="/css/dashboard.css" rel="stylesheet">
     <%- include('../partials/navbar-styles') %>
+    <script>
+        // Captura temprana de errores típicos de extensiones del navegador (no son de la app)
+        (function() {
+            window.addEventListener('error', function(e) {
+                try {
+                    const msg = String(e && e.message ? e.message : '');
+                    const file = String(e && e.filename ? e.filename : '');
+                    const isExtension = file.startsWith('chrome-extension://') || file.startsWith('moz-extension://') || file.includes('extension');
+                    const isImportSyntax = msg.includes('Cannot use import statement') || msg.includes('Unexpected token') || msg.includes('import');
+                    if (isImportSyntax && (isExtension || file === '' || file === 'null')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return false;
+                    }
+                } catch (_) {}
+            }, true);
+        })();
+    </script>
 </head>
 <body>
     <%- include('../partials/navbar-dashboard') %>
