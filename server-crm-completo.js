@@ -1254,19 +1254,42 @@ const obtenerClientesPorRol = async (crm, req) => {
     // Administrador: ver todos los clientes
     return await crm.getClientes();
   } else {
-    // Comercial: solo sus clientes
-    const todosClientes = await crm.getClientes();
-    // Filtrar por comercial_id si existe en la tabla
-    // Nota: Esto requiere que la tabla Clientes tenga un campo Comercial_id
-    return todosClientes.filter(cliente => {
-      const clienteComercialId = cliente.Comercial_id || cliente.comercial_id || cliente.ComercialId;
-      if (Array.isArray(clienteComercialId)) {
-        return clienteComercialId.some(c => (c.Id || c.id) == comercialId);
+    // Comercial: solo sus clientes (compatibilidad: Id_Cial / ComercialId / comercialId / etc.)
+    const cid = Number(comercialId);
+    if (!Number.isFinite(cid) || cid <= 0) return [];
+
+    // 1) Intento directo (rápido) por Id_Cial (esquema principal)
+    try {
+      const byIdCial = await crm.getClientes(cid);
+      if (Array.isArray(byIdCial) && byIdCial.length) return byIdCial;
+    } catch (_) {}
+
+    // 2) Fallback por ComercialId/comercialId (esquemas alternativos)
+    try {
+      const byComercialId = await crm.getClientesByComercial(cid);
+      if (Array.isArray(byComercialId) && byComercialId.length) return byComercialId;
+    } catch (_) {}
+
+    // 3) Último recurso: cargar y filtrar en memoria por cualquiera de los campos conocidos
+    const todos = await crm.getClientes();
+    if (!Array.isArray(todos) || !todos.length) return [];
+
+    const campos = ['Id_Cial', 'id_cial', 'ComercialId', 'comercialId', 'Comercial_id', 'comercial_id', 'Id_Comercial', 'id_comercial'];
+    return todos.filter(cliente => {
+      for (const campo of campos) {
+        const v = cliente ? cliente[campo] : null;
+        if (v === null || v === undefined) continue;
+        if (Array.isArray(v)) {
+          if (v.some(x => (x?.Id ?? x?.id) == cid || x == cid)) return true;
+          continue;
+        }
+        if (typeof v === 'object') {
+          if ((v.Id ?? v.id) == cid) return true;
+          continue;
+        }
+        if (v == cid) return true;
       }
-      if (typeof clienteComercialId === 'object' && clienteComercialId) {
-        return (clienteComercialId.Id || clienteComercialId.id) == comercialId;
-      }
-      return clienteComercialId == comercialId;
+      return false;
     });
   }
 };
@@ -2838,14 +2861,11 @@ app.get('/dashboard', requireAuth, async (req, res) => {
       });
     }
     
-    // Obtener clientes usando la misma función que funciona en la vista de clientes
-    // La vista de clientes usa directamente crm.getClientes() sin filtro por rol
-    const clientes = await crm.getClientes();
-    // Usar COUNT directo de SQL para obtener el total real de clientes
-    const totalClientesCalculado = await crm.getClientesCount().catch(() => {
-      // Fallback: contar el array si falla el COUNT
-      return Array.isArray(clientes) ? clientes.length : 0;
-    });
+    // Clientes / contador: por comercial (sus clientes asignados) o total si es admin
+    const clientes = await obtenerClientesPorRol(crm, req);
+    const totalClientesCalculado = isAdmin(req)
+      ? await crm.getClientesCount().catch(() => (Array.isArray(clientes) ? clientes.length : 0))
+      : (Array.isArray(clientes) ? clientes.length : 0);
  
     // Obtener nombres de clientes y comerciales para todos los pedidos
     // Según los logs, el campo es Cliente_id (número) o Id_Cliente
@@ -3078,20 +3098,18 @@ app.get('/dashboard', requireAuth, async (req, res) => {
  
     const estadisticasFallback = await getEstadisticasGlobales();
     
-    // Calcular totalClientes directamente en el fallback
+    // Calcular totalClientes en el fallback respetando rol
     let totalClientesFallback = 0;
     try {
-      // Usar COUNT directo de SQL para obtener el total real
-      totalClientesFallback = await crm.getClientesCount();
-    } catch (clientesError) {
-      console.error('Error obteniendo conteo de clientes en fallback:', clientesError);
-      try {
-        // Fallback: contar el array si falla el COUNT
-        const clientesFallback = await crm.getClientes();
+      const clientesFallback = await obtenerClientesPorRol(crm, req);
+      if (isAdmin(req)) {
+        totalClientesFallback = await crm.getClientesCount().catch(() => (Array.isArray(clientesFallback) ? clientesFallback.length : 0));
+      } else {
         totalClientesFallback = Array.isArray(clientesFallback) ? clientesFallback.length : 0;
-      } catch (clientesError2) {
-        console.error('Error obteniendo clientes en fallback:', clientesError2);
       }
+    } catch (clientesError) {
+      console.error('Error obteniendo clientes en fallback:', clientesError);
+      totalClientesFallback = 0;
     }
     
     const estadisticasFallbackFinal = {
