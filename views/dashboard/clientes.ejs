@@ -1395,6 +1395,11 @@
                 setTimeout(initSearch, 100);
                 return;
             }
+            // Evitar doble inicialización (duplicaría listeners)
+            if (window.__clientesSearchInitialized) {
+                return;
+            }
+            window.__clientesSearchInitialized = true;
             
             console.log('✅ Inicializando búsqueda...');
             
@@ -1445,7 +1450,11 @@
                 
                 try {
                     const qs = buildQueryParams({ q: term, limit: 100 });
-                    const res = await fetch(`/api/clientes/buscar?${qs}`, { signal: searchAbortController.signal });
+                    const res = await fetch(`/api/clientes/buscar?${qs}`, {
+                        signal: searchAbortController.signal,
+                        credentials: 'include',
+                        headers: { 'Accept': 'application/json' }
+                    });
                     if (!res.ok) {
                         const txt = await res.text().catch(() => '');
                         throw new Error(`HTTP ${res.status}${txt ? `: ${txt.slice(0, 200)}` : ''}`);
@@ -1498,7 +1507,7 @@
                     // Volver al listado paginado recargando (mantiene filtros)
                     const params = buildQueryParams({ page: 1, pageSize: pageSize });
                     window.location.href = `/dashboard/clientes?${params}`;
-                });
+                }, { capture: true });
             }
             
             // Scroll to top dentro de la tabla - aparece después de 10 registros y se mueve con el scroll
@@ -1961,9 +1970,13 @@
         
         // Inicializar
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSearch);
+            document.addEventListener('DOMContentLoaded', () => {
+                try { initSearch(); } catch (e) { console.error('❌ initSearch falló:', e); }
+            });
         } else {
-            setTimeout(initSearch, 100);
+            setTimeout(() => {
+                try { initSearch(); } catch (e) { console.error('❌ initSearch falló:', e); }
+            }, 100);
         }
     </script>
     <script src="/js/go-to-top.js"></script>
