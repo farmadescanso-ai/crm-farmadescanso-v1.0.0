@@ -6570,16 +6570,23 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     
     // Paginación (evitar cargar miles de filas)
     const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
-    const pageSize = Math.min(200, Math.max(10, parseInt(req.query.pageSize || '50', 10) || 50));
+    // Default: 20 (para acelerar). Se puede cambiar con pageSize en query (hasta 200).
+    const pageSize = Math.min(200, Math.max(10, parseInt(req.query.pageSize || '20', 10) || 20));
 
     // Obtener filtros de la query string
     const filters = {
       tipoCliente: req.query.tipoCliente || null,
       provincia: req.query.provincia || null,
       comercial: req.query.comercial || null,
-      conVentas: req.query.conVentas !== undefined && req.query.conVentas !== '' ? req.query.conVentas : undefined,
+      // Default: Con ventas (para cargar menos y más relevante). Si el usuario lo especifica, respetar.
+      conVentas: req.query.conVentas !== undefined
+        ? (req.query.conVentas !== '' ? req.query.conVentas : undefined)
+        : 'true',
       estado: req.query.estado || 'activos' // default: activos (escalable para 6.000+)
     };
+    // Búsqueda inteligente (servidor): `q` (>=2 caracteres)
+    const q = (req.query.q || '').toString().trim();
+    filters.q = q && q.length >= 2 ? q : null;
     console.log('✅ [CLIENTES] Filtros obtenidos:', filters);
     
     // Convertir strings a números donde sea necesario (solo si no son null o vacíos)
@@ -6640,6 +6647,9 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     }
     if (filters.estado) {
       filtersForQuery.estado = filters.estado;
+    }
+    if (filters.q) {
+      filtersForQuery.q = filters.q;
     }
 
     console.log('🔍 [CLIENTES] Filtros recibidos del query:', req.query);
@@ -6851,6 +6861,7 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       monedas: monedas || [],
       comerciales: comerciales || [],
       filters: filters || {}, // Pasar filtros actuales a la vista (ya incluye el comercial si no es admin)
+      searchQuery: filters.q || '',
       error: null
     });
   } catch (error) {

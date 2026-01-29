@@ -664,7 +664,7 @@
                         <div class="col-md-10">
                             <div class="input-group">
                                 <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                <input type="text" class="form-control" id="searchInput" placeholder="Búsqueda inteligente: busca en todos los campos automáticamente...">
+                                <input type="text" class="form-control" id="searchInput" placeholder="Búsqueda inteligente: busca en todos los campos automáticamente..." value="<%= typeof searchQuery !== 'undefined' ? searchQuery : '' %>">
                                 <span class="input-group-text" id="searchInfo" title="Búsqueda inteligente activa - Busca en todos los campos">
                                     <i class="fas fa-brain text-primary"></i>
                                 </span>
@@ -1980,6 +1980,7 @@
         }
     </script>
     <script src="/js/go-to-top.js"></script>
+    <script src="/js/clientes-search-url.js"></script>
 
     <!-- Go to Top Button -->
     <button id="goToTop" class="go-to-top" title="Ir arriba">

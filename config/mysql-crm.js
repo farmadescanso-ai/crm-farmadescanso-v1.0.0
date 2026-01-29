@@ -874,6 +874,19 @@ class MySQLCRM {
         LEFT JOIN comerciales cial ON c.Id_Cial = cial.id
       `;
 
+      // Resolver columna cliente en pedidos (Id_Cliente vs Cliente_id, etc.) para con/sin ventas.
+      // Cache simple en la instancia para no repetir SHOW COLUMNS en cada request.
+      if (!this.__pedidosClienteCol) {
+        try {
+          const colsRows = await this.query('SHOW COLUMNS FROM pedidos').catch(() => []);
+          const cols = new Set((colsRows || []).map(r => String(r.Field || '').trim()).filter(Boolean));
+          this.__pedidosClienteCol =
+            ['Id_Cliente', 'Cliente_id', 'id_cliente', 'cliente_id', 'ClienteId', 'clienteId'].find(c => cols.has(c)) || 'Id_Cliente';
+        } catch (_) {
+          this.__pedidosClienteCol = 'Id_Cliente';
+        }
+      }
+
       // Estado (activos por defecto a nivel UI, pero aquí solo aplicamos si viene)
       if (filters.estado === 'activos') {
         whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
@@ -907,10 +920,33 @@ class MySQLCRM {
 
       if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
         if (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1') {
-          whereConditions.push('EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+          whereConditions.push(`EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
         } else if (filters.conVentas === false || filters.conVentas === 'false' || filters.conVentas === '0') {
-          whereConditions.push('NOT EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+          whereConditions.push(`NOT EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
         }
+      }
+
+      // Búsqueda inteligente (servidor) por múltiples campos.
+      if (filters.q && typeof filters.q === 'string' && filters.q.trim().length >= 2) {
+        const termLower = filters.q.trim().toLowerCase();
+        const like = `%${termLower}%`;
+        whereConditions.push(`(
+          LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ?
+          OR LOWER(IFNULL(c.Nombre_Cial,'')) LIKE ?
+          OR LOWER(IFNULL(c.DNI_CIF,'')) LIKE ?
+          OR LOWER(IFNULL(c.Email,'')) LIKE ?
+          OR LOWER(IFNULL(c.Telefono,'')) LIKE ?
+          OR LOWER(IFNULL(c.Movil,'')) LIKE ?
+          OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
+          OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
+          OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
+          OR LOWER(IFNULL(c.CodigoPostal,'')) LIKE ?
+          OR LOWER(IFNULL(c.NomContacto,'')) LIKE ?
+          OR LOWER(IFNULL(c.Observaciones,'')) LIKE ?
+          OR LOWER(IFNULL(c.IBAN,'')) LIKE ?
+          OR LOWER(IFNULL(c.CuentaContable,'')) LIKE ?
+        )`);
+        params.push(like, like, like, like, like, like, like, like, like, like, like, like, like, like);
       }
 
       if (whereConditions.length > 0) {
@@ -920,7 +956,16 @@ class MySQLCRM {
       // Orden estable (evita saltos entre páginas)
       // Nota: algunos drivers/entornos dan problemas con placeholders en LIMIT/OFFSET.
       // Como limit/offset ya están saneados a números, los interpolamos directamente.
-      sql += ` ORDER BY c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
+      // Orden:
+      // - Si estamos en modo "conVentas" y no hay búsqueda, priorizar por último pedido (para que los "primeros 20" sean relevantes)
+      // - Si hay búsqueda u otros filtros, ordenar estable por Id.
+      const hasSearch = !!(filters.q && String(filters.q).trim().length >= 2);
+      const conVentas = (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1');
+      if (conVentas && !hasSearch) {
+        sql += ` ORDER BY (SELECT MAX(p3.FechaPedido) FROM pedidos p3 WHERE p3.\`${this.__pedidosClienteCol}\` = c.Id) DESC, c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
+      } else {
+        sql += ` ORDER BY c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
+      }
 
       const rows = await this.query(sql, params);
       return rows;
@@ -949,6 +994,18 @@ class MySQLCRM {
 
       const params = [];
 
+      // Resolver columna cliente en pedidos (Id_Cliente vs Cliente_id, etc.) para con/sin ventas.
+      if (!this.__pedidosClienteCol) {
+        try {
+          const colsRows = await this.query('SHOW COLUMNS FROM pedidos').catch(() => []);
+          const cols = new Set((colsRows || []).map(r => String(r.Field || '').trim()).filter(Boolean));
+          this.__pedidosClienteCol =
+            ['Id_Cliente', 'Cliente_id', 'id_cliente', 'cliente_id', 'ClienteId', 'clienteId'].find(c => cols.has(c)) || 'Id_Cliente';
+        } catch (_) {
+          this.__pedidosClienteCol = 'Id_Cliente';
+        }
+      }
+
       if (filters.tipoCliente !== null && filters.tipoCliente !== undefined && filters.tipoCliente !== '' && !isNaN(filters.tipoCliente)) {
         const tipoClienteId = typeof filters.tipoCliente === 'number' ? filters.tipoCliente : parseInt(filters.tipoCliente);
         if (!isNaN(tipoClienteId) && tipoClienteId > 0) {
@@ -975,10 +1032,32 @@ class MySQLCRM {
 
       if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
         if (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1') {
-          whereConditions.push('EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+          whereConditions.push(`EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
         } else if (filters.conVentas === false || filters.conVentas === 'false' || filters.conVentas === '0') {
-          whereConditions.push('NOT EXISTS (SELECT 1 FROM pedidos WHERE Id_Cliente = c.Id)');
+          whereConditions.push(`NOT EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
         }
+      }
+
+      if (filters.q && typeof filters.q === 'string' && filters.q.trim().length >= 2) {
+        const termLower = filters.q.trim().toLowerCase();
+        const like = `%${termLower}%`;
+        whereConditions.push(`(
+          LOWER(IFNULL(c.Nombre_Razon_Social,'')) LIKE ?
+          OR LOWER(IFNULL(c.Nombre_Cial,'')) LIKE ?
+          OR LOWER(IFNULL(c.DNI_CIF,'')) LIKE ?
+          OR LOWER(IFNULL(c.Email,'')) LIKE ?
+          OR LOWER(IFNULL(c.Telefono,'')) LIKE ?
+          OR LOWER(IFNULL(c.Movil,'')) LIKE ?
+          OR LOWER(IFNULL(c.NumeroFarmacia,'')) LIKE ?
+          OR LOWER(IFNULL(c.Direccion,'')) LIKE ?
+          OR LOWER(IFNULL(c.Poblacion,'')) LIKE ?
+          OR LOWER(IFNULL(c.CodigoPostal,'')) LIKE ?
+          OR LOWER(IFNULL(c.NomContacto,'')) LIKE ?
+          OR LOWER(IFNULL(c.Observaciones,'')) LIKE ?
+          OR LOWER(IFNULL(c.IBAN,'')) LIKE ?
+          OR LOWER(IFNULL(c.CuentaContable,'')) LIKE ?
+        )`);
+        params.push(like, like, like, like, like, like, like, like, like, like, like, like, like, like);
       }
 
       if (whereConditions.length > 0) {
