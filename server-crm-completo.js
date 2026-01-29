@@ -7995,7 +7995,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     const colProvincia = pickFirst(['Id_Provincia', 'id_provincia', 'ProvinciaId', 'provinciaId'], clientesCols);
     const colOkKo = pickFirst(['OK_KO', 'ok_ko'], clientesCols);
 
-    const colPedidoCliente = pickFirst(['Id_Cliente', 'id_cliente', 'ClienteId', 'clienteId'], pedidosCols);
+    const colPedidoCliente = pickFirst(['Id_Cliente', 'id_cliente', 'Cliente_id', 'cliente_id', 'ClienteId', 'clienteId'], pedidosCols);
 
     // Campos a buscar (solo los que existan en esta BD)
     const searchCols = [
@@ -8063,8 +8063,8 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       where.push(`c.\`${colProvincia}\` = ?`);
       params.push(provincia);
     }
-    // Nota: algunas instalaciones tienen PK del cliente como `Id` y otras como `id`.
-    // Construimos la query con una columna idCol y, si falla por "Unknown column", reintentamos.
+    // Nota: algunas instalaciones tienen PK del cliente como `id` y otras como `Id`.
+    // Elegimos la que exista para evitar fallos por "Unknown column".
     const runSearch = async (idCol) => {
       const whereLocal = [...where];
       const paramsLocal = [...params];
@@ -8131,15 +8131,23 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       return rowsLocal || [];
     };
 
+    const pkPrimary = pickFirst(['id', 'Id'], clientesCols) || 'id';
+    const pkFallback = pkPrimary === 'id' ? 'Id' : 'id';
+
     let rows = [];
     try {
-      rows = await runSearch('Id');
+      rows = await runSearch(pkPrimary);
     } catch (e1) {
       const msg = String(e1?.sqlMessage || e1?.message || '');
       const isBadField = e1?.code === 'ER_BAD_FIELD_ERROR' || /Unknown column/i.test(msg);
       if (!isBadField) throw e1;
-      console.warn('⚠️ [BUSCAR CLIENTES] Reintentando con PK `id` (fallback)...', { msg });
-      rows = await runSearch('id');
+      // Reintentar con el otro nombre de PK solo si existe en esta tabla
+      if (clientesCols.has(pkFallback)) {
+        console.warn(`⚠️ [BUSCAR CLIENTES] Reintentando con PK \`${pkFallback}\` (fallback)...`, { msg });
+        rows = await runSearch(pkFallback);
+      } else {
+        throw e1;
+      }
     }
     const clientesFiltrados = (rows || []).map(r => ({
       Id: r.Id ?? r.id,
