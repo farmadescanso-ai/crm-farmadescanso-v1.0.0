@@ -280,11 +280,36 @@ PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 -- conviene consolidar a una sola tabla para evitar comportamientos inesperados.
 -- Este bloque SOLO muestra conteos para comparar.
 
-SELECT 'codigos_postales' AS tabla, (SELECT COUNT(*) FROM codigos_postales) AS filas
-UNION ALL
-SELECT 'Codigos_Postales', (SELECT COUNT(*) FROM Codigos_Postales)
-UNION ALL
-SELECT 'comerciales_codigos_postales_marcas', (SELECT COUNT(*) FROM comerciales_codigos_postales_marcas)
-UNION ALL
-SELECT 'Comerciales_Codigos_Postales_Marcas', (SELECT COUNT(*) FROM Comerciales_Codigos_Postales_Marcas);
+-- Nota:
+-- - Si has borrado las tablas duplicadas en MAYÚSCULAS, este bloque NO debe fallar.
+-- - MySQL lanzaría #1146 si intentamos contar una tabla que no existe, así que lo resolvemos con SQL dinámico.
+SET @has_cp_upper := (
+  SELECT COUNT(*) FROM information_schema.tables
+  WHERE table_schema = @db AND table_name = 'Codigos_Postales'
+);
+SET @has_asig_upper := (
+  SELECT COUNT(*) FROM information_schema.tables
+  WHERE table_schema = @db AND table_name = 'Comerciales_Codigos_Postales_Marcas'
+);
+
+SET @sql := CONCAT(
+  "SELECT 'codigos_postales' AS tabla, ",
+  IF(@t_cp IS NOT NULL, CONCAT("(SELECT COUNT(*) FROM `", @t_cp, "`)"), "0"),
+  " AS filas ",
+  "UNION ALL ",
+  IF(@has_cp_upper > 0,
+    "SELECT 'Codigos_Postales' AS tabla, (SELECT COUNT(*) FROM `Codigos_Postales`) AS filas ",
+    "SELECT 'Codigos_Postales' AS tabla, 0 AS filas "
+  ),
+  "UNION ALL ",
+  "SELECT 'comerciales_codigos_postales_marcas' AS tabla, ",
+  IF(@t_asig IS NOT NULL, CONCAT("(SELECT COUNT(*) FROM `", @t_asig, "`)"), "0"),
+  " AS filas ",
+  "UNION ALL ",
+  IF(@has_asig_upper > 0,
+    "SELECT 'Comerciales_Codigos_Postales_Marcas' AS tabla, (SELECT COUNT(*) FROM `Comerciales_Codigos_Postales_Marcas`) AS filas ",
+    "SELECT 'Comerciales_Codigos_Postales_Marcas' AS tabla, 0 AS filas "
+  )
+);
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
