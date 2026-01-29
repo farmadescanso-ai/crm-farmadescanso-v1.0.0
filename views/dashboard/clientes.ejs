@@ -909,15 +909,7 @@
                     </div>
                 </div>
 
-                <!-- Load more (paginación incremental) -->
-                <% if (typeof totalFiltrados !== 'undefined' && totalFiltrados !== null) { %>
-                <div class="d-flex justify-content-center align-items-center gap-2 my-3">
-                    <button class="btn btn-outline-primary btn-sm" type="button" id="loadMoreBtn">
-                        <i class="fas fa-plus"></i> Cargar 50 más
-                    </button>
-                    <span class="text-muted small" id="loadMoreInfo"></span>
-                </div>
-                <% } %>
+                <!-- Load more eliminado: usamos paginación + búsqueda -->
                 <!-- Scroll to Top Button Container -->
                 <div class="scroll-to-top-container">
                     <button class="scroll-to-top" id="scrollToTop" title="Volver al inicio de la tabla">
@@ -935,7 +927,6 @@
         let originalContent = {};
         let currentSort = { column: null, direction: null }; // 'asc' o 'desc'
         let isSearchRemoteActive = false;
-        let isLoadingMore = false;
         let loadedCount = <%= (typeof clientes !== 'undefined' && Array.isArray(clientes)) ? clientes.length : 0 %>;
         const pageSize = <%= (typeof pageSize !== 'undefined' && pageSize) ? Number(pageSize) : 50 %>;
         const totalFiltrados = <%= (typeof totalFiltrados !== 'undefined' && totalFiltrados !== null) ? Number(totalFiltrados) : 0 %>;
@@ -1025,21 +1016,8 @@
             }
         }
 
-        function updateLoadMoreUI() {
-            const btn = document.getElementById('loadMoreBtn');
-            const info = document.getElementById('loadMoreInfo');
-            if (!btn || !info) return;
-            if (isSearchRemoteActive) {
-                btn.disabled = true;
-                info.textContent = 'Búsqueda activa: desactiva para cargar más.';
-                return;
-            }
-            const total = Number.isFinite(totalFiltrados) ? totalFiltrados : 0;
-            const hasMore = total > 0 ? loadedCount < total : true;
-            btn.style.display = hasMore ? '' : 'none';
-            btn.disabled = isLoadingMore;
-            info.textContent = total > 0 ? `Mostrados ${loadedCount} de ${total}` : `Mostrados ${loadedCount}`;
-        }
+        // Load more eliminado: mantener un stub para no romper llamadas antiguas del script.
+        function updateLoadMoreUI() {}
 
         function buildQueryParams(extra = {}) {
             const p = new URLSearchParams();
@@ -1132,47 +1110,8 @@
             `;
         }
 
-        async function loadMore() {
-            if (isLoadingMore || isSearchRemoteActive) return;
-            if (totalFiltrados && loadedCount >= totalFiltrados) return;
-            isLoadingMore = true;
-            updateLoadMoreUI();
-            const info = document.getElementById('loadMoreInfo');
-            try {
-                if (info) info.textContent = 'Cargando...';
-                const ac = new AbortController();
-                const t = setTimeout(() => ac.abort(), 20000);
-                const qs = buildQueryParams({ offset: loadedCount, limit: pageSize });
-                const res = await fetch(`/api/clientes/paged?${qs}`, { headers: { 'Accept': 'application/json' }, signal: ac.signal });
-                clearTimeout(t);
-                if (!res.ok) {
-                    const txt = await res.text().catch(() => '');
-                    throw new Error(`HTTP ${res.status}${txt ? `: ${txt.slice(0, 200)}` : ''}`);
-                }
-                const data = await res.json();
-                if (data && data.success === false) {
-                    throw new Error(data.error || 'Respuesta no válida del servidor');
-                }
-                const list = data && data.clientes ? data.clientes : [];
-                const tbody = document.getElementById('clientesTableBody');
-                if (tbody && list.length > 0) {
-                    const html = list.map(renderClienteRow).join('');
-                    tbody.insertAdjacentHTML('beforeend', html);
-                    loadedCount += list.length;
-                    const clientesMostrados = document.getElementById('clientesMostrados');
-                    if (clientesMostrados) clientesMostrados.textContent = String(loadedCount);
-                } else if (tbody && list.length === 0) {
-                    // Nada más que cargar
-                    if (info) info.textContent = 'No hay más clientes para cargar.';
-                }
-            } catch (e) {
-                console.error('❌ Error cargando más clientes:', e);
-                if (info) info.textContent = `Error: ${e && e.name === 'AbortError' ? 'Timeout (20s)' : (e.message || 'desconocido')}`;
-            } finally {
-                isLoadingMore = false;
-                updateLoadMoreUI();
-            }
-        }
+        // Load more eliminado: mantenemos un stub por compatibilidad.
+        async function loadMore() {}
         
         function highlightText(text, term) {
             if (!term || !text) return String(text || '');
@@ -1421,8 +1360,7 @@
                 
                 if (!term || term.length < 2) {
                     // Para volver al listado paginado, recargar manteniendo filtros (sin perder coherencia)
-                    isSearchRemoteActive = false;
-                    updateLoadMoreUI();
+                isSearchRemoteActive = false;
                     if (busquedaActiva) busquedaActiva.textContent = 'Inactiva';
                     if (searchInfo) {
                         searchInfo.innerHTML = '<i class="fas fa-brain text-primary"></i>';
@@ -1432,7 +1370,6 @@
                 }
                 
                 isSearchRemoteActive = true;
-                updateLoadMoreUI();
                 if (busquedaActiva) busquedaActiva.textContent = 'Buscando...';
                 if (searchInfo) {
                     searchInfo.innerHTML = '<span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>';
@@ -1512,13 +1449,7 @@
             
             // Scroll to top dentro de la tabla - aparece después de 10 registros y se mueve con el scroll
             const tableContainer = document.querySelector('.table-container');
-            // Load more: botón + scroll
-            const loadMoreBtn = document.getElementById('loadMoreBtn');
-            if (loadMoreBtn) {
-                loadMoreBtn.addEventListener('click', loadMore);
-            }
             if (tableContainer) {
-                updateLoadMoreUI();
                 let lastAutoLoad = 0;
                 tableContainer.addEventListener('scroll', function() {
                     if (isSearchRemoteActive) return;
@@ -1527,7 +1458,7 @@
                     const nearBottom = (tableContainer.scrollTop + tableContainer.clientHeight) >= (tableContainer.scrollHeight - 200);
                     if (nearBottom) {
                         lastAutoLoad = now;
-                        loadMore();
+                        // loadMore eliminado
                     }
                 }, { passive: true });
             }
