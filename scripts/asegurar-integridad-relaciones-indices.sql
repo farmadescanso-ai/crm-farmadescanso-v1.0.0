@@ -155,6 +155,24 @@ SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_
 SET @sql := (SELECT IF(@t IS NOT NULL AND @has_col > 0 AND @has_idx = 0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col, '`)'), 'SELECT 1'));
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
+-- idx_pedidos_id_cliente_fecha (si existe FechaPedido)
+SET @idx := 'idx_pedidos_id_cliente_fecha';
+SET @col1 := 'Id_Cliente';
+SET @col2 := 'FechaPedido';
+SET @has1 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col1);
+SET @has2 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col2);
+SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=@db AND table_name=@t AND index_name=@idx);
+SET @sql := (SELECT IF(@t IS NOT NULL AND @has1>0 AND @has2>0 AND @has_idx=0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col1, '`,`', @col2, '`)'), 'SELECT 1'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+-- idx_pedidos_cliente_id (compat: Cliente_id)
+SET @idx := 'idx_pedidos_cliente_id';
+SET @col := 'Cliente_id';
+SET @has_col := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col);
+SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=@db AND table_name=@t AND index_name=@idx);
+SET @sql := (SELECT IF(@t IS NOT NULL AND @has_col>0 AND @has_idx=0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col, '`)'), 'SELECT 1'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
 -- idx_pedidos_num_pedido
 SET @idx := 'idx_pedidos_num_pedido';
 SET @col := 'NumPedido';
