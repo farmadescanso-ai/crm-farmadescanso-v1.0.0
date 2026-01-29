@@ -700,30 +700,11 @@
                                     <th class="sortable" data-column="tipoCliente">Tipo Cliente <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="dniCif">DNI/CIF <span class="sort-icon"></span></th>
                                     <th class="sortable col-nombre-razon-social" data-column="nombreRazonSocial">Nombre/Razón Social <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="nombreComercial">Nombre Comercial <span class="sort-icon"></span></th>
                                     <th class="sortable col-direccion" data-column="direccion">Dirección <span class="sort-icon"></span></th>
+                                    <th class="sortable" data-column="codigoPostal">Código Postal <span class="sort-icon"></span></th>
                                     <th class="sortable col-poblacion" data-column="poblacion">Población <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="provincia">Provincia <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="codigoPostal">Código Postal <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="movil">Móvil <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="telefono">Teléfono <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="email">Email <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="codPais">Código País <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="pais">País <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="idioma">Idioma <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="moneda">Moneda <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="contacto">Contacto <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="tarifa">Tarifa <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="formaPago">Forma de Pago <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="dto">Dto (%) <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="cuentaContable">Cuenta Contable <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="re">RE (%) <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="banco">Banco <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="swift">Swift <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="iban">IBAN <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="cooperativas">Cooperativas <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="numeroFarmacia">Nº Farmacia <span class="sort-icon"></span></th>
-                                    <th class="sortable" data-column="comercial">Comercial <span class="sort-icon"></span></th>
+                                    <th class="sortable text-end" data-column="ventasYear">Ventas <%= typeof ventasYear !== 'undefined' ? ventasYear : '' %> <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="estado">Estado <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
@@ -738,30 +719,8 @@
                                         <% 
                                         // Usar datos optimizados del JOIN (más rápido que buscar en arrays)
                                         // Estos campos ya deberían estar normalizados por normalizeClienteUTF8
-                                        const comercialNombre = cliente.ComercialNombre || '-';
                                         const provinciaNombre = cliente.ProvinciaNombre || '-';
                                         const tipoClienteNombre = cliente.TipoClienteNombre || cliente.TipoCliente || '-';
-                                    
-                                    // Obtener nombre del idioma
-                                    let idiomaNombre = cliente.Idioma || '-';
-                                    if (cliente.Id_Idioma && typeof idiomas !== 'undefined' && idiomas && idiomas.length > 0) {
-                                        const idioma = idiomas.find(i => i.id === cliente.Id_Idioma);
-                                        idiomaNombre = idioma ? idioma.Idioma : cliente.Idioma || '-';
-                                    }
-                                    
-                                    // Obtener nombre de la moneda
-                                    let monedaNombre = cliente.Moneda || '-';
-                                    if (cliente.Id_Moneda && typeof monedas !== 'undefined' && monedas && monedas.length > 0) {
-                                        const moneda = monedas.find(m => m.id === cliente.Id_Moneda);
-                                        monedaNombre = moneda ? moneda.Moneda : cliente.Moneda || '-';
-                                    }
-                                    
-                                    // Obtener nombre de la forma de pago
-                                    let formaPagoNombre = '-';
-                                    if (cliente.Id_FormaPago && typeof formasPago !== 'undefined' && formasPago && formasPago.length > 0) {
-                                        const formaPago = formasPago.find(f => f.id === cliente.Id_FormaPago);
-                                        formaPagoNombre = formaPago ? formaPago.Nombre : cliente.Id_FormaPago;
-                                    }
                                     
                                     // Estado activo/inactivo (usar OK_KO)
                                     // OK_KO puede ser 1/0 (booleano) o 'OK'/'KO' (legacy)
@@ -848,46 +807,27 @@
                                             });
                                         }
                                     }
+
+                                    let poblacion = cliente.Poblacion || '-';
+                                    if (typeof poblacion === 'string') {
+                                        poblacion = poblacion.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                            return accented + upper.toLowerCase();
+                                        });
+                                        let prev = '';
+                                        while (poblacion !== prev) {
+                                            prev = poblacion;
+                                            poblacion = poblacion.replace(/([áéíóúñ])([A-Z])/g, function(match, accented, upper) {
+                                                return accented + upper.toLowerCase();
+                                            });
+                                        }
+                                    }
                                     %>
                                     <td class="col-nombre-razon-social"><%= nombreRazonSocial %></td>
-                                    <td><%= nombreCial %></td>
                                     <td class="col-direccion"><%= direccion %></td>
-                                    <td class="col-poblacion"><%= cliente.Poblacion || '-' %></td>
-                                    <td><%= provinciaNombre %></td>
                                     <td><%= cliente.CodigoPostal || '-' %></td>
-                                    <td><%= cliente.Movil || cliente['Móvil'] || '-' %></td>
-                                    <td><%= cliente.Telefono || cliente['Teléfono'] || '-' %></td>
-                                    <td><%= cliente.Email || '-' %></td>
-                                    <td><%= cliente.CodPais || '-' %></td>
-                                    <td><%= typeof normalizeUTF8 !== 'undefined' ? normalizeUTF8(cliente.Pais || '') : (cliente.Pais || '-') %></td>
-                                    <td><%= idiomaNombre %></td>
-                                    <td><%= monedaNombre %></td>
-                                    <td><%= cliente.NomContacto || '-' %></td>
-                                    <td>
-                                        <%
-                                          const tarifaVal = (cliente.Tarifa ?? cliente.tarifa);
-                                          const tarifaNum = (tarifaVal === null || tarifaVal === undefined || String(tarifaVal).trim() === '') ? null : Number(tarifaVal);
-                                        %>
-                                        <%= (tarifaNum === null || tarifaNum === 0) ? 'PVL' : tarifaVal %>
-                                    </td>
-                                    <td><%= formaPagoNombre %></td>
-                                    <td><%= cliente.Dto !== null && cliente.Dto !== undefined ? cliente.Dto : '-' %></td>
-                                    <td><%= cliente.CuentaContable || '-' %></td>
-                                    <td><%= cliente.RE !== null && cliente.RE !== undefined ? cliente.RE : '-' %></td>
-                                    <td><%= cliente.Banco || '-' %></td>
-                                    <td><%= cliente.Swift || '-' %></td>
-                                    <td><%= cliente.IBAN || '-' %></td>
-                                    <td>
-                                        <% 
-                                        const cooperativasCliente = cliente.cooperativas || [];
-                                        const cooperativasTexto = cooperativasCliente.length > 0 
-                                            ? cooperativasCliente.map(c => c.Nombre).join(', ') 
-                                            : 'Sin Asignar';
-                                        %>
-                                        <%= cooperativasTexto %>
-                                    </td>
-                                    <td><%= cliente.NumeroFarmacia || '-' %></td>
-                                    <td><%= comercialNombre %></td>
+                                    <td class="col-poblacion"><%= poblacion %></td>
+                                    <td><%= provinciaNombre %></td>
+                                    <td class="text-end"><%= new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(cliente.VentasAcumuladasYear || 0)) %></td>
                                     <td>
                                         <span class="badge <%= estadoActivo ? 'bg-success' : 'bg-secondary' %>" id="badge-estado-<%= cliente.Id || cliente.id %>">
                                             <%= estadoActivo ? 'Activo' : 'Inactivo' %>
@@ -901,7 +841,7 @@
                                 <% } }); %>
                                 <% } else { %>
                                 <tr>
-                                    <td colspan="30" class="text-center">No hay clientes para mostrar</td>
+                                    <td colspan="10" class="text-center">No hay clientes para mostrar</td>
                                 </tr>
                                 <% } %>
                             </tbody>
@@ -1045,10 +985,8 @@
         function renderClienteRow(cliente) {
             const id = cliente.Id || cliente.id;
             const nombre = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
-            const nombreCial = cliente.Nombre_Cial || '-';
             const provinciaNombre = cliente.ProvinciaNombre || '-';
             const tipoClienteNombre = cliente.TipoClienteNombre || cliente.TipoCliente || '-';
-            const comercialNombre = cliente.ComercialNombre || '-';
             const okKo = cliente.OK_KO;
             let estadoActivo = true;
             if (okKo === null || okKo === undefined) estadoActivo = true;
@@ -1057,6 +995,14 @@
                 estadoActivo = (u === 'OK' || u === '1' || u === 'TRUE');
             } else if (typeof okKo === 'number') estadoActivo = (okKo === 1);
             else if (typeof okKo === 'boolean') estadoActivo = okKo;
+
+            const ventasYear = Number(cliente.VentasAcumuladasYear || 0) || 0;
+            const ventasYearFormatted = new Intl.NumberFormat('es-ES', {
+                style: 'currency',
+                currency: 'EUR',
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(ventasYear);
             
             const encoded = encodeURIComponent(JSON.stringify(cliente));
             
@@ -1081,30 +1027,11 @@
                 <td>${escapeHtml(tipoClienteNombre)}</td>
                 <td>${escapeHtml(cliente.DNI_CIF || 'Pendiente')}</td>
                 <td class="col-nombre-razon-social">${escapeHtml(nombre)}</td>
-                <td>${escapeHtml(nombreCial)}</td>
                 <td class="col-direccion">${escapeHtml(cliente.Direccion || '-')}</td>
+                <td>${escapeHtml(cliente.CodigoPostal || '-')}</td>
                 <td class="col-poblacion">${escapeHtml(cliente.Poblacion || '-')}</td>
                 <td>${escapeHtml(provinciaNombre)}</td>
-                <td>${escapeHtml(cliente.CodigoPostal || '-')}</td>
-                <td>${escapeHtml(cliente.Movil || cliente['Móvil'] || '-')}</td>
-                <td>${escapeHtml(cliente.Telefono || cliente['Teléfono'] || '-')}</td>
-                <td>${escapeHtml(cliente.Email || '-')}</td>
-                <td>${escapeHtml(cliente.CodPais || '-')}</td>
-                <td>${escapeHtml(cliente.Pais || '-')}</td>
-                <td>${escapeHtml(cliente.Idioma || '-')}</td>
-                <td>${escapeHtml(cliente.Moneda || '-')}</td>
-                <td>${escapeHtml(cliente.NomContacto || '-')}</td>
-                <td>${escapeHtml((cliente.Tarifa ?? 0) === 0 ? 'PVL' : (cliente.Tarifa ?? '-'))}</td>
-                <td>${escapeHtml(cliente.FormaPagoNombre || '-')}</td>
-                <td>${escapeHtml(cliente.Dto ?? '-')}</td>
-                <td>${escapeHtml(cliente.CuentaContable || '-')}</td>
-                <td>${escapeHtml(cliente.RE ?? '-')}</td>
-                <td>${escapeHtml(cliente.Banco || '-')}</td>
-                <td>${escapeHtml(cliente.Swift || '-')}</td>
-                <td>${escapeHtml(cliente.IBAN || '-')}</td>
-                <td>${escapeHtml((cliente.cooperativas && cliente.cooperativas.length) ? cliente.cooperativas.map(c => c.Nombre).join(', ') : 'Sin Asignar')}</td>
-                <td>${escapeHtml(cliente.NumeroFarmacia || '-')}</td>
-                <td>${escapeHtml(comercialNombre)}</td>
+                <td class="text-end">${escapeHtml(ventasYearFormatted)}</td>
                 <td><span class="badge ${estadoActivo ? 'bg-success' : 'bg-secondary'}" id="badge-estado-${id}">${estadoActivo ? 'Activo' : 'Inactivo'}</span></td>
               </tr>
             `;
@@ -1860,34 +1787,16 @@
         function getCellValue(row, column) {
             const cells = row.querySelectorAll('td');
             const columnMap = {
+                // 0: acciones
                 'tipoCliente': 1,
                 'dniCif': 2,
                 'nombreRazonSocial': 3,
-                'nombreComercial': 4,
-                'direccion': 5,
+                'direccion': 4,
+                'codigoPostal': 5,
                 'poblacion': 6,
                 'provincia': 7,
-                'codigoPostal': 8,
-                'movil': 9,
-                'telefono': 10,
-                'email': 11,
-                'codPais': 12,
-                'pais': 13,
-                'idioma': 14,
-                'moneda': 15,
-                'contacto': 16,
-                'tarifa': 17,
-                'formaPago': 18,
-                'dto': 19,
-                'cuentaContable': 20,
-                're': 21,
-                'banco': 22,
-                'swift': 23,
-                'iban': 24,
-                'cooperativas': 25,
-                'numeroFarmacia': 26,
-                'comercial': 27,
-                'estado': 28
+                'ventasYear': 8,
+                'estado': 9
             };
             
             const cellIndex = columnMap[column];

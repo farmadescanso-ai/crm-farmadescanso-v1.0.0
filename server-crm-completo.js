@@ -6778,81 +6778,76 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     if (!totalFiltrados) {
       totalFiltrados = Array.isArray(clientes) ? clientes.length : 0;
     }
-    
-    // Cargar cooperativas para cada cliente (si no están ya cargadas)
-    if (clientes && clientes.length > 0) {
+
+    // Ventas acumuladas por cliente en el año (por defecto: año actual; opcional ?year=YYYY)
+    const currentYear = new Date().getFullYear();
+    const yearVentas = req.query.year ? parseInt(String(req.query.year), 10) : currentYear;
+    const yearVentasSafe = Number.isFinite(yearVentas) && yearVentas >= 2000 && yearVentas <= 2100 ? yearVentas : currentYear;
+
+    const clientesIds = (clientes || []).map(c => Number(c.id || c.Id)).filter(n => Number.isFinite(n) && n > 0);
+    const ventasPorCliente = new Map();
+    if (clientesIds.length > 0) {
       try {
-        const cooperativasPorCliente = {};
-        const clienteIds = clientes.map(c => c.id || c.Id).filter(id => id);
-        
-        if (clienteIds.length > 0) {
-          // Intentar con diferentes nombres de tabla
-          let cooperativasRaw = [];
-          try {
-            cooperativasRaw = await crm.query(
-              `SELECT cc.Id_Cliente, co.id, co.Nombre 
-               FROM \`Clientes_Cooperativas\` cc
-               LEFT JOIN cooperativas co ON cc.Id_Cooperativa = co.id
-               WHERE cc.Id_Cliente IN (${clienteIds.map(() => '?').join(',')})`,
-              clienteIds
-            );
-          } catch (e1) {
-            try {
-              cooperativasRaw = await crm.query(
-                `SELECT cc.Id_Cliente, co.id, co.Nombre 
-                 FROM clientes_cooperativas cc
-                 LEFT JOIN cooperativas co ON cc.Id_Cooperativa = co.id
-                 WHERE cc.Id_Cliente IN (${clienteIds.map(() => '?').join(',')})`,
-                clienteIds
-              );
-            } catch (e2) {
-              console.warn('⚠️ [CLIENTES] No se pudieron cargar cooperativas:', e2.message);
-            }
-          }
-          
-          cooperativasRaw.forEach(cc => {
-            const clienteId = cc.Id_Cliente || cc.id_Cliente;
-            if (!cooperativasPorCliente[clienteId]) {
-              cooperativasPorCliente[clienteId] = [];
-            }
-            if (cc.Nombre) {
-              cooperativasPorCliente[clienteId].push({ Nombre: cc.Nombre });
-            }
-          });
-          
-          // Asignar cooperativas a cada cliente
-          clientes.forEach(cliente => {
-            const clienteId = cliente.id || cliente.Id;
-            cliente.cooperativas = cooperativasPorCliente[clienteId] || [];
+        const pedidosColsRows = await crm.query('SHOW COLUMNS FROM pedidos').catch(() => []);
+        const pedidosCols = new Set((pedidosColsRows || []).map(r => String(r.Field || '').trim()).filter(Boolean));
+
+        const pick = (cands) => (cands || []).find(c => pedidosCols.has(c)) || null;
+        const colClientePedido = pick(['Id_Cliente', 'Cliente_id', 'id_cliente', 'cliente_id', 'ClienteId', 'clienteId']);
+        const colFechaPedido = pick(['FechaPedido', 'Fecha', 'fecha', 'CreatedAt', 'created_at', 'Fecha_Pedido', 'fecha_pedido']);
+        const colEstadoPedido = pick(['EstadoPedido', 'estadoPedido', 'estado_pedido']);
+        const colTotalPedido = pick(['TotalPedido', 'totalPedido', 'total_pedido', 'Total_pedido']);
+        const colBase = pick(['BaseImponible', 'baseImponible', 'base_imponible']);
+        const colIva = pick(['TotalIva', 'totalIva', 'total_iva']);
+
+        if (colClientePedido && colFechaPedido) {
+          const placeholders = clientesIds.map(() => '?').join(',');
+          const totalExpr = colTotalPedido
+            ? (colBase && colIva
+              ? `COALESCE(p.\`${colTotalPedido}\`, (COALESCE(p.\`${colBase}\`,0) + COALESCE(p.\`${colIva}\`,0)), 0)`
+              : `COALESCE(p.\`${colTotalPedido}\`, 0)`)
+            : (colBase && colIva ? `(COALESCE(p.\`${colBase}\`,0) + COALESCE(p.\`${colIva}\`,0))` : '0');
+
+          const whereEstado = colEstadoPedido
+            ? ` AND LOWER(COALESCE(p.\`${colEstadoPedido}\`,'')) NOT IN ('anulado','pendiente','cancelado')`
+            : '';
+
+          const sqlVentas = `
+            SELECT
+              p.\`${colClientePedido}\` AS clienteId,
+              ROUND(SUM(${totalExpr}), 2) AS total
+            FROM pedidos p
+            WHERE p.\`${colClientePedido}\` IN (${placeholders})
+              AND YEAR(p.\`${colFechaPedido}\`) = ?
+              ${whereEstado}
+            GROUP BY p.\`${colClientePedido}\`
+          `;
+          const rowsVentas = await crm.query(sqlVentas, [...clientesIds, yearVentasSafe]).catch(() => []);
+          (rowsVentas || []).forEach(r => {
+            const id = Number(r.clienteId);
+            const total = Number(r.total || 0);
+            if (Number.isFinite(id) && id > 0) ventasPorCliente.set(id, Number.isFinite(total) ? total : 0);
           });
         }
-      } catch (coopError) {
-        console.warn('⚠️ [CLIENTES] Error cargando cooperativas:', coopError.message);
-        // Asignar array vacío si falla
-        clientes.forEach(cliente => {
-          if (!cliente.cooperativas) {
-            cliente.cooperativas = [];
-          }
-        });
+      } catch (e) {
+        console.warn('⚠️ [CLIENTES] No se pudieron calcular ventas por cliente:', e?.message || e);
       }
     }
-    
-    // Obtener datos para los filtros (solo una vez, en paralelo)
-    let [provincias, tiposClientes, formasPago, idiomas, monedas, comerciales] = await Promise.all([
+    (clientes || []).forEach(c => {
+      const id = Number(c.id || c.Id);
+      c.VentasAcumuladasYear = ventasPorCliente.get(id) || 0;
+      c.VentasAcumuladasYearLabel = yearVentasSafe;
+    });
+
+    // Obtener datos para los filtros (solo lo necesario)
+    let [provincias, tiposClientes, comerciales] = await Promise.all([
       crm.getProvincias().catch(() => []),
       crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []),
-      crm.getFormasPago().catch(() => []),
-      crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []),
-      crm.query('SELECT id, Nombre AS Moneda FROM monedas').catch(() => []),
       crm.getComerciales().catch(() => [])
     ]);
-    
+
     // Normalizar codificación UTF-8 de los datos de filtros
     provincias = provincias.map(p => ({ ...p, Nombre: normalizeUTF8(p.Nombre || '') }));
     tiposClientes = tiposClientes.map(t => ({ ...t, Tipo: normalizeUTF8(t.Tipo || '') }));
-    formasPago = formasPago.map(f => ({ ...f, Nombre: normalizeUTF8(f.Nombre || '') }));
-    idiomas = idiomas.map(i => ({ ...i, Idioma: normalizeUTF8(i.Idioma || '') }));
-    monedas = monedas.map(m => ({ ...m, Moneda: normalizeUTF8(m.Moneda || '') }));
     comerciales = comerciales.map(c => ({ ...c, Nombre: normalizeUTF8(c.Nombre || '') }));
     
     // Verificar si el usuario es administrador usando el helper
@@ -6880,12 +6875,10 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       pageSize,
       provincias: provincias || [],
       tiposClientes: tiposClientes || [],
-      formasPago: formasPago || [],
-      idiomas: idiomas || [],
-      monedas: monedas || [],
       comerciales: comerciales || [],
       filters: filters || {}, // Pasar filtros actuales a la vista (ya incluye el comercial si no es admin)
       searchQuery: filters.q || '',
+      ventasYear: yearVentasSafe,
       error: null
     });
   } catch (error) {
