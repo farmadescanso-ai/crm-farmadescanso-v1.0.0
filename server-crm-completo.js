@@ -17209,8 +17209,9 @@ app.get('/api/clientes/count', async (req, res) => {
       // Si no está autenticado, devolver 0 en lugar de error para evitar problemas en el frontend
       return res.json({ count: 0, totalClientes: 0 });
     }
-    
-    const count = await crm.getClientesCount();
+
+    // Por rol: admin => total; comercial => solo asignados (Id_Cial)
+    const count = await obtenerTotalClientesPorRol(crm, req);
     res.json({ count: count, totalClientes: count });
   } catch (error) {
     console.error('Error obteniendo contador de clientes:', error);
