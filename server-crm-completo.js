@@ -6717,6 +6717,30 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
             // Para con/sin ventas, necesitaríamos cargar pedidos, así que por ahora lo omitimos en el fallback
             console.log('⚠️ [CLIENTES] Filtro con/sin ventas no disponible en fallback manual');
           }
+
+          // Búsqueda inteligente (q) en fallback manual
+          if (filtersForQuery.q && typeof filtersForQuery.q === 'string' && filtersForQuery.q.trim().length >= 2) {
+            const qLower = filtersForQuery.q.trim().toLowerCase();
+            clientesFiltrados = clientesFiltrados.filter(c => {
+              const hay = (v) => String(v ?? '').toLowerCase().includes(qLower);
+              return (
+                hay(c.Nombre_Razon_Social) ||
+                hay(c.Nombre_Cial) ||
+                hay(c.DNI_CIF) ||
+                hay(c.Email) ||
+                hay(c.Telefono) ||
+                hay(c.Movil) ||
+                hay(c.NumeroFarmacia) ||
+                hay(c.Direccion) ||
+                hay(c.Poblacion) ||
+                hay(c.CodigoPostal) ||
+                hay(c.NomContacto) ||
+                hay(c.Observaciones) ||
+                hay(c.IBAN) ||
+                hay(c.CuentaContable)
+              );
+            });
+          }
           
           // Estado (solo en fallback manual)
           if (filtersForQuery.estado === 'activos') {

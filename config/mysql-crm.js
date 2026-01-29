@@ -882,8 +882,12 @@ class MySQLCRM {
           const cols = new Set((colsRows || []).map(r => String(r.Field || '').trim()).filter(Boolean));
           this.__pedidosClienteCol =
             ['Id_Cliente', 'Cliente_id', 'id_cliente', 'cliente_id', 'ClienteId', 'clienteId'].find(c => cols.has(c)) || 'Id_Cliente';
+          // Columna de fecha del pedido para ordenar por "último pedido" (compatibilidad de esquemas)
+          this.__pedidosFechaCol =
+            ['FechaPedido', 'Fecha', 'fecha', 'CreatedAt', 'created_at', 'Fecha_Pedido', 'fecha_pedido'].find(c => cols.has(c)) || null;
         } catch (_) {
           this.__pedidosClienteCol = 'Id_Cliente';
+          this.__pedidosFechaCol = null;
         }
       }
 
@@ -961,8 +965,8 @@ class MySQLCRM {
       // - Si hay búsqueda u otros filtros, ordenar estable por Id.
       const hasSearch = !!(filters.q && String(filters.q).trim().length >= 2);
       const conVentas = (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1');
-      if (conVentas && !hasSearch) {
-        sql += ` ORDER BY (SELECT MAX(p3.FechaPedido) FROM pedidos p3 WHERE p3.\`${this.__pedidosClienteCol}\` = c.Id) DESC, c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
+      if (conVentas && !hasSearch && this.__pedidosFechaCol) {
+        sql += ` ORDER BY (SELECT MAX(p3.\`${this.__pedidosFechaCol}\`) FROM pedidos p3 WHERE p3.\`${this.__pedidosClienteCol}\` = c.Id) DESC, c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
       } else {
         sql += ` ORDER BY c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
       }
