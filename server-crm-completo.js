@@ -1294,6 +1294,43 @@ const obtenerClientesPorRol = async (crm, req) => {
   }
 };
 
+// Contador de clientes por rol (evita falsos positivos por columnas distintas)
+const obtenerTotalClientesPorRol = async (crm, req) => {
+  const cid = Number(req.comercialId || req.session?.comercialId);
+  const esAdminLocal = isAdmin(req);
+
+  // Admin: total real en BD
+  if (esAdminLocal) {
+    return await crm.getClientesCount().catch(() => 0);
+  }
+
+  // Comercial: si no hay id, no podemos filtrar
+  if (!Number.isFinite(cid) || cid <= 0) return 0;
+
+  // Detectar columna de asignación en `clientes`
+  try {
+    const colsRows = await crm.query('SHOW COLUMNS FROM clientes').catch(() => []);
+    const cols = new Set((colsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+
+    const pick = (cands) => (cands || []).find(c => cols.has(c)) || null;
+    const colAsignacion = pick(['Id_Cial', 'ComercialId', 'comercialId', 'Id_Comercial', 'id_comercial', 'comercial_id', 'Comercial_id']);
+
+    if (colAsignacion) {
+      const rows = await crm.query(`SELECT COUNT(*) AS count FROM clientes WHERE \`${colAsignacion}\` = ?`, [cid]).catch(() => []);
+      const count = rows?.[0]?.count ?? rows?.[0]?.COUNT ?? 0;
+      return Number(count) || 0;
+    }
+  } catch (_) {}
+
+  // Fallback seguro: usar el listado por rol y contar
+  try {
+    const list = await obtenerClientesPorRol(crm, req);
+    return Array.isArray(list) ? list.length : 0;
+  } catch (_) {
+    return 0;
+  }
+};
+
 const obtenerVisitasPorRol = async (crm, req) => {
   const comercialId = req.comercialId || req.session?.comercialId;
   const usuarioRol = getUsuarioRol(req);
@@ -2861,11 +2898,8 @@ app.get('/dashboard', requireAuth, async (req, res) => {
       });
     }
     
-    // Clientes / contador: por comercial (sus clientes asignados) o total si es admin
-    const clientes = await obtenerClientesPorRol(crm, req);
-    const totalClientesCalculado = isAdmin(req)
-      ? await crm.getClientesCount().catch(() => (Array.isArray(clientes) ? clientes.length : 0))
-      : (Array.isArray(clientes) ? clientes.length : 0);
+    // Clientes: contador por rol (admin total, comercial solo asignados)
+    const totalClientesCalculado = await obtenerTotalClientesPorRol(crm, req);
  
     // Obtener nombres de clientes y comerciales para todos los pedidos
     // Según los logs, el campo es Cliente_id (número) o Id_Cliente
@@ -3101,12 +3135,7 @@ app.get('/dashboard', requireAuth, async (req, res) => {
     // Calcular totalClientes en el fallback respetando rol
     let totalClientesFallback = 0;
     try {
-      const clientesFallback = await obtenerClientesPorRol(crm, req);
-      if (isAdmin(req)) {
-        totalClientesFallback = await crm.getClientesCount().catch(() => (Array.isArray(clientesFallback) ? clientesFallback.length : 0));
-      } else {
-        totalClientesFallback = Array.isArray(clientesFallback) ? clientesFallback.length : 0;
-      }
+      totalClientesFallback = await obtenerTotalClientesPorRol(crm, req);
     } catch (clientesError) {
       console.error('Error obteniendo clientes en fallback:', clientesError);
       totalClientesFallback = 0;
