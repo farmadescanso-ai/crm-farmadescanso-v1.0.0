@@ -160,24 +160,23 @@
         }
         
         .table td {
+            /* Por defecto: ajustar al contenido */
             white-space: nowrap;
             padding: 0.5rem;
             font-size: 0.875rem;
             vertical-align: top;
         }
         
-        /* Estilo para columna Nombre/Razón Social - ancho ajustado para dos líneas */
+        /* Estilo para columna Nombre/Razón Social - permitir 2+ líneas */
         .col-nombre-razon-social {
-            max-width: 400px !important;
-            min-width: 300px;
-            width: 400px !important;
+            max-width: 520px !important;
+            width: auto !important;
             white-space: normal !important;
             overflow-wrap: break-word; /* Cortar palabras largas si es necesario, pero preferir espacios */
             word-break: normal; /* Respetar espacios cuando sea posible */
             line-height: 1.5;
             padding: 0.75rem 0.5rem;
             vertical-align: top;
-            overflow: hidden; /* Ocultar el desbordamiento */
             box-sizing: border-box;
         }
         
@@ -187,16 +186,14 @@
         
         /* Estilo para columna Dirección - ancho ajustado para múltiples líneas */
         .col-direccion {
-            max-width: 350px !important;
-            min-width: 250px;
-            width: 350px !important;
+            max-width: 520px !important;
+            width: auto !important;
             white-space: normal !important;
             overflow-wrap: break-word;
             word-break: normal;
             line-height: 1.5;
             padding: 0.75rem 0.5rem;
             vertical-align: top;
-            overflow: hidden;
             box-sizing: border-box;
         }
         
@@ -206,16 +203,14 @@
         
         /* Estilo para columna Población - ancho ajustado para dos líneas */
         .col-poblacion {
-            max-width: 200px !important;
-            min-width: 150px;
-            width: 200px !important;
+            max-width: 260px !important;
+            width: auto !important;
             white-space: normal !important;
             overflow-wrap: break-word;
             word-break: normal;
             line-height: 1.5;
             padding: 0.75rem 0.5rem;
             vertical-align: top;
-            overflow: hidden;
             box-sizing: border-box;
         }
         
@@ -233,50 +228,11 @@
             vertical-align: top !important;
         }
         
-        /* Forzar que el texto se ajuste correctamente sin desbordarse */
-        .table tbody tr td.col-nombre-razon-social {
-            display: table-cell;
-            max-width: 400px !important;
-            width: 400px !important;
-            overflow: hidden !important;
-        }
-        
-        .table tbody tr td.col-direccion {
-            display: table-cell;
-            max-width: 350px !important;
-            width: 350px !important;
-            overflow: hidden !important;
-        }
-        
-        .table tbody tr td.col-poblacion {
-            display: table-cell;
-            max-width: 200px !important;
-            width: 200px !important;
-            overflow: hidden !important;
-        }
-        
-        /* Asegurar que la tabla respete el ancho de las columnas */
+        /* Tabla: ajustar al contenido, sin anchos forzados */
         .table {
-            table-layout: auto; /* Mantener auto para flexibilidad */
-        }
-        
-        /* Forzar que las columnas no se expandan más allá de su ancho definido */
-        .table th.col-nombre-razon-social,
-        .table td.col-nombre-razon-social {
-            max-width: 400px !important;
-            width: 400px !important;
-        }
-        
-        .table th.col-direccion,
-        .table td.col-direccion {
-            max-width: 350px !important;
-            width: 350px !important;
-        }
-        
-        .table th.col-poblacion,
-        .table td.col-poblacion {
-            max-width: 200px !important;
-            width: 200px !important;
+            table-layout: auto;
+            width: 100%;
+            min-width: 0 !important;
         }
         
         .search-box {
@@ -344,7 +300,7 @@
         /* Responsive - Tablet */
         @media (max-width: 991.98px) {
             .table {
-                min-width: 2000px; /* Mantener ancho mínimo para scroll horizontal */
+                min-width: 0 !important;
             }
             
             .table th,
@@ -370,9 +326,7 @@
                 overflow-y: auto;
             }
             
-            .table {
-                min-width: 2000px; /* Mantener ancho mínimo para scroll horizontal */
-            }
+            .table { min-width: 0 !important; }
             
             .table th,
             .table td {
@@ -409,9 +363,7 @@
                 overflow-y: auto;
             }
             
-            .table {
-                min-width: 2000px; /* Mantener ancho mínimo para scroll horizontal */
-            }
+            .table { min-width: 0 !important; }
             
             .table th,
             .table td {
@@ -698,13 +650,13 @@
                                 <tr>
                                     <th class="text-center">Acciones</th>
                                     <th class="sortable" data-column="tipoCliente">Tipo Cliente <span class="sort-icon"></span></th>
+                                    <th class="sortable text-end" data-column="ventasYear">Ventas <%= typeof ventasYear !== 'undefined' ? ventasYear : '' %> <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="dniCif">DNI/CIF <span class="sort-icon"></span></th>
                                     <th class="sortable col-nombre-razon-social" data-column="nombreRazonSocial">Nombre/Razón Social <span class="sort-icon"></span></th>
                                     <th class="sortable col-direccion" data-column="direccion">Dirección <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="codigoPostal">Código Postal <span class="sort-icon"></span></th>
                                     <th class="sortable col-poblacion" data-column="poblacion">Población <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="provincia">Provincia <span class="sort-icon"></span></th>
-                                    <th class="sortable text-end" data-column="ventasYear">Ventas <%= typeof ventasYear !== 'undefined' ? ventasYear : '' %> <span class="sort-icon"></span></th>
                                     <th class="sortable" data-column="estado">Estado <span class="sort-icon"></span></th>
                                 </tr>
                             </thead>
@@ -761,6 +713,7 @@
                                         <% } %>
                                     </td>
                                     <td><%= tipoClienteNombre %></td>
+                                    <td class="text-end"><%= new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(cliente.VentasAcumuladasYear || 0)) %></td>
                                     <td><%= cliente.DNI_CIF ? cliente.DNI_CIF : 'Pendiente' %></td>
                                     <% 
                                     // Aplicar normalización UTF-8 directamente en la vista
@@ -827,7 +780,6 @@
                                     <td><%= cliente.CodigoPostal || '-' %></td>
                                     <td class="col-poblacion"><%= poblacion %></td>
                                     <td><%= provinciaNombre %></td>
-                                    <td class="text-end"><%= new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(cliente.VentasAcumuladasYear || 0)) %></td>
                                     <td>
                                         <span class="badge <%= estadoActivo ? 'bg-success' : 'bg-secondary' %>" id="badge-estado-<%= cliente.Id || cliente.id %>">
                                             <%= estadoActivo ? 'Activo' : 'Inactivo' %>
@@ -1025,13 +977,13 @@
                   <% } %>
                 </td>
                 <td>${escapeHtml(tipoClienteNombre)}</td>
+                <td class="text-end">${escapeHtml(ventasYearFormatted)}</td>
                 <td>${escapeHtml(cliente.DNI_CIF || 'Pendiente')}</td>
                 <td class="col-nombre-razon-social">${escapeHtml(nombre)}</td>
                 <td class="col-direccion">${escapeHtml(cliente.Direccion || '-')}</td>
                 <td>${escapeHtml(cliente.CodigoPostal || '-')}</td>
                 <td class="col-poblacion">${escapeHtml(cliente.Poblacion || '-')}</td>
                 <td>${escapeHtml(provinciaNombre)}</td>
-                <td class="text-end">${escapeHtml(ventasYearFormatted)}</td>
                 <td><span class="badge ${estadoActivo ? 'bg-success' : 'bg-secondary'}" id="badge-estado-${id}">${estadoActivo ? 'Activo' : 'Inactivo'}</span></td>
               </tr>
             `;
@@ -1789,13 +1741,13 @@
             const columnMap = {
                 // 0: acciones
                 'tipoCliente': 1,
-                'dniCif': 2,
-                'nombreRazonSocial': 3,
-                'direccion': 4,
-                'codigoPostal': 5,
-                'poblacion': 6,
-                'provincia': 7,
-                'ventasYear': 8,
+                'ventasYear': 2,
+                'dniCif': 3,
+                'nombreRazonSocial': 4,
+                'direccion': 5,
+                'codigoPostal': 6,
+                'poblacion': 7,
+                'provincia': 8,
                 'estado': 9
             };
             
