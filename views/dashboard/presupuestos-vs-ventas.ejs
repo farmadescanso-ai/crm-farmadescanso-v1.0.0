@@ -47,11 +47,13 @@
                                 <i class="fas fa-users me-2"></i>Clientes
                             </a>
                         </li>
+                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
                         <li class="nav-item mb-2">
                             <a class="nav-link" href="/dashboard/comerciales">
                                 <i class="fas fa-user-tie me-2"></i>Comerciales
                             </a>
                         </li>
+                        <% } %>
                         <li class="nav-item mb-2">
                             <a class="nav-link" href="/dashboard/pedidos">
                                 <i class="fas fa-shopping-cart me-2"></i>Pedidos
