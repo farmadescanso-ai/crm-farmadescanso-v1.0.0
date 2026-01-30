@@ -6665,6 +6665,17 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
         filtersForQuery.comercial = comId;
         filters.comercial = comId;
         console.log(`🔐 [CLIENTES] Filtro de comercial forzado para usuario no-admin: ${comId}`);
+
+        // Si el usuario intenta forzar ?comercial=OTRO, normalizar la URL para evitar confusión
+        if (req.query && req.query.comercial !== undefined && String(req.query.comercial).trim() !== '' && String(req.query.comercial) !== String(comId)) {
+          const params = new URLSearchParams();
+          Object.entries(req.query).forEach(([k, v]) => {
+            if (v !== undefined && v !== null && String(v).trim() !== '') params.set(k, String(v));
+          });
+          params.set('comercial', String(comId));
+          params.set('page', '1');
+          return res.redirect(`/dashboard/clientes?${params.toString()}`);
+        }
       } else {
         console.warn(`⚠️ [CLIENTES] comercialIdAutenticado no es válido: ${comercialIdAutenticado}`);
       }
