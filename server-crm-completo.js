@@ -8044,6 +8044,24 @@ app.post('/dashboard/clientes/:id', requireAuth, async (req, res) => {
 
 // API: Mover cliente a papelera (solo administradores)
 // API para búsqueda inteligente de clientes
+// Cache de metadatos para acelerar (evita information_schema + SHOW COLUMNS en cada pulsación)
+const __clientesBuscarMetaCache = {
+  loadedAt: 0,
+  ttlMs: 10 * 60 * 1000, // 10 min
+  tClientes: 'clientes',
+  tPedidos: 'pedidos',
+  clientesCols: null,
+  pedidosCols: null,
+  pkPrimary: 'Id',
+  pkFallback: 'id',
+  colComercialClientes: null,
+  colTipoCliente: null,
+  colProvincia: null,
+  colOkKo: null,
+  colPedidoCliente: null,
+  searchCols: []
+};
+
 app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
   try {
     // Normalizar para búsquedas case-insensitive (independiente del collation de MySQL)
@@ -8061,71 +8079,105 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
 
     const comercialIdAutenticado = getComercialId(req);
     const esAdmin = getUserIsAdmin(req);
+    const debug = esAdmin && String(req.query.debug || '').trim() === '1';
 
-    // Resolver nombres reales de tablas (por compatibilidad mayúsculas/minúsculas)
-    const resolveTableName = async (lowerName) => {
-      try {
-        const rows = await crm.query(
-          `SELECT table_name
-           FROM information_schema.tables
-           WHERE table_schema = DATABASE()
-             AND LOWER(table_name) = ?
-           ORDER BY (table_name = ?) DESC, table_name ASC
-           LIMIT 1`,
-          [String(lowerName).toLowerCase(), String(lowerName)]
-        );
-        return rows && rows.length ? rows[0].table_name : lowerName;
-      } catch (_) {
-        return lowerName;
-      }
-    };
+    // Cargar/renovar metadatos (cacheado)
+    const now = Date.now();
+    const cacheStale = !__clientesBuscarMetaCache.loadedAt || (now - __clientesBuscarMetaCache.loadedAt) > __clientesBuscarMetaCache.ttlMs;
+    if (cacheStale) {
+      const resolveTableName = async (lowerName) => {
+        try {
+          const rows = await crm.query(
+            `SELECT table_name
+             FROM information_schema.tables
+             WHERE table_schema = DATABASE()
+               AND LOWER(table_name) = ?
+             ORDER BY (table_name = ?) DESC, table_name ASC
+             LIMIT 1`,
+            [String(lowerName).toLowerCase(), String(lowerName)]
+          );
+          return rows && rows.length ? rows[0].table_name : lowerName;
+        } catch (_) {
+          return lowerName;
+        }
+      };
 
-    const tClientes = await resolveTableName('clientes');
-    const tPedidos = await resolveTableName('pedidos');
+      const tClientes = await resolveTableName('clientes');
+      const tPedidos = await resolveTableName('pedidos');
+      const clientesColsRows = await crm.query(`SHOW COLUMNS FROM \`${tClientes}\``).catch(() => []);
+      const pedidosColsRows = await crm.query(`SHOW COLUMNS FROM \`${tPedidos}\``).catch(() => []);
 
-    // Detectar columnas reales (clientes/pedidos) para no “romper” en esquemas distintos
-    const clientesColsRows = await crm.query(`SHOW COLUMNS FROM \`${tClientes}\``).catch(() => []);
-    const clientesCols = new Set((clientesColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+      const clientesCols = new Set((clientesColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+      const pedidosCols = new Set((pedidosColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+      const pickFirst = (cands, set) => (cands || []).find(c => set.has(c)) || null;
 
-    const pedidosColsRows = await crm.query(`SHOW COLUMNS FROM \`${tPedidos}\``).catch(() => []);
-    const pedidosCols = new Set((pedidosColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
+      const colComercialClientes = pickFirst(['Id_Cial', 'ComercialId', 'comercialId', 'Id_Comercial', 'id_comercial'], clientesCols);
+      const colTipoCliente = pickFirst(['Id_TipoCliente', 'id_tipo_cliente', 'TipoClienteId', 'tipoClienteId'], clientesCols);
+      const colProvincia = pickFirst(['Id_Provincia', 'id_provincia', 'ProvinciaId', 'provinciaId'], clientesCols);
+      const colOkKo = pickFirst(['OK_KO', 'ok_ko'], clientesCols);
+      const colPedidoCliente = pickFirst(['Id_Cliente', 'id_cliente', 'Cliente_id', 'cliente_id', 'ClienteId', 'clienteId'], pedidosCols);
 
-    const pickFirst = (candidates, set) => (candidates || []).find(c => set.has(c)) || null;
+      const searchCols = [
+        pickFirst(['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social'], clientesCols),
+        pickFirst(['Nombre_Cial', 'nombre_cial'], clientesCols),
+        pickFirst(['DNI_CIF', 'dni_cif', 'NIF', 'nif'], clientesCols),
+        pickFirst(['Email', 'email'], clientesCols),
+        pickFirst(['Telefono', 'telefono'], clientesCols),
+        pickFirst(['Movil', 'movil'], clientesCols),
+        pickFirst(['NumeroFarmacia', 'numero_farmacia', 'Numero_Farmacia'], clientesCols),
+        pickFirst(['Direccion', 'direccion'], clientesCols),
+        pickFirst(['Poblacion', 'poblacion', 'Localidad', 'localidad'], clientesCols),
+        pickFirst(['CodigoPostal', 'codigo_postal', 'codigoPostal'], clientesCols),
+        pickFirst(['NomContacto', 'nom_contacto', 'Contacto', 'contacto'], clientesCols),
+        pickFirst(['Observaciones', 'observaciones'], clientesCols)
+      ].filter(Boolean);
 
-    const colComercialClientes = pickFirst(['Id_Cial', 'ComercialId', 'comercialId', 'Id_Comercial', 'id_comercial'], clientesCols);
-    const colTipoCliente = pickFirst(['Id_TipoCliente', 'id_tipo_cliente', 'TipoClienteId', 'tipoClienteId'], clientesCols);
-    const colProvincia = pickFirst(['Id_Provincia', 'id_provincia', 'ProvinciaId', 'provinciaId'], clientesCols);
-    const colOkKo = pickFirst(['OK_KO', 'ok_ko'], clientesCols);
+      const pkPrimary = pickFirst(['id', 'Id'], clientesCols) || 'Id';
+      const pkFallback = pkPrimary === 'id' ? 'Id' : 'id';
 
-    const colPedidoCliente = pickFirst(['Id_Cliente', 'id_cliente', 'Cliente_id', 'cliente_id', 'ClienteId', 'clienteId'], pedidosCols);
+      Object.assign(__clientesBuscarMetaCache, {
+        loadedAt: now,
+        tClientes,
+        tPedidos,
+        clientesCols,
+        pedidosCols,
+        pkPrimary,
+        pkFallback,
+        colComercialClientes,
+        colTipoCliente,
+        colProvincia,
+        colOkKo,
+        colPedidoCliente,
+        searchCols
+      });
+    }
 
-    // Campos a buscar (solo los que existan en esta BD)
-    const searchCols = [
-      // nombres
-      pickFirst(['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social'], clientesCols),
-      pickFirst(['Nombre_Cial', 'nombre_cial'], clientesCols),
-      // identificación/contacto
-      pickFirst(['DNI_CIF', 'dni_cif', 'NIF', 'nif'], clientesCols),
-      pickFirst(['Email', 'email'], clientesCols),
-      pickFirst(['Telefono', 'telefono'], clientesCols),
-      pickFirst(['Movil', 'movil'], clientesCols),
-      pickFirst(['NumeroFarmacia', 'numero_farmacia', 'Numero_Farmacia'], clientesCols),
-      // dirección
-      pickFirst(['Direccion', 'direccion'], clientesCols),
-      pickFirst(['Poblacion', 'poblacion', 'Localidad', 'localidad'], clientesCols),
-      pickFirst(['CodigoPostal', 'codigo_postal', 'codigoPostal'], clientesCols),
-      // extra
-      pickFirst(['NomContacto', 'nom_contacto', 'Contacto', 'contacto'], clientesCols),
-      pickFirst(['Observaciones', 'observaciones'], clientesCols),
-    ].filter(Boolean);
+    const {
+      tClientes,
+      tPedidos,
+      clientesCols,
+      pkPrimary,
+      pkFallback,
+      colComercialClientes,
+      colTipoCliente,
+      colProvincia,
+      colOkKo,
+      colPedidoCliente,
+      searchCols
+    } = __clientesBuscarMetaCache;
+
+    const pickFirst = (cands, set) => (cands || []).find(c => set.has(c)) || null;
 
     const where = [];
     const params = [];
 
     // Restricción por comercial (no-admin) — detecta la columna real (Id_Cial / ComercialId / comercialId)
     if (!esAdmin && comercialIdAutenticado && colComercialClientes) {
+      const comId = parseInt(String(comercialIdAutenticado), 10);
+      if (Number.isFinite(comId) && comId > 0) {
       where.push(`c.\`${colComercialClientes}\` = ?`);
-      params.push(Number(comercialIdAutenticado));
+        params.push(comId);
+      }
     }
     
     // Filtros opcionales (siempre deben aplicarse sobre TODA la BD, no sobre 50 filas)
@@ -8240,9 +8292,6 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       return rowsLocal || [];
     };
 
-    const pkPrimary = pickFirst(['id', 'Id'], clientesCols) || 'id';
-    const pkFallback = pkPrimary === 'id' ? 'Id' : 'id';
-
     let rows = [];
     try {
       rows = await runSearch(pkPrimary);
@@ -8251,7 +8300,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       const isBadField = e1?.code === 'ER_BAD_FIELD_ERROR' || /Unknown column/i.test(msg);
       if (!isBadField) throw e1;
       // Reintentar con el otro nombre de PK solo si existe en esta tabla
-      if (clientesCols.has(pkFallback)) {
+        if (clientesCols && clientesCols.has(pkFallback)) {
         console.warn(`⚠️ [BUSCAR CLIENTES] Reintentando con PK \`${pkFallback}\` (fallback)...`, { msg });
         rows = await runSearch(pkFallback);
       } else {
@@ -8276,6 +8325,20 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     }));
 
     console.log(`✅ [BUSCAR CLIENTES] Resultados encontrados: ${clientesFiltrados.length}`);
+    if (debug) {
+      return res.json({
+        clientes: clientesFiltrados,
+        debug: {
+          q: qRaw,
+          tClientes,
+          pkPrimary,
+          colComercialClientes,
+          comercialIdAutenticado,
+          whereCount: where.length,
+          searchColsCount: (searchCols || []).length
+        }
+      });
+    }
     res.json({ clientes: clientesFiltrados });
   } catch (error) {
     console.error('❌ Error buscando clientes:', error);

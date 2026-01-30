@@ -437,7 +437,7 @@
                 .replace(/'/g, '&#39;');
 
             async function fetchClientes(q) {
-                const url = `/api/clientes/buscar?q=${encodeURIComponent(q)}&estado=todos&limit=20`;
+                const url = `/api/clientes/buscar?q=${encodeURIComponent(q)}&estado=activos&limit=20`;
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {
