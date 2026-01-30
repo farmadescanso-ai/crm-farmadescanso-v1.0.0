@@ -1146,7 +1146,8 @@ const requireAdmin = (req, res, next) => {
     // Verificar si es admin de forma segura
     let adminCheck = false;
     try {
-      const comercial = req.comercial || req.session?.comercial;
+      // IMPORTANTE: en JWT el usuario suele venir en req.user (no en req.session.comercial)
+      const comercial = req.comercial || req.session?.comercial || req.user;
       if (comercial) {
         const rol = getUsuarioRol(req) || '';
         adminCheck = String(rol).toLowerCase().includes('administrador') || String(rol).toLowerCase().includes('admin');
@@ -5942,7 +5943,7 @@ app.get('/dashboard/articulos', requireAuth, async (req, res) => {
 });
 
 // Crear nuevo artículo (formulario)
-app.get('/dashboard/articulos/nuevo', requireAuth, (req, res) => {
+app.get('/dashboard/articulos/nuevo', requireAuth, requireAdmin, (req, res) => {
   res.render('dashboard/articulo-editar', {
     title: 'Nuevo Artículo - Farmadescaso',
     user: req.comercial || req.session.comercial,
@@ -5973,7 +5974,7 @@ app.get('/dashboard/articulos/:id', requireAuth, async (req, res) => {
 });
 
 // Formulario de edición de artículo
-app.get('/dashboard/articulos/:id/editar', requireAuth, async (req, res) => {
+app.get('/dashboard/articulos/:id/editar', requireAuth, requireAdmin, async (req, res) => {
   try {
     const articulo = await crm.getArticuloById(req.params.id);
     if (!articulo) {
@@ -5993,7 +5994,7 @@ app.get('/dashboard/articulos/:id/editar', requireAuth, async (req, res) => {
 });
 
 // Crear nuevo artículo (submit)
-app.post('/dashboard/articulos', requireAuth, async (req, res) => {
+app.post('/dashboard/articulos', requireAuth, requireAdmin, async (req, res) => {
   try {
     // Mapeo simple y directo: nombre del formulario -> nombre de columna en BD
     // NOTA: El formulario ahora usa directamente los nombres de columna de BD
@@ -6106,7 +6107,7 @@ app.post('/dashboard/articulos', requireAuth, async (req, res) => {
 });
 
 // Guardar edición de artículo
-app.post('/dashboard/articulos/:id', requireAuth, async (req, res) => {
+app.post('/dashboard/articulos/:id', requireAuth, requireAdmin, async (req, res) => {
   try {
     const id = req.params.id;
     const articuloExistente = await crm.getArticuloById(id);
@@ -6317,7 +6318,7 @@ app.post('/dashboard/articulos/:id', requireAuth, async (req, res) => {
 });
 
 // API: Alternar estado OK/KO de artículo
-app.post('/api/articulos/:id/okko', requireAuth, async (req, res) => {
+app.post('/api/articulos/:id/okko', requireAuth, requireAdmin, async (req, res) => {
   try {
     const id = req.params.id;
     const { value } = req.body;
@@ -6343,7 +6344,7 @@ app.post('/api/articulos/:id/okko', requireAuth, async (req, res) => {
 });
 
 // Eliminar artículo
-app.post('/dashboard/articulos/:id/eliminar', requireAuth, async (req, res) => {
+app.post('/dashboard/articulos/:id/eliminar', requireAuth, requireAdmin, async (req, res) => {
   try {
     const id = req.params.id;
     await crm.deleteArticulo(id);
