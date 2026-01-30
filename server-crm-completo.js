@@ -8150,10 +8150,17 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     }
     
     if (colOkKo) {
+      // Compatibilidad: OK_KO puede venir como 1/0, 'OK'/'KO' o 'Activo'/'Inactivo'
       if (estado === 'activos') {
-        where.push(`(c.\`${colOkKo}\` = 1 OR c.\`${colOkKo}\` = '1' OR UPPER(c.\`${colOkKo}\`) = 'OK')`);
+        where.push(`(
+          c.\`${colOkKo}\` = 1 OR c.\`${colOkKo}\` = '1'
+          OR UPPER(c.\`${colOkKo}\`) IN ('OK','ACTIVO')
+        )`);
       } else if (estado === 'inactivos') {
-        where.push(`(c.\`${colOkKo}\` = 0 OR c.\`${colOkKo}\` = '0' OR UPPER(c.\`${colOkKo}\`) = 'KO')`);
+        where.push(`(
+          c.\`${colOkKo}\` = 0 OR c.\`${colOkKo}\` = '0'
+          OR UPPER(c.\`${colOkKo}\`) IN ('KO','INACTIVO')
+        )`);
       }
     }
     
