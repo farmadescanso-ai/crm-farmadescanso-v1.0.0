@@ -83,7 +83,24 @@
                 <div class="row g-3">
                     <div class="col-md-6">
                         <label class="form-label">Nombre / Razón Social <span class="text-danger">*</span></label>
-                        <input type="text" name="Nombre_Razon_Social" class="form-control" required value="<%= cliente ? (cliente.Nombre_Razon_Social || cliente.Nombre || '') : '' %>">
+                        <div class="position-relative">
+                            <input
+                                type="text"
+                                name="Nombre_Razon_Social"
+                                id="clienteNombreSearchInput"
+                                class="form-control"
+                                required
+                                autocomplete="off"
+                                value="<%= cliente ? (cliente.Nombre_Razon_Social || cliente.Nombre || '') : '' %>">
+                            <% if (isNew) { %>
+                                <div id="clienteNombreDropdown" class="list-group position-absolute w-100 shadow-sm" style="top: 100%; z-index: 1050; max-height: 320px; overflow-y: auto; display: none;"></div>
+                            <% } %>
+                        </div>
+                        <% if (isNew) { %>
+                            <small class="text-muted d-block mt-1">
+                                <i class="fas fa-search me-1"></i>Escribe al menos 2 caracteres para buscar clientes existentes.
+                            </small>
+                        <% } %>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Nombre Comercial</label>
@@ -400,6 +417,100 @@
 
     <% if (isNew) { %>
     <script>
+        // Autocomplete (búsqueda inteligente) en Nombre/Razón Social
+        (function() {
+            const input = document.getElementById('clienteNombreSearchInput');
+            const dropdown = document.getElementById('clienteNombreDropdown');
+            if (!input || !dropdown) return;
+
+            let t = null;
+            let lastQuery = '';
+
+            const hide = () => { dropdown.style.display = 'none'; dropdown.innerHTML = ''; };
+            const show = () => { dropdown.style.display = 'block'; };
+
+            const escapeHtml = (s) => String(s ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+
+            async function fetchClientes(q) {
+                const url = `/api/clientes/buscar?q=${encodeURIComponent(q)}&estado=todos&limit=20`;
+                const res = await fetch(url, { credentials: 'include' });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    const details = data && (data.details || data.error) ? (data.details || data.error) : `HTTP ${res.status}`;
+                    throw new Error(details);
+                }
+                return (data.clientes || []);
+            }
+
+            function render(clientes) {
+                if (!Array.isArray(clientes) || clientes.length === 0) {
+                    dropdown.innerHTML = `<div class="list-group-item text-muted small">No se encontraron clientes</div>`;
+                    show();
+                    return;
+                }
+
+                dropdown.innerHTML = clientes.map(c => {
+                    const id = c.Id ?? c.id;
+                    const nombre = c.Nombre_Razon_Social || c.Nombre || '-';
+                    const dni = c.DNI_CIF || '';
+                    const pobl = c.Poblacion || '';
+                    const cp = c.CodigoPostal || '';
+                    const email = c.Email || '';
+                    const tel = c.Telefono || c.Movil || '';
+                    const meta = [dni, pobl, cp].filter(Boolean).join(' · ');
+                    const meta2 = [email, tel].filter(Boolean).join(' · ');
+                    return `
+                        <button type="button" class="list-group-item list-group-item-action" data-id="${escapeHtml(id)}">
+                            <div class="fw-semibold">${escapeHtml(nombre)}</div>
+                            ${meta ? `<div class="text-muted small">${escapeHtml(meta)}</div>` : ''}
+                            ${meta2 ? `<div class="text-muted small">${escapeHtml(meta2)}</div>` : ''}
+                            <div class="small mt-1"><span class="badge bg-secondary">ID ${escapeHtml(id)}</span></div>
+                        </button>
+                    `;
+                }).join('');
+                show();
+
+                dropdown.querySelectorAll('button[data-id]').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.getAttribute('data-id');
+                        if (id) window.location.href = `/dashboard/clientes/${encodeURIComponent(id)}`;
+                    });
+                });
+            }
+
+            input.addEventListener('input', () => {
+                const q = String(input.value || '').trim();
+                if (q.length < 2) {
+                    lastQuery = q;
+                    hide();
+                    return;
+                }
+                if (q === lastQuery) return;
+                lastQuery = q;
+                clearTimeout(t);
+                t = setTimeout(async () => {
+                    dropdown.innerHTML = `<div class="list-group-item text-muted small"><i class="fas fa-spinner fa-spin me-2"></i>Buscando...</div>`;
+                    show();
+                    try {
+                        const clientes = await fetchClientes(q);
+                        render(clientes);
+                    } catch (e) {
+                        dropdown.innerHTML = `<div class="list-group-item text-danger small">Error buscando clientes: ${escapeHtml(e.message || 'desconocido')}</div>`;
+                        show();
+                    }
+                }, 250);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target) && e.target !== input) hide();
+            });
+        })();
+
         // Verificar duplicados antes de crear cliente
         document.getElementById('formCliente').addEventListener('submit', async function(e) {
             e.preventDefault();
