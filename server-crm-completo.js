@@ -1107,7 +1107,21 @@ const isComercial = (req) => {
 
 // Helper para obtener el ID del comercial autenticado
 const getComercialId = (req) => {
-  return req.comercialId || req.session?.comercialId || null;
+  // Prioridad: campo explícito poblado por auth middleware
+  const direct = req.comercialId || req.session?.comercialId;
+  if (direct) return direct;
+
+  // Fallbacks: algunos entornos guardan el id dentro del objeto comercial/usuario
+  const comercialObj = req.comercial || req.session?.comercial || req.user || null;
+  if (!comercialObj) return null;
+
+  return (
+    comercialObj.id ??
+    comercialObj.Id ??
+    comercialObj.comercialId ??
+    comercialObj.ComercialId ??
+    null
+  );
 };
 
 // Helper para verificar si el usuario es administrador
@@ -6568,6 +6582,31 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     const comercialIdAutenticado = getComercialId(req);
     const esAdmin = getUserIsAdmin(req);
     console.log('✅ [CLIENTES] Usuario obtenido:', { comercialId: comercialIdAutenticado, isAdmin: esAdmin });
+
+    // Seguridad: si NO es admin y no podemos determinar comercialId, no devolver todos los clientes.
+    if (!esAdmin) {
+      const comIdSafe = parseInt(String(comercialIdAutenticado || ''), 10);
+      if (!Number.isFinite(comIdSafe) || comIdSafe <= 0) {
+        console.warn('⚠️ [CLIENTES] Usuario Comercial sin comercialId válido. Devolviendo lista vacía por seguridad.');
+        return res.render('dashboard/clientes', {
+          title: 'Clientes - Farmadescaso',
+          user: req.comercial || req.session?.comercial || req.user || null,
+          isAdmin: false,
+          esAdmin: false,
+          comercialIdAutenticado: null,
+          clientes: [],
+          totalClientes: 0,
+          provincias: await crm.getProvincias().catch(() => []),
+          tiposClientes: await crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []),
+          formasPago: [],
+          idiomas: [],
+          monedas: [],
+          comerciales: [],
+          filters: { ...req.query, comercial: null },
+          error: 'No se pudo determinar tu comercial asignado. Contacta con el administrador.'
+        });
+      }
+    }
     
     // Paginación (evitar cargar miles de filas)
     const page = Math.max(1, parseInt(req.query.page || '1', 10) || 1);
@@ -6691,11 +6730,11 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
           const comId = parseInt(comercialIdAutenticado);
           if (!isNaN(comId) && comId > 0) {
             console.log(`🔐 [CLIENTES] Aplicando filtro de comercial en fallback: ${comId}`);
-            clientes = clientes.filter(c => {
+            todos = todos.filter(c => {
               const clienteComercialId = c.Id_Cial || c.id_Cial || c.Comercial_id || c.comercial_id;
               return Number(clienteComercialId) === comId;
             });
-            console.log(`✅ [CLIENTES] Filtrados por comercial en fallback: ${clientes.length} clientes`);
+            console.log(`✅ [CLIENTES] Filtrados por comercial en fallback: ${todos.length} clientes`);
           }
         }
         
@@ -6951,6 +6990,9 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
 // Formulario de nuevo cliente
 app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
   try {
+    const esAdmin = getUserIsAdmin(req);
+    const comercialIdAutenticado = getComercialId(req);
+
     // Obtener todos los datos necesarios para los selectores
     const provincias = await crm.getProvincias();
     const paises = await crm.getPaises();
@@ -6961,7 +7003,9 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     const formasPago = await crm.getFormasPago();
     const idiomas = await crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []);
     const monedas = await crm.query('SELECT id, Nombre AS Moneda FROM monedas').catch(() => []);
-    const comerciales = await crm.getComerciales().catch(() => []);
+    // Solo admin necesita listado completo de comerciales (para reasignar).
+    // Comercial crea clientes para sí mismo.
+    const comerciales = esAdmin ? await crm.getComerciales().catch(() => []) : [];
     const tarifasClientes = await crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => []);
     
     res.render('dashboard/cliente-editar', {
@@ -6978,6 +7022,8 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       comerciales: comerciales || [],
       tarifasClientes: tarifasClientes || [],
       isNew: true,
+      esAdmin,
+      comercialIdAutenticado: comercialIdAutenticado || null,
       error: null
     });
   } catch (error) {
@@ -7415,6 +7461,9 @@ app.post('/dashboard/clientes/verificar-duplicado', requireAuth, async (req, res
 app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
   try {
     console.log('📝 [CREAR CLIENTE] Iniciando creación:', { body: req.body });
+
+    const esAdmin = getUserIsAdmin(req);
+    const comercialIdAutenticado = getComercialId(req);
     
     // Mapear campos del formulario a los nombres reales en la base de datos
     const payload = {};
@@ -7481,6 +7530,19 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
         
         payload[dbField] = value;
       }
+    }
+
+    // Asignación automática: si es Comercial, forzar Id_Cial al comercial logueado (ignorar el formulario).
+    if (!esAdmin) {
+      const comId = parseInt(String(comercialIdAutenticado || ''), 10);
+      if (!Number.isFinite(comId) || comId <= 0) {
+        return res.status(400).render('error', {
+          error: 'Error de validación',
+          message: 'No se pudo determinar el comercial logueado para asignar el cliente.'
+        });
+      }
+      payload.Id_Cial = comId;
+      console.log(`🔐 [CREAR CLIENTE] Comercial: asignando automáticamente Id_Cial=${comId}`);
     }
     
     // Manejar OK_KO (Estado) - validar y convertir valor a 1 (Activo) o 0 (Inactivo)

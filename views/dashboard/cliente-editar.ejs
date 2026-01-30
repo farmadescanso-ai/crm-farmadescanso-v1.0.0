@@ -100,21 +100,29 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Comercial <span class="text-danger">*</span></label>
-                        <select name="Id_Cial" class="form-select" required>
-                            <option value="">— Seleccionar comercial —</option>
-                            <% if (typeof comerciales !== 'undefined' && comerciales && comerciales.length > 0) { %>
-                                <% comerciales.forEach(function(comercial) { %>
-                                    <% const comercialId = comercial.id || comercial.Id; %>
-                                    <% const clienteComercialId = cliente ? (cliente.Id_Cial || cliente.id_Cial) : null; %>
-                                    <option value="<%= comercialId %>" <%= (clienteComercialId && String(clienteComercialId) === String(comercialId)) ? 'selected' : '' %>>
-                                        <%= comercial.Nombre %> <% if (comercial.Email) { %>(<%= comercial.Email %>)<% } %>
-                                    </option>
-                                <% }); %>
-                            <% } else { %>
-                                <option value="" disabled>No hay comerciales disponibles</option>
-                            <% } %>
-                        </select>
-                        <small class="text-muted">Selecciona el comercial asignado a este cliente</small>
+                        <% const esAdminView = (typeof esAdmin !== 'undefined' && esAdmin); %>
+                        <% const comercialAuthedId = (typeof comercialIdAutenticado !== 'undefined' && comercialIdAutenticado) ? comercialIdAutenticado : null; %>
+                        <% if (!esAdminView) { %>
+                            <input type="hidden" name="Id_Cial" value="<%= comercialAuthedId %>">
+                            <input type="text" class="form-control" value="<%= (user && (user.nombre || user.Nombre)) ? (user.nombre || user.Nombre) : 'Comercial' %>" disabled readonly style="background-color: #e9ecef; cursor: not-allowed;">
+                            <small class="text-muted"><i class="fas fa-lock me-1"></i>Asignación automática al comercial logueado</small>
+                        <% } else { %>
+                            <select name="Id_Cial" class="form-select" required>
+                                <option value="">— Seleccionar comercial —</option>
+                                <% if (typeof comerciales !== 'undefined' && comerciales && comerciales.length > 0) { %>
+                                    <% comerciales.forEach(function(comercial) { %>
+                                        <% const comercialId = comercial.id || comercial.Id; %>
+                                        <% const clienteComercialId = cliente ? (cliente.Id_Cial || cliente.id_Cial) : null; %>
+                                        <option value="<%= comercialId %>" <%= (clienteComercialId && String(clienteComercialId) === String(comercialId)) ? 'selected' : '' %>>
+                                            <%= comercial.Nombre %> <% if (comercial.Email) { %>(<%= comercial.Email %>)<% } %>
+                                        </option>
+                                    <% }); %>
+                                <% } else { %>
+                                    <option value="" disabled>No hay comerciales disponibles</option>
+                                <% } %>
+                            </select>
+                            <small class="text-muted">Selecciona el comercial asignado a este cliente</small>
+                        <% } %>
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Tipo Cliente</label>
