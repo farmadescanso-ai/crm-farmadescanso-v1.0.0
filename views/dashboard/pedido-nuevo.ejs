@@ -669,8 +669,14 @@
                 clienteDropdown.classList.add('show');
 
                 try {
-                    const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(query)}`);
-                    const data = await response.json();
+                    const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(query)}&estado=activos&limit=50`, {
+                        credentials: 'include'
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        const details = data && (data.details || data.error) ? ` (${data.details || data.error})` : '';
+                        throw new Error(`HTTP ${response.status}${details}`);
+                    }
                     const clientes = data.clientes || [];
 
                     if (clientes.length === 0) {
@@ -708,7 +714,7 @@
                     currentSelectedIndex = -1;
                 } catch (error) {
                     console.error('Error buscando clientes:', error);
-                    clienteDropdown.innerHTML = '<div class="cliente-no-results">Error al buscar clientes</div>';
+                    clienteDropdown.innerHTML = `<div class="cliente-no-results">Error al buscar clientes</div>`;
                 }
             }, 300);
         }

@@ -102,8 +102,10 @@
                         <label class="form-label">Comercial <span class="text-danger">*</span></label>
                         <% const esAdminView = (typeof esAdmin !== 'undefined' && esAdmin); %>
                         <% const comercialAuthedId = (typeof comercialIdAutenticado !== 'undefined' && comercialIdAutenticado) ? comercialIdAutenticado : null; %>
+                        <% const clienteComercialIdHidden = cliente ? (cliente.Id_Cial || cliente.id_Cial || null) : null; %>
+                        <% const idCialHidden = clienteComercialIdHidden || comercialAuthedId; %>
                         <% if (!esAdminView) { %>
-                            <input type="hidden" name="Id_Cial" value="<%= comercialAuthedId %>">
+                            <input type="hidden" name="Id_Cial" value="<%= idCialHidden %>">
                             <input type="text" class="form-control" value="<%= (user && (user.nombre || user.Nombre)) ? (user.nombre || user.Nombre) : 'Comercial' %>" disabled readonly style="background-color: #e9ecef; cursor: not-allowed;">
                             <small class="text-muted"><i class="fas fa-lock me-1"></i>Asignación automática al comercial logueado</small>
                         <% } else { %>
@@ -308,6 +310,7 @@
                         <% const tarifaSeleccionada = cliente ? (cliente.Tarifa ?? cliente.tarifa ?? 0) : 0; %>
                         <% if (typeof tarifasClientes !== 'undefined' && tarifasClientes && tarifasClientes.length > 0) { %>
                         <select name="Tarifa" class="form-select">
+                            <option value="0" <%= String(tarifaSeleccionada) === '0' ? 'selected' : '' %>>PVL (Base)</option>
                             <% tarifasClientes.forEach(function(t) { %>
                                 <% const tid = t.Id || t.id; %>
                                 <option value="<%= tid %>" <%= String(tarifaSeleccionada) === String(tid) ? 'selected' : '' %>>
