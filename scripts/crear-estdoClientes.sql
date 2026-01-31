@@ -44,7 +44,10 @@ SET @cif_pat = '^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$';
 UPDATE `clientes`
 SET `Id_EstdoCliente` = 3
 WHERE
-  (`OK_KO` = 0 OR `OK_KO` = '0' OR UPPER(TRIM(COALESCE(`OK_KO`, ''))) = 'KO');
+  (
+    -- Forzar a texto para evitar #1292 (truncado DOUBLE) cuando OK_KO contiene 'OK'
+    TRIM(UPPER(COALESCE(CONCAT(`OK_KO`, ''), ''))) IN ('0','KO')
+  );
 
 -- 3.2) No inactivos: Potencial vs Activo según DNI/CIF válido
 UPDATE `clientes`
