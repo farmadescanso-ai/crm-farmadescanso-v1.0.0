@@ -34,6 +34,8 @@ class MySQLCRM {
     this.pool = null;
     this.connected = false;
     this._schemaEnsured = false;
+    // Cache interno para metadatos de tablas/columnas (útil en serverless)
+    this._metaCache = {};
   }
 
   // Resolver nombre real de tabla sin depender de information_schema (puede estar restringido en hosting).
@@ -64,6 +66,54 @@ class MySQLCRM {
     // Fallback: usar el nombre base tal cual.
     this._cache[cacheKey] = base;
     return base;
+  }
+
+  /**
+   * Resolver (cacheado) nombres de columnas para la tabla clientes en distintos entornos.
+   * Evita fallos si la columna del comercial cambia (Id_Cial vs ComercialId, etc.).
+   */
+  async _ensureClientesMeta() {
+    if (this._metaCache?.clientesMeta) return this._metaCache.clientesMeta;
+
+    const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+    let colsRows = [];
+    try {
+      colsRows = await this.query(`SHOW COLUMNS FROM \`${tClientes}\``);
+    } catch (_) {
+      colsRows = [];
+    }
+
+    const cols = (Array.isArray(colsRows) ? colsRows : [])
+      .map(r => String(r.Field || r.field || '').trim())
+      .filter(Boolean);
+
+    const colsLower = new Set(cols.map(c => c.toLowerCase()));
+    const pickCI = (cands) => {
+      for (const cand of (cands || [])) {
+        const cl = String(cand).toLowerCase();
+        if (colsLower.has(cl)) {
+          // devolver el nombre real tal como aparece en SHOW COLUMNS (preserva casing)
+          const idx = cols.findIndex(c => c.toLowerCase() === cl);
+          return idx >= 0 ? cols[idx] : cand;
+        }
+      }
+      return null;
+    };
+
+    const pk = pickCI(['Id', 'id']) || 'Id';
+    const colComercial = pickCI([
+      'Id_Cial',
+      'id_cial',
+      'Id_Comercial',
+      'id_comercial',
+      'ComercialId',
+      'comercialId',
+      'comercial_id'
+    ]);
+
+    const meta = { tClientes, pk, colComercial };
+    this._metaCache.clientesMeta = meta;
+    return meta;
   }
 
   async _getFormasPagoTableName() {
@@ -719,19 +769,23 @@ class MySQLCRM {
   // CLIENTES
   async getClientes(comercialId = null) {
     try {
-      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const { tClientes, pk, colComercial } = await this._ensureClientesMeta();
       let sql = `SELECT * FROM \`${tClientes}\``;
       const params = [];
       
       // Si se proporciona un comercialId, filtrar por él
       // El campo en la tabla clientes es Id_Cial (con mayúsculas, igual que en pedidos)
       if (comercialId) {
-        sql += ' WHERE Id_Cial = ?';
+        if (!colComercial) {
+          console.warn('⚠️ [GET_CLIENTES] No se pudo resolver la columna de comercial en clientes. Devolviendo vacío por seguridad.');
+          return [];
+        }
+        sql += ` WHERE \`${colComercial}\` = ?`;
         params.push(comercialId);
-        console.log(`🔐 [GET_CLIENTES] Filtro aplicado: Id_Cial = ${comercialId}`);
+        console.log(`🔐 [GET_CLIENTES] Filtro aplicado: ${colComercial} = ${comercialId}`);
       }
       
-      sql += ' ORDER BY Id ASC';
+      sql += ` ORDER BY \`${pk}\` ASC`;
       
       const rows = await this.query(sql, params);
       console.log(`✅ Obtenidos ${rows.length} clientes${comercialId ? ` (filtrado por comercial ${comercialId})` : ''}`);
@@ -749,6 +803,7 @@ class MySQLCRM {
   async getClientesOptimizado(filters = {}) {
     let sql = '';
     try {
+      const { colComercial } = await this._ensureClientesMeta();
       const whereConditions = [];
       const params = [];
 
@@ -759,11 +814,11 @@ class MySQLCRM {
           c.*,
           p.Nombre as ProvinciaNombre,
           tc.Tipo as TipoClienteNombre,
-          cial.Nombre as ComercialNombre
+          ${colComercial ? 'cial.Nombre as ComercialNombre' : 'NULL as ComercialNombre'}
         FROM clientes c
         LEFT JOIN provincias p ON c.Id_Provincia = p.id
         LEFT JOIN tipos_clientes tc ON c.Id_TipoCliente = tc.id
-        LEFT JOIN comerciales cial ON c.Id_Cial = cial.id
+        ${colComercial ? `LEFT JOIN comerciales cial ON c.\`${colComercial}\` = cial.id` : ''}
       `;
 
       // Filtro por tipo de cliente
@@ -790,9 +845,17 @@ class MySQLCRM {
       if (filters.comercial !== null && filters.comercial !== undefined && filters.comercial !== '' && !isNaN(filters.comercial)) {
         const comercialId = typeof filters.comercial === 'number' ? filters.comercial : parseInt(filters.comercial);
         if (!isNaN(comercialId) && comercialId > 0) {
-          whereConditions.push('c.Id_Cial = ?');
+          if (!colComercial) {
+            throw new Error('No se encontró columna de comercial en tabla clientes');
+          }
+          // Regla: comercial ve sus clientes; si filters.comercialIncludePool, incluir pool (1)
+          if (filters.comercialIncludePool && comercialId !== 1) {
+            whereConditions.push(`(c.\`${colComercial}\` = ? OR c.\`${colComercial}\` = 1)`);
+          } else {
+            whereConditions.push(`c.\`${colComercial}\` = ?`);
+          }
           params.push(comercialId);
-          console.log(`✅ [OPTIMIZADO] Filtro comercial aplicado: c.Id_Cial = ${comercialId}`);
+          console.log(`✅ [OPTIMIZADO] Filtro comercial aplicado: c.${colComercial} = ${comercialId}${filters.comercialIncludePool && comercialId !== 1 ? ' (+pool=1)' : ''}`);
         } else {
           console.warn(`⚠️ [OPTIMIZADO] Filtro comercial inválido (valor recibido: ${filters.comercial}, tipo: ${typeof filters.comercial})`);
         }
@@ -887,6 +950,7 @@ class MySQLCRM {
   async getClientesOptimizadoPaged(filters = {}, options = {}) {
     let sql = '';
     try {
+      const { pk, colComercial } = await this._ensureClientesMeta();
       const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Math.min(500, Number(options.limit))) : 50;
       const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Number(options.offset)) : 0;
 
@@ -898,11 +962,11 @@ class MySQLCRM {
           c.*,
           p.Nombre as ProvinciaNombre,
           tc.Tipo as TipoClienteNombre,
-          cial.Nombre as ComercialNombre
+          ${colComercial ? 'cial.Nombre as ComercialNombre' : 'NULL as ComercialNombre'}
         FROM clientes c
         LEFT JOIN provincias p ON c.Id_Provincia = p.id
         LEFT JOIN tipos_clientes tc ON c.Id_TipoCliente = tc.id
-        LEFT JOIN comerciales cial ON c.Id_Cial = cial.id
+        ${colComercial ? `LEFT JOIN comerciales cial ON c.\`${colComercial}\` = cial.id` : ''}
       `;
 
       // Resolver columna cliente en pedidos (Id_Cliente vs Cliente_id, etc.) para con/sin ventas.
@@ -948,16 +1012,24 @@ class MySQLCRM {
       if (filters.comercial !== null && filters.comercial !== undefined && filters.comercial !== '' && !isNaN(filters.comercial)) {
         const comercialId = typeof filters.comercial === 'number' ? filters.comercial : parseInt(filters.comercial);
         if (!isNaN(comercialId) && comercialId > 0) {
-          whereConditions.push('c.Id_Cial = ?');
+          if (!colComercial) {
+            throw new Error('No se encontró columna de comercial en tabla clientes');
+          }
+          // Regla: comercial ve sus clientes + pool (Id=1) si se pide explícitamente
+          if (filters.comercialIncludePool && comercialId !== 1) {
+            whereConditions.push(`(c.\`${colComercial}\` = ? OR c.\`${colComercial}\` = 1)`);
+          } else {
+            whereConditions.push(`c.\`${colComercial}\` = ?`);
+          }
           params.push(comercialId);
         }
       }
 
       if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
         if (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1') {
-          whereConditions.push(`EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
+          whereConditions.push(`EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.\`${pk}\`)`);
         } else if (filters.conVentas === false || filters.conVentas === 'false' || filters.conVentas === '0') {
-          whereConditions.push(`NOT EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
+          whereConditions.push(`NOT EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.\`${pk}\`)`);
         }
       }
 
@@ -997,9 +1069,9 @@ class MySQLCRM {
       const hasSearch = !!(filters.q && String(filters.q).trim().length >= 2);
       const conVentas = (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1');
       if (conVentas && !hasSearch && this.__pedidosFechaCol) {
-        sql += ` ORDER BY (SELECT MAX(p3.\`${this.__pedidosFechaCol}\`) FROM pedidos p3 WHERE p3.\`${this.__pedidosClienteCol}\` = c.Id) DESC, c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
+        sql += ` ORDER BY (SELECT MAX(p3.\`${this.__pedidosFechaCol}\`) FROM pedidos p3 WHERE p3.\`${this.__pedidosClienteCol}\` = c.\`${pk}\`) DESC, c.\`${pk}\` ASC LIMIT ${limit} OFFSET ${offset}`;
       } else {
-        sql += ` ORDER BY c.Id ASC LIMIT ${limit} OFFSET ${offset}`;
+        sql += ` ORDER BY c.\`${pk}\` ASC LIMIT ${limit} OFFSET ${offset}`;
       }
 
       const rows = await this.query(sql, params);
@@ -1017,6 +1089,7 @@ class MySQLCRM {
   async countClientesOptimizado(filters = {}) {
     let sql = '';
     try {
+      const { pk, colComercial } = await this._ensureClientesMeta();
       const whereConditions = [];
 
       sql = 'SELECT COUNT(*) as total FROM clientes c';
@@ -1060,16 +1133,23 @@ class MySQLCRM {
       if (filters.comercial !== null && filters.comercial !== undefined && filters.comercial !== '' && !isNaN(filters.comercial)) {
         const comercialId = typeof filters.comercial === 'number' ? filters.comercial : parseInt(filters.comercial);
         if (!isNaN(comercialId) && comercialId > 0) {
-          whereConditions.push('c.Id_Cial = ?');
+          if (!colComercial) {
+            throw new Error('No se encontró columna de comercial en tabla clientes');
+          }
+          if (filters.comercialIncludePool && comercialId !== 1) {
+            whereConditions.push(`(c.\`${colComercial}\` = ? OR c.\`${colComercial}\` = 1)`);
+          } else {
+            whereConditions.push(`c.\`${colComercial}\` = ?`);
+          }
           params.push(comercialId);
         }
       }
 
       if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
         if (filters.conVentas === true || filters.conVentas === 'true' || filters.conVentas === '1') {
-          whereConditions.push(`EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
+          whereConditions.push(`EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.\`${pk}\`)`);
         } else if (filters.conVentas === false || filters.conVentas === 'false' || filters.conVentas === '0') {
-          whereConditions.push(`NOT EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.Id)`);
+          whereConditions.push(`NOT EXISTS (SELECT 1 FROM pedidos p2 WHERE p2.\`${this.__pedidosClienteCol}\` = c.\`${pk}\`)`);
         }
       }
 

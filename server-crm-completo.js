@@ -6664,6 +6664,9 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       if (!isNaN(comId) && comId > 0) {
         filtersForQuery.comercial = comId;
         filters.comercial = comId;
+        // Regla de visibilidad: comercial ve sus clientes + el pool (Id_Cial = 1)
+        // (se aplica en la capa SQL; si comId=1 ya es el pool)
+        filtersForQuery.comercialIncludePool = true;
         console.log(`🔐 [CLIENTES] Filtro de comercial forzado para usuario no-admin: ${comId}`);
 
         // Si el usuario intenta forzar ?comercial=OTRO, normalizar la URL para evitar confusión
@@ -6740,10 +6743,16 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
         if (!esAdmin && comercialIdAutenticado) {
           const comId = parseInt(comercialIdAutenticado);
           if (!isNaN(comId) && comId > 0) {
-            console.log(`🔐 [CLIENTES] Aplicando filtro de comercial en fallback: ${comId}`);
+            console.log(`🔐 [CLIENTES] Aplicando filtro de comercial en fallback: ${comId} (+pool=1)`);
             todos = todos.filter(c => {
-              const clienteComercialId = c.Id_Cial || c.id_Cial || c.Comercial_id || c.comercial_id;
-              return Number(clienteComercialId) === comId;
+              const clienteComercialId =
+                c.Id_Cial ?? c.id_Cial ?? c.id_cial ??
+                c.ComercialId ?? c.comercialId ?? c.comercial_id ??
+                c.Id_Comercial ?? c.id_comercial ??
+                c.Comercial_id;
+              const n = Number(clienteComercialId);
+              // Pool: 1
+              return n === comId || n === 1;
             });
             console.log(`✅ [CLIENTES] Filtrados por comercial en fallback: ${todos.length} clientes`);
           }
@@ -17752,7 +17761,11 @@ app.get('/api/clientes/paged', requireAuth, async (req, res) => {
     // No-admin: siempre restringir al comercial autenticado
     if (!esAdmin && comercialIdAutenticado) {
       const comId = Number(comercialIdAutenticado);
-      if (Number.isFinite(comId) && comId > 0) filtersForQuery.comercial = comId;
+      if (Number.isFinite(comId) && comId > 0) {
+        filtersForQuery.comercial = comId;
+        // Regla de visibilidad: comercial ve sus clientes + pool (1)
+        filtersForQuery.comercialIncludePool = true;
+      }
     } else if (esAdmin && Number.isFinite(comercialFiltro) && comercialFiltro > 0) {
       filtersForQuery.comercial = comercialFiltro;
     }
