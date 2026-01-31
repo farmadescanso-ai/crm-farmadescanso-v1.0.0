@@ -160,26 +160,44 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Estado del Cliente <span class="text-danger">*</span></label>
-                        <select name="OK_KO" class="form-select" required>
-                            <% 
-                            // OK_KO debe ser 1 (Activo) o 0 (Inactivo)
-                            // También aceptar valores legacy 'OK'/'KO' para compatibilidad
+                        <%
+                          // Nuevo estado desde catálogo: Id_EstdoCliente
+                          // Regla: si DNI/CIF inválido => Potencial; si válido => Activo; Inactivo se respeta.
+                          let estadoSel = null;
+                          if (cliente && (cliente.Id_EstdoCliente !== undefined && cliente.Id_EstdoCliente !== null)) {
+                            estadoSel = String(cliente.Id_EstdoCliente);
+                          } else {
                             const okKoRaw = cliente && (cliente.OK_KO !== undefined && cliente.OK_KO !== null) ? cliente.OK_KO : 1;
-                            let estadoActivo = false;
-                            
-                            if (typeof okKoRaw === 'string') {
-                                const okKoUpper = okKoRaw.toUpperCase().trim();
-                                estadoActivo = (okKoUpper === 'OK' || okKoUpper === '1' || okKoUpper === 'TRUE');
-                            } else if (typeof okKoRaw === 'number') {
-                                estadoActivo = (okKoRaw === 1);
-                            } else if (typeof okKoRaw === 'boolean') {
-                                estadoActivo = okKoRaw;
-                            }
-                            %>
-                            <option value="1" <%= estadoActivo ? 'selected' : '' %>>Activo</option>
-                            <option value="0" <%= !estadoActivo ? 'selected' : '' %>>Inactivo</option>
+                            let esInactivo = false;
+                            if (typeof okKoRaw === 'string') esInactivo = okKoRaw.toUpperCase().trim() === 'KO' || okKoRaw.trim() === '0';
+                            else if (typeof okKoRaw === 'number') esInactivo = okKoRaw === 0;
+                            else if (typeof okKoRaw === 'boolean') esInactivo = okKoRaw === false;
+
+                            const rawDni = cliente ? (cliente.DNI_CIF || '') : '';
+                            const v = String(rawDni).trim().toUpperCase().replace(/\s+/g,'').replace(/-/g,'');
+                            const dni = /^[0-9]{8}[A-Z]$/;
+                            const nie = /^[XYZ][0-9]{7}[A-Z]$/;
+                            const cif = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/;
+                            const valido = v && !['PENDIENTE','NULL','N/A','NA'].includes(v) && !v.startsWith('SIN_DNI') && (dni.test(v) || nie.test(v) || cif.test(v));
+                            estadoSel = esInactivo ? '3' : (valido ? '2' : '1');
+                          }
+                        %>
+                        <select name="Id_EstdoCliente" class="form-select" required>
+                          <% if (typeof estadosClientes !== 'undefined' && estadosClientes && Array.isArray(estadosClientes)) { %>
+                            <% estadosClientes.forEach(function(est) { %>
+                              <% const estId = est.id || est.Id; %>
+                              <% const estNombre = est.Nombre || est.nombre || 'Sin nombre'; %>
+                              <option value="<%= estId %>" <%= String(estId) === String(estadoSel) ? 'selected' : '' %>><%= estNombre %></option>
+                            <% }); %>
+                          <% } else { %>
+                            <option value="1" <%= estadoSel === '1' ? 'selected' : '' %>>Potencial</option>
+                            <option value="2" <%= estadoSel === '2' ? 'selected' : '' %>>Activo</option>
+                            <option value="3" <%= estadoSel === '3' ? 'selected' : '' %>>Inactivo</option>
+                          <% } %>
                         </select>
-                        <small class="text-muted">El estado debe ser "Activo" (1) o "Inactivo" (0)</small>
+                        <small class="text-muted">
+                          <strong>Automático:</strong> Potencial/Activo se recalculan según DNI/CIF. <strong>Manual:</strong> puedes marcar Inactivo.
+                        </small>
                     </div>
                 </div>
             </div>
@@ -437,7 +455,7 @@
                 .replace(/'/g, '&#39;');
 
             async function fetchClientes(q) {
-                const url = `/api/clientes/buscar?q=${encodeURIComponent(q)}&estado=activos&limit=20`;
+                const url = `/api/clientes/buscar?q=${encodeURIComponent(q)}&estadoCliente=2&limit=20`;
                 const res = await fetch(url, { credentials: 'include' });
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) {

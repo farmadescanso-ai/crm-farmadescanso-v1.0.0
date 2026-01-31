@@ -428,7 +428,7 @@
                             <% if (typeof totalFiltrados !== 'undefined' && totalFiltrados !== null) { %>
                             <span class="badge bg-secondary ms-2">Filtrados: <%= totalFiltrados %></span>
                             <% } %>
-                            <% if (typeof filters !== 'undefined' && filters && (filters.tipoCliente || filters.provincia || filters.comercial || filters.conVentas || filters.estado)) { %>
+                            <% if (typeof filters !== 'undefined' && filters && (filters.tipoCliente || filters.provincia || filters.comercial || filters.conVentas || filters.estadoCliente)) { %>
                             <span class="badge bg-info ms-2">Filtrado</span>
                             <% } %>
                         </div>
@@ -445,7 +445,7 @@
                         const prevPage = Math.max(1, Number(page) - 1);
                         const nextPage = Math.min(totalPages, Number(page) + 1);
                         const params = new URLSearchParams();
-                        const keepKeys = ['tipoCliente','provincia','comercial','conVentas','estado','pageSize'];
+                        const keepKeys = ['tipoCliente','provincia','comercial','conVentas','estadoCliente','pageSize'];
                         keepKeys.forEach(k => {
                             if (typeof filters !== 'undefined' && filters && filters[k] !== null && filters[k] !== undefined && String(filters[k]).trim() !== '') {
                                 params.set(k, String(filters[k]));
@@ -495,11 +495,32 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label small">Estado</label>
-                                <% const estadoSel = (typeof filters !== 'undefined' && filters && filters.estado) ? String(filters.estado) : 'activos'; %>
-                                <select name="estado" class="form-select form-select-sm" id="filterEstado">
-                                    <option value="activos" <%= estadoSel === 'activos' ? 'selected' : '' %>>Activos</option>
-                                    <option value="inactivos" <%= estadoSel === 'inactivos' ? 'selected' : '' %>>Inactivos</option>
-                                    <option value="todos" <%= estadoSel === 'todos' ? 'selected' : '' %>>Todos</option>
+                                <%
+                                  // Nuevo: estadoCliente (id). Compatibilidad legacy: estado=activos/inactivos/todos
+                                  let estadoSelId = null;
+                                  if (typeof filters !== 'undefined' && filters && filters.estadoCliente !== undefined && filters.estadoCliente !== null && String(filters.estadoCliente).trim() !== '') {
+                                    estadoSelId = String(filters.estadoCliente);
+                                  } else if (typeof filters !== 'undefined' && filters && filters.estado) {
+                                    const e = String(filters.estado).toLowerCase();
+                                    if (e === 'activos') estadoSelId = '2';
+                                    else if (e === 'inactivos') estadoSelId = '3';
+                                    else estadoSelId = '';
+                                  } else {
+                                    estadoSelId = '2'; // Default: Activo
+                                  }
+                                %>
+                                <select name="estadoCliente" class="form-select form-select-sm" id="filterEstado">
+                                    <option value="" <%= !estadoSelId ? 'selected' : '' %>>Todos</option>
+                                    <% if (typeof estadosClientes !== 'undefined' && estadosClientes && Array.isArray(estadosClientes)) { %>
+                                      <% estadosClientes.forEach(function(est) { %>
+                                        <%
+                                          const estId = est.id || est.Id;
+                                          const estNombre = est.Nombre || est.nombre || 'Sin nombre';
+                                          const isSel = estadoSelId && String(estId) === String(estadoSelId);
+                                        %>
+                                        <option value="<%= estId %>" <%= isSel ? 'selected' : '' %>><%= estNombre %></option>
+                                      <% }); %>
+                                    <% } %>
                                 </select>
                             </div>
                             <div class="col-md-3">
@@ -674,27 +695,26 @@
                                         const provinciaNombre = cliente.ProvinciaNombre || '-';
                                         const tipoClienteNombre = cliente.TipoClienteNombre || cliente.TipoCliente || '-';
                                     
-                                    // Estado activo/inactivo (usar OK_KO)
-                                    // OK_KO puede ser 1/0 (booleano) o 'OK'/'KO' (legacy)
-                                    // Nota: MySQL puede devolver números como strings, por lo que debemos verificar ambos casos
+                                    // Estado nuevo desde catálogo (fallback a OK_KO si no viene)
+                                    const estadoNombre = cliente.EstadoClienteNombre || cliente.estadoClienteNombre || null;
                                     const okKo = cliente.OK_KO;
-                                    let estadoActivo = false;
-                                    
-                                    if (okKo === null || okKo === undefined) {
-                                      // Por defecto activo si no está definido
+                                    let estadoActivo = true;
+                                    if (estadoNombre) {
+                                      estadoActivo = String(estadoNombre).toLowerCase() !== 'inactivo';
+                                    } else if (okKo === null || okKo === undefined) {
                                       estadoActivo = true;
                                     } else if (typeof okKo === 'string') {
                                       const okKoUpper = okKo.toUpperCase().trim();
-                                      // Verificar si es 'OK' o '1' (puede venir como string desde MySQL)
                                       estadoActivo = (okKoUpper === 'OK' || okKoUpper === '1' || okKoUpper === 'TRUE');
                                     } else if (typeof okKo === 'number') {
                                       estadoActivo = (okKo === 1);
                                     } else if (typeof okKo === 'boolean') {
                                       estadoActivo = okKo;
-                                    } else {
-                                      // Por defecto activo si no está definido
-                                      estadoActivo = true;
                                     }
+                                    const estadoLabel = estadoNombre ? String(estadoNombre) : (estadoActivo ? 'Activo' : 'Inactivo');
+                                    const estadoBadgeClass =
+                                      estadoLabel.toLowerCase() === 'activo' ? 'bg-success'
+                                      : (estadoLabel.toLowerCase() === 'inactivo' ? 'bg-secondary' : 'bg-warning');
                                     %>
                                     <td class="text-center">
                                         <a class="btn btn-sm btn-outline-primary me-1 view-client" title="Ver" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" role="button">
@@ -781,8 +801,8 @@
                                     <td class="col-poblacion"><%= poblacion %></td>
                                     <td><%= provinciaNombre %></td>
                                     <td>
-                                        <span class="badge <%= estadoActivo ? 'bg-success' : 'bg-secondary' %>" id="badge-estado-<%= cliente.Id || cliente.id %>">
-                                            <%= estadoActivo ? 'Activo' : 'Inactivo' %>
+                                        <span class="badge <%= estadoBadgeClass %>" id="badge-estado-<%= cliente.Id || cliente.id %>">
+                                            <%= estadoLabel %>
                                         </span>
                                     </td>
                                 </tr>
@@ -829,7 +849,7 @@
             provincia: <%= (typeof filters !== 'undefined' && filters && filters.provincia) ? JSON.stringify(String(filters.provincia)) : 'null' %>,
             comercial: <%= (typeof filters !== 'undefined' && filters && filters.comercial) ? JSON.stringify(String(filters.comercial)) : 'null' %>,
             conVentas: <%= (typeof filters !== 'undefined' && filters && filters.conVentas !== undefined && filters.conVentas !== null && String(filters.conVentas).trim() !== '') ? JSON.stringify(String(filters.conVentas)) : 'null' %>,
-            estado: <%= (typeof filters !== 'undefined' && filters && filters.estado) ? JSON.stringify(String(filters.estado)) : JSON.stringify('activos') %>
+            estadoCliente: <%= (typeof filters !== 'undefined' && filters && filters.estadoCliente !== undefined && filters.estadoCliente !== null && String(filters.estadoCliente).trim() !== '') ? JSON.stringify(String(filters.estadoCliente)) : JSON.stringify('2') %>
         };
         
         // Asegurar que el filtro de comercial esté fijado para no-admins
@@ -939,14 +959,20 @@
             const nombre = cliente.Nombre_Razon_Social || cliente.Nombre || '-';
             const provinciaNombre = cliente.ProvinciaNombre || '-';
             const tipoClienteNombre = cliente.TipoClienteNombre || cliente.TipoCliente || '-';
+            const estadoNombre = cliente.EstadoClienteNombre || cliente.estadoClienteNombre || null;
             const okKo = cliente.OK_KO;
             let estadoActivo = true;
-            if (okKo === null || okKo === undefined) estadoActivo = true;
+            if (estadoNombre) estadoActivo = String(estadoNombre).toLowerCase() !== 'inactivo';
+            else if (okKo === null || okKo === undefined) estadoActivo = true;
             else if (typeof okKo === 'string') {
                 const u = okKo.toUpperCase().trim();
                 estadoActivo = (u === 'OK' || u === '1' || u === 'TRUE');
             } else if (typeof okKo === 'number') estadoActivo = (okKo === 1);
             else if (typeof okKo === 'boolean') estadoActivo = okKo;
+            const estadoLabel = estadoNombre ? String(estadoNombre) : (estadoActivo ? 'Activo' : 'Inactivo');
+            const estadoBadgeClass =
+              estadoLabel.toLowerCase() === 'activo' ? 'bg-success'
+              : (estadoLabel.toLowerCase() === 'inactivo' ? 'bg-secondary' : 'bg-warning');
 
             const ventasYear = Number(cliente.VentasAcumuladasYear || 0) || 0;
             const ventasYearFormatted = new Intl.NumberFormat('es-ES', {
@@ -984,7 +1010,7 @@
                 <td>${escapeHtml(cliente.CodigoPostal || '-')}</td>
                 <td class="col-poblacion">${escapeHtml(cliente.Poblacion || '-')}</td>
                 <td>${escapeHtml(provinciaNombre)}</td>
-                <td><span class="badge ${estadoActivo ? 'bg-success' : 'bg-secondary'}" id="badge-estado-${id}">${estadoActivo ? 'Activo' : 'Inactivo'}</span></td>
+                <td><span class="badge ${estadoBadgeClass}" id="badge-estado-${id}">${escapeHtml(estadoLabel)}</span></td>
               </tr>
             `;
         }
@@ -1480,10 +1506,11 @@
                         // Actualizar badge y botón en la UI
                         const badge = row.querySelector(`#badge-estado-${id}`);
                         if (badge) {
-                            const isActive = nuevoEstado === 'OK';
-                            badge.classList.remove('bg-success', 'bg-secondary');
-                            badge.classList.add(isActive ? 'bg-success' : 'bg-secondary');
-                            badge.textContent = isActive ? 'Activo' : 'Inactivo';
+                            const estadoNombre = (data && data.data && data.data.EstadoClienteNombre) ? String(data.data.EstadoClienteNombre) : (nuevoEstado === 'OK' ? 'Activo' : 'Inactivo');
+                            const lower = estadoNombre.toLowerCase();
+                            badge.classList.remove('bg-success', 'bg-secondary', 'bg-warning');
+                            badge.classList.add(lower === 'activo' ? 'bg-success' : (lower === 'inactivo' ? 'bg-secondary' : 'bg-warning'));
+                            badge.textContent = estadoNombre;
                         }
                         
                         // Actualizar botón (verde para activo, rojo para inactivo)

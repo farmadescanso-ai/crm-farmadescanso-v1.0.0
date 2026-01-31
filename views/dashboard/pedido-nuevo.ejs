@@ -671,7 +671,7 @@
                 clienteDropdown.classList.add('show');
 
                 try {
-                    const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(query)}&estado=activos&limit=50`, {
+                    const response = await fetch(`/api/clientes/buscar?q=${encodeURIComponent(query)}&estadoCliente=2&limit=50`, {
                         credentials: 'include'
                     });
                     const data = await response.json().catch(() => ({}));

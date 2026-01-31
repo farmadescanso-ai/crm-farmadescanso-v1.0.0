@@ -140,3 +140,4 @@ scripts/configurar-usuario-mysql-remoto.sql
 !scripts/recalcular-rapeles-trimestre.js
 !scripts/recalcular-comisiones-segun-pedido.js
 !scripts/asegurar-integridad-relaciones-indices.sql
+!scripts/crear-estdoClientes.sql

@@ -6588,6 +6588,11 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       const comIdSafe = parseInt(String(comercialIdAutenticado || ''), 10);
       if (!Number.isFinite(comIdSafe) || comIdSafe <= 0) {
         console.warn('⚠️ [CLIENTES] Usuario Comercial sin comercialId válido. Devolviendo lista vacía por seguridad.');
+        const estadosClientes = await crm.query('SELECT id, Nombre FROM estdoClientes ORDER BY id ASC').catch(() => ([
+          { id: 1, Nombre: 'Potencial' },
+          { id: 2, Nombre: 'Activo' },
+          { id: 3, Nombre: 'Inactivo' }
+        ]));
         return res.render('dashboard/clientes', {
           title: 'Clientes - Farmadescaso',
           user: req.comercial || req.session?.comercial || req.user || null,
@@ -6602,6 +6607,7 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
           idiomas: [],
           monedas: [],
           comerciales: [],
+          estadosClientes: estadosClientes || [],
           filters: { ...req.query, comercial: null },
           error: 'No se pudo determinar tu comercial asignado. Contacta con el administrador.'
         });
@@ -6622,8 +6628,18 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       conVentas: req.query.conVentas !== undefined
         ? (req.query.conVentas !== '' ? req.query.conVentas : undefined)
         : 'true',
-      estado: req.query.estado || 'activos' // default: activos (escalable para 6.000+)
+      // Nuevo: estadoCliente (desde catálogo). Default: Activo (2).
+      // Compatibilidad legacy: estado=activos/inactivos/todos
+      estadoCliente: req.query.estadoCliente || null,
+      estado: req.query.estado || null
     };
+    if (!filters.estadoCliente) {
+      const legacy = (filters.estado || '').toString().trim().toLowerCase();
+      if (legacy === 'activos') filters.estadoCliente = 2;
+      else if (legacy === 'inactivos') filters.estadoCliente = 3;
+      else if (legacy === 'todos') filters.estadoCliente = null;
+      else filters.estadoCliente = 2;
+    }
     // Búsqueda inteligente (servidor): `q` (>=2 caracteres)
     const q = (req.query.q || '').toString().trim();
     filters.q = q && q.length >= 2 ? q : null;
@@ -6699,8 +6715,12 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     if (filters.conVentas !== undefined && filters.conVentas !== null && filters.conVentas !== '') {
       filtersForQuery.conVentas = filters.conVentas;
     }
-    if (filters.estado) {
-      filtersForQuery.estado = filters.estado;
+    if (filters.estadoCliente !== null && filters.estadoCliente !== undefined && String(filters.estadoCliente).trim() !== '') {
+      const n = Number(filters.estadoCliente);
+      if (Number.isFinite(n) && n > 0) {
+        filtersForQuery.estadoCliente = n;
+        filters.estadoCliente = n;
+      }
     }
     if (filters.q) {
       filtersForQuery.q = filters.q;
@@ -6802,8 +6822,16 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
             });
           }
           
-          // Estado (solo en fallback manual)
-          if (filtersForQuery.estado === 'activos') {
+          // Estado (fallback manual): preferir Id_EstdoCliente; fallback a OK_KO si no existe.
+          if (filtersForQuery.estadoCliente) {
+            const estadoId = Number(filtersForQuery.estadoCliente);
+            if (Number.isFinite(estadoId) && estadoId > 0) {
+              clientesFiltrados = clientesFiltrados.filter(c => {
+                const v = c.Id_EstdoCliente ?? c.id_EstdoCliente ?? c.Id_EstadoCliente ?? c.id_estado_cliente ?? null;
+                return Number(v) === estadoId;
+              });
+            }
+          } else if (filtersForQuery.estado === 'activos') {
             clientesFiltrados = clientesFiltrados.filter(c => {
               const ok = c.OK_KO;
               return ok === 1 || ok === true || ok === '1' || (typeof ok === 'string' && ok.toUpperCase().trim() === 'OK');
@@ -6899,10 +6927,15 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
     });
 
     // Obtener datos para los filtros (solo lo necesario)
-    let [provincias, tiposClientes, comerciales] = await Promise.all([
+    let [provincias, tiposClientes, comerciales, estadosClientes] = await Promise.all([
       crm.getProvincias().catch(() => []),
       crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []),
-      crm.getComerciales().catch(() => [])
+      crm.getComerciales().catch(() => []),
+      crm.query('SELECT id, Nombre FROM estdoClientes ORDER BY id ASC').catch(() => ([
+        { id: 1, Nombre: 'Potencial' },
+        { id: 2, Nombre: 'Activo' },
+        { id: 3, Nombre: 'Inactivo' }
+      ]))
     ]);
 
     // Normalizar codificación UTF-8 de los datos de filtros
@@ -6936,6 +6969,7 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       provincias: provincias || [],
       tiposClientes: tiposClientes || [],
       comerciales: comerciales || [],
+      estadosClientes: estadosClientes || [],
       filters: filters || {}, // Pasar filtros actuales a la vista (ya incluye el comercial si no es admin)
       searchQuery: filters.q || '',
       ventasYear: yearVentasSafe,
@@ -6966,12 +7000,18 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
       let provincias = [];
       let tiposClientes = [];
       let comerciales = [];
+      let estadosClientes = [];
       
       try {
-        [provincias, tiposClientes, comerciales] = await Promise.all([
+        [provincias, tiposClientes, comerciales, estadosClientes] = await Promise.all([
           crm.getProvincias().catch(() => []),
           crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []),
-          crm.getComerciales().catch(() => [])
+          crm.getComerciales().catch(() => []),
+          crm.query('SELECT id, Nombre FROM estdoClientes ORDER BY id ASC').catch(() => ([
+            { id: 1, Nombre: 'Potencial' },
+            { id: 2, Nombre: 'Activo' },
+            { id: 3, Nombre: 'Inactivo' }
+          ]))
         ]);
       } catch (fallbackError) {
         console.error('❌ [CLIENTES] Error en fallback:', fallbackError.message);
@@ -6991,6 +7031,7 @@ app.get('/dashboard/clientes', requireAuth, async (req, res) => {
         idiomas: [],
         monedas: [],
         comerciales: comerciales || [],
+        estadosClientes: estadosClientes || [],
         filters: filtersError || {}, // Incluir el filtro de comercial si no es admin
         error: `Error cargando clientes: ${error.message}`
       });
@@ -7020,6 +7061,11 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     const paisesNormalizados = paises ? paises.map(p => ({ ...p, Nombre_pais: normalizeUTF8(p.Nombre_pais || '') })) : [];
     
     const tiposClientes = await crm.query('SELECT id, Tipo FROM tipos_clientes').catch(() => []);
+    const estadosClientes = await crm.query('SELECT id, Nombre FROM estdoClientes ORDER BY id ASC').catch(() => ([
+      { id: 1, Nombre: 'Potencial' },
+      { id: 2, Nombre: 'Activo' },
+      { id: 3, Nombre: 'Inactivo' }
+    ]));
     const formasPago = await crm.getFormasPago();
     const idiomas = await crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(() => []);
     const monedas = await crm.query('SELECT id, Nombre AS Moneda FROM monedas').catch(() => []);
@@ -7036,6 +7082,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       paises: paisesNormalizados,
       cooperativasCliente: [],
       tiposClientes: tiposClientes || [],
+      estadosClientes: estadosClientes || [],
       formasPago: formasPago || [],
       idiomas: idiomas || [],
       monedas: monedas || [],
@@ -7071,11 +7118,16 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
     
     // Obtener todos los datos necesarios para los selectores
     console.log(`📋 [EDITAR CLIENTE] Cargando datos adicionales...`);
-    const [provincias, paises, cooperativasCliente, tiposClientes, formasPago, idiomas, monedas, comerciales] = await Promise.all([
+    const [provincias, paises, cooperativasCliente, tiposClientes, estadosClientes, formasPago, idiomas, monedas, comerciales] = await Promise.all([
       crm.getProvincias().catch(err => { console.error('Error obteniendo provincias:', err); return []; }),
       crm.getPaises().catch(err => { console.error('Error obteniendo países:', err); return []; }),
       crm.getCooperativasByClienteId(clienteId).catch(err => { console.error('Error obteniendo cooperativas:', err); return []; }),
       crm.query('SELECT id, Tipo FROM tipos_clientes').catch(err => { console.error('Error obteniendo tipos clientes:', err); return []; }),
+      crm.query('SELECT id, Nombre FROM estdoClientes ORDER BY id ASC').catch(() => ([
+        { id: 1, Nombre: 'Potencial' },
+        { id: 2, Nombre: 'Activo' },
+        { id: 3, Nombre: 'Inactivo' }
+      ])),
       crm.getFormasPago().catch(err => { console.error('Error obteniendo formas de pago:', err); return []; }),
       crm.query('SELECT id, Nombre AS Idioma FROM idiomas').catch(err => { console.error('Error obteniendo idiomas:', err); return []; }),
       crm.query('SELECT id, Nombre AS Moneda FROM monedas').catch(err => { console.error('Error obteniendo monedas:', err); return []; }),
@@ -7096,6 +7148,7 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
       paises: paisesNormalizados,
       cooperativasCliente: cooperativasCliente ? cooperativasCliente.map(c => normalizeObjectUTF8(c)) : [],
       tiposClientes: tiposClientes || [],
+      estadosClientes: estadosClientes || [],
       formasPago: formasPago || [],
       idiomas: idiomas || [],
       monedas: monedas || [],
@@ -8066,6 +8119,7 @@ const __clientesBuscarMetaCache = {
   colComercialClientes: null,
   colTipoCliente: null,
   colProvincia: null,
+  colEstadoCliente: null,
   colOkKo: null,
   colPedidoCliente: null,
   searchCols: []
@@ -8081,6 +8135,7 @@ const __KNOWN_CLIENTES_SCHEMA = {
   colComercialClientes: 'Id_Cial',
   colTipoCliente: 'Id_TipoCliente',
   colProvincia: 'Id_Provincia',
+  colEstadoCliente: 'Id_EstdoCliente',
   colOkKo: 'OK_KO',
   colPedidoCliente: 'Id_Cliente',
   searchCols: [
@@ -8179,6 +8234,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       const colComercialClientes = pickFirst(['Id_Cial', 'ComercialId', 'comercialId', 'Id_Comercial', 'id_comercial'], clientesCols);
       const colTipoCliente = pickFirst(['Id_TipoCliente', 'id_tipo_cliente', 'TipoClienteId', 'tipoClienteId'], clientesCols);
       const colProvincia = pickFirst(['Id_Provincia', 'id_provincia', 'ProvinciaId', 'provinciaId'], clientesCols);
+      const colEstadoCliente = pickFirst(['Id_EstdoCliente', 'id_estdo_cliente', 'Id_EstadoCliente', 'id_estado_cliente', 'EstadoClienteId', 'estadoClienteId'], clientesCols);
       const colOkKo = pickFirst(['OK_KO', 'ok_ko'], clientesCols);
       const colPedidoCliente = pickFirst(['Id_Cliente', 'id_cliente', 'Cliente_id', 'cliente_id', 'ClienteId', 'clienteId'], pedidosCols);
 
@@ -8212,6 +8268,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
           __KNOWN_CLIENTES_SCHEMA.colComercialClientes,
           __KNOWN_CLIENTES_SCHEMA.colTipoCliente,
           __KNOWN_CLIENTES_SCHEMA.colProvincia,
+          __KNOWN_CLIENTES_SCHEMA.colEstadoCliente,
           __KNOWN_CLIENTES_SCHEMA.colOkKo,
           ...__KNOWN_CLIENTES_SCHEMA.searchCols
         ]) : clientesCols,
@@ -8221,6 +8278,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         colComercialClientes: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colComercialClientes : colComercialClientes,
         colTipoCliente: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colTipoCliente : colTipoCliente,
         colProvincia: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colProvincia : colProvincia,
+        colEstadoCliente: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colEstadoCliente : colEstadoCliente,
         colOkKo: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colOkKo : colOkKo,
         colPedidoCliente: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colPedidoCliente : colPedidoCliente,
         searchCols: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.searchCols : searchCols
@@ -8236,6 +8294,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       colComercialClientes,
       colTipoCliente,
       colProvincia,
+      colEstadoCliente,
       colOkKo,
       colPedidoCliente,
       searchCols
@@ -8263,7 +8322,9 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     }
     
     // Filtros opcionales (siempre deben aplicarse sobre TODA la BD, no sobre 50 filas)
-    const estado = (req.query.estado || '').toString().trim().toLowerCase();
+    const estado = (req.query.estado || '').toString().trim().toLowerCase(); // legacy
+    const estadoClienteRaw = (req.query.estadoCliente || '').toString().trim();
+    const estadoClienteId = estadoClienteRaw !== '' && !Number.isNaN(Number(estadoClienteRaw)) ? Number(estadoClienteRaw) : null;
     const tipoCliente = req.query.tipoCliente !== undefined && req.query.tipoCliente !== null && String(req.query.tipoCliente).trim() !== ''
       ? Number(req.query.tipoCliente)
       : null;
@@ -8283,7 +8344,11 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       params.push(comercialFiltro);
     }
     
-    if (colOkKo) {
+    // Estado (nuevo catálogo): si viene estadoCliente y existe columna, usarlo.
+    if (colEstadoCliente && Number.isFinite(estadoClienteId) && estadoClienteId > 0) {
+      where.push(`c.\`${colEstadoCliente}\` = ?`);
+      params.push(estadoClienteId);
+    } else if (colOkKo) {
       // Compatibilidad: OK_KO puede venir como 1/0, 'OK'/'KO' o 'Activo'/'Inactivo'
       if (estado === 'activos') {
         where.push(`(
@@ -17748,7 +17813,11 @@ app.get('/api/clientes/paged', requireAuth, async (req, res) => {
     const conVentas = req.query.conVentas !== undefined && req.query.conVentas !== null && String(req.query.conVentas).trim() !== ''
       ? req.query.conVentas
       : undefined;
-    const estado = req.query.estado ? String(req.query.estado) : 'activos';
+    // Nuevo: estadoCliente (catálogo). Compatibilidad legacy: estado=activos/inactivos/todos
+    const estadoClienteRaw = req.query.estadoCliente !== undefined && req.query.estadoCliente !== null && String(req.query.estadoCliente).trim() !== ''
+      ? Number(req.query.estadoCliente)
+      : null;
+    const estadoLegacy = req.query.estado ? String(req.query.estado).trim().toLowerCase() : null;
     const comercialFiltro = req.query.comercial !== undefined && req.query.comercial !== null && String(req.query.comercial).trim() !== ''
       ? Number(req.query.comercial)
       : null;
@@ -17756,7 +17825,13 @@ app.get('/api/clientes/paged', requireAuth, async (req, res) => {
     if (Number.isFinite(tipoCliente) && tipoCliente > 0) filtersForQuery.tipoCliente = tipoCliente;
     if (Number.isFinite(provincia) && provincia > 0) filtersForQuery.provincia = provincia;
     if (conVentas !== undefined) filtersForQuery.conVentas = conVentas;
-    if (estado) filtersForQuery.estado = estado;
+    if (Number.isFinite(estadoClienteRaw) && estadoClienteRaw > 0) {
+      filtersForQuery.estadoCliente = estadoClienteRaw;
+    } else if (estadoLegacy === 'activos') {
+      filtersForQuery.estadoCliente = 2;
+    } else if (estadoLegacy === 'inactivos') {
+      filtersForQuery.estadoCliente = 3;
+    }
     
     // No-admin: siempre restringir al comercial autenticado
     if (!esAdmin && comercialIdAutenticado) {

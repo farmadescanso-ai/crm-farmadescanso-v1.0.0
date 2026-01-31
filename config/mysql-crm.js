@@ -110,10 +110,56 @@ class MySQLCRM {
       'comercialId',
       'comercial_id'
     ]);
+    const colEstadoCliente = pickCI([
+      'Id_EstdoCliente',
+      'id_estdo_cliente',
+      'Id_EstadoCliente',
+      'id_estado_cliente',
+      'EstadoClienteId',
+      'estadoClienteId'
+    ]);
 
-    const meta = { tClientes, pk, colComercial };
+    const meta = { tClientes, pk, colComercial, colEstadoCliente };
     this._metaCache.clientesMeta = meta;
     return meta;
+  }
+
+  _normalizeDniCif(value) {
+    return String(value ?? '')
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '')
+      .replace(/-/g, '');
+  }
+
+  _isValidDniCif(value) {
+    const v = this._normalizeDniCif(value);
+    if (!v) return false;
+    if (['PENDIENTE', 'NULL', 'N/A', 'NA'].includes(v)) return false;
+    if (v.startsWith('SIN_DNI')) return false;
+
+    // DNI: 8 dígitos + letra
+    // NIE: X/Y/Z + 7 dígitos + letra
+    // CIF: letra + 7 dígitos + [0-9A-J]
+    const dni = /^[0-9]{8}[A-Z]$/;
+    const nie = /^[XYZ][0-9]{7}[A-Z]$/;
+    const cif = /^[ABCDEFGHJNPQRSUVW][0-9]{7}[0-9A-J]$/;
+    return dni.test(v) || nie.test(v) || cif.test(v);
+  }
+
+  async _getEstadoClienteIds() {
+    // Cache: ids fijos por diseño, pero leemos por si en el futuro cambian
+    if (this._metaCache?.estadoClienteIds) return this._metaCache.estadoClienteIds;
+    const tEstados = await this._resolveTableNameCaseInsensitive('estdoClientes');
+    const rows = await this.query(`SELECT id, Nombre FROM \`${tEstados}\``).catch(() => []);
+    const map = new Map((rows || []).map(r => [String(r.Nombre || '').toLowerCase(), Number(r.id)]));
+    const ids = {
+      potencial: map.get('potencial') || 1,
+      activo: map.get('activo') || 2,
+      inactivo: map.get('inactivo') || 3
+    };
+    this._metaCache.estadoClienteIds = ids;
+    return ids;
   }
 
   async _getFormasPagoTableName() {
@@ -803,7 +849,8 @@ class MySQLCRM {
   async getClientesOptimizado(filters = {}) {
     let sql = '';
     try {
-      const { colComercial } = await this._ensureClientesMeta();
+      const { colComercial, colEstadoCliente } = await this._ensureClientesMeta();
+      const tEstados = colEstadoCliente ? await this._resolveTableNameCaseInsensitive('estdoClientes') : null;
       const whereConditions = [];
       const params = [];
 
@@ -814,11 +861,14 @@ class MySQLCRM {
           c.*,
           p.Nombre as ProvinciaNombre,
           tc.Tipo as TipoClienteNombre,
-          ${colComercial ? 'cial.Nombre as ComercialNombre' : 'NULL as ComercialNombre'}
+          ${colComercial ? 'cial.Nombre as ComercialNombre' : 'NULL as ComercialNombre'},
+          ${colEstadoCliente ? 'ec.Nombre as EstadoClienteNombre' : 'NULL as EstadoClienteNombre'},
+          ${colEstadoCliente ? `c.\`${colEstadoCliente}\` as EstadoClienteId` : 'NULL as EstadoClienteId'}
         FROM clientes c
         LEFT JOIN provincias p ON c.Id_Provincia = p.id
         LEFT JOIN tipos_clientes tc ON c.Id_TipoCliente = tc.id
         ${colComercial ? `LEFT JOIN comerciales cial ON c.\`${colComercial}\` = cial.id` : ''}
+        ${colEstadoCliente ? `LEFT JOIN \`${tEstados}\` ec ON c.\`${colEstadoCliente}\` = ec.id` : ''}
       `;
 
       // Filtro por tipo de cliente
@@ -861,6 +911,15 @@ class MySQLCRM {
         }
       } else {
         console.log(`ℹ️ [OPTIMIZADO] No se aplica filtro de comercial (valor: ${filters.comercial}, tipo: ${typeof filters.comercial})`);
+      }
+
+      // Filtro por estado de cliente (nuevo catálogo)
+      if (colEstadoCliente && filters.estadoCliente !== null && filters.estadoCliente !== undefined && filters.estadoCliente !== '' && !isNaN(filters.estadoCliente)) {
+        const estadoId = typeof filters.estadoCliente === 'number' ? filters.estadoCliente : parseInt(filters.estadoCliente);
+        if (!isNaN(estadoId) && estadoId > 0) {
+          whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+          params.push(estadoId);
+        }
       }
 
       // Filtro por con/sin ventas
@@ -950,7 +1009,8 @@ class MySQLCRM {
   async getClientesOptimizadoPaged(filters = {}, options = {}) {
     let sql = '';
     try {
-      const { pk, colComercial } = await this._ensureClientesMeta();
+      const { pk, colComercial, colEstadoCliente } = await this._ensureClientesMeta();
+      const tEstados = colEstadoCliente ? await this._resolveTableNameCaseInsensitive('estdoClientes') : null;
       const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Math.min(500, Number(options.limit))) : 50;
       const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Number(options.offset)) : 0;
 
@@ -962,11 +1022,14 @@ class MySQLCRM {
           c.*,
           p.Nombre as ProvinciaNombre,
           tc.Tipo as TipoClienteNombre,
-          ${colComercial ? 'cial.Nombre as ComercialNombre' : 'NULL as ComercialNombre'}
+          ${colComercial ? 'cial.Nombre as ComercialNombre' : 'NULL as ComercialNombre'},
+          ${colEstadoCliente ? 'ec.Nombre as EstadoClienteNombre' : 'NULL as EstadoClienteNombre'},
+          ${colEstadoCliente ? `c.\`${colEstadoCliente}\` as EstadoClienteId` : 'NULL as EstadoClienteId'}
         FROM clientes c
         LEFT JOIN provincias p ON c.Id_Provincia = p.id
         LEFT JOIN tipos_clientes tc ON c.Id_TipoCliente = tc.id
         ${colComercial ? `LEFT JOIN comerciales cial ON c.\`${colComercial}\` = cial.id` : ''}
+        ${colEstadoCliente ? `LEFT JOIN \`${tEstados}\` ec ON c.\`${colEstadoCliente}\` = ec.id` : ''}
       `;
 
       // Resolver columna cliente en pedidos (Id_Cliente vs Cliente_id, etc.) para con/sin ventas.
@@ -986,11 +1049,32 @@ class MySQLCRM {
         }
       }
 
-      // Estado (activos por defecto a nivel UI, pero aquí solo aplicamos si viene)
-      if (filters.estado === 'activos') {
-        whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
-      } else if (filters.estado === 'inactivos') {
-        whereConditions.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+      // Estado: preferir catálogo si existe; fallback a OK_KO si no.
+      if (colEstadoCliente) {
+        if (filters.estadoCliente !== undefined && filters.estadoCliente !== null && String(filters.estadoCliente).trim() !== '' && !isNaN(filters.estadoCliente)) {
+          const estadoId = Number(filters.estadoCliente);
+          if (Number.isFinite(estadoId) && estadoId > 0) {
+            whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+            params.push(estadoId);
+          }
+        } else if (filters.estado && typeof filters.estado === 'string') {
+          // Compatibilidad legacy: estado=activos/inactivos/todos
+          const ids = await this._getEstadoClienteIds();
+          const e = filters.estado.trim().toLowerCase();
+          if (e === 'activos') {
+            whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+            params.push(ids.activo);
+          } else if (e === 'inactivos') {
+            whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+            params.push(ids.inactivo);
+          }
+        }
+      } else {
+        if (filters.estado === 'activos') {
+          whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
+        } else if (filters.estado === 'inactivos') {
+          whereConditions.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+        }
       }
 
       if (filters.tipoCliente !== null && filters.tipoCliente !== undefined && filters.tipoCliente !== '' && !isNaN(filters.tipoCliente)) {
@@ -1089,18 +1173,38 @@ class MySQLCRM {
   async countClientesOptimizado(filters = {}) {
     let sql = '';
     try {
-      const { pk, colComercial } = await this._ensureClientesMeta();
+      const { pk, colComercial, colEstadoCliente } = await this._ensureClientesMeta();
       const whereConditions = [];
 
       sql = 'SELECT COUNT(*) as total FROM clientes c';
-
-      if (filters.estado === 'activos') {
-        whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
-      } else if (filters.estado === 'inactivos') {
-        whereConditions.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
-      }
-
       const params = [];
+
+      // Estado: preferir catálogo si existe; fallback a OK_KO si no.
+      if (colEstadoCliente) {
+        if (filters.estadoCliente !== undefined && filters.estadoCliente !== null && String(filters.estadoCliente).trim() !== '' && !isNaN(filters.estadoCliente)) {
+          const estadoId = Number(filters.estadoCliente);
+          if (Number.isFinite(estadoId) && estadoId > 0) {
+            whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+            params.push(estadoId);
+          }
+        } else if (filters.estado && typeof filters.estado === 'string') {
+          const ids = await this._getEstadoClienteIds();
+          const e = filters.estado.trim().toLowerCase();
+          if (e === 'activos') {
+            whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+            params.push(ids.activo);
+          } else if (e === 'inactivos') {
+            whereConditions.push(`c.\`${colEstadoCliente}\` = ?`);
+            params.push(ids.inactivo);
+          }
+        }
+      } else {
+        if (filters.estado === 'activos') {
+          whereConditions.push("(c.OK_KO = 1 OR c.OK_KO = '1' OR UPPER(c.OK_KO) = 'OK')");
+        } else if (filters.estado === 'inactivos') {
+          whereConditions.push("(c.OK_KO = 0 OR c.OK_KO = '0' OR UPPER(c.OK_KO) = 'KO')");
+        }
+      }
 
       // Resolver columna cliente en pedidos (Id_Cliente vs Cliente_id, etc.) para con/sin ventas.
       if (!this.__pedidosClienteCol) {
@@ -1455,6 +1559,40 @@ class MySQLCRM {
       const clienteActual = await this.getClienteById(id);
       const provinciaId = payload.Id_Provincia !== undefined ? payload.Id_Provincia : (clienteActual?.Id_Provincia || clienteActual?.id_Provincia);
       const paisId = payload.Id_Pais !== undefined ? payload.Id_Pais : (clienteActual?.Id_Pais || clienteActual?.id_Pais);
+
+      // Estado de cliente (nuevo): Id_EstdoCliente (si existe la columna)
+      // Regla solicitada:
+      // - Inactivo si OK_KO=0 o si se selecciona Inactivo explícitamente
+      // - Si no inactivo:
+      //    * DNI/CIF inválido => Potencial
+      //    * DNI/CIF válido   => Activo
+      try {
+        const meta = await this._ensureClientesMeta();
+        const colEstadoCliente = meta?.colEstadoCliente || null;
+        if (colEstadoCliente) {
+          const ids = await this._getEstadoClienteIds().catch(() => ({ potencial: 1, activo: 2, inactivo: 3 }));
+
+          const dniToCheck = (payload.DNI_CIF !== undefined) ? payload.DNI_CIF : (clienteActual?.DNI_CIF);
+          const dniValido = this._isValidDniCif(dniToCheck);
+
+          const okKoToCheck = (payload.OK_KO !== undefined) ? payload.OK_KO : (clienteActual?.OK_KO);
+          const esInactivoPorOkKo = (okKoToCheck === 0 || okKoToCheck === '0' || okKoToCheck === false || (typeof okKoToCheck === 'string' && okKoToCheck.toUpperCase().trim() === 'KO'));
+
+          const estadoReq = (payload.Id_EstdoCliente !== undefined && payload.Id_EstdoCliente !== null && String(payload.Id_EstdoCliente).trim() !== '')
+            ? Number(payload.Id_EstdoCliente)
+            : null;
+
+          const estadoFinal = (estadoReq === ids.inactivo || esInactivoPorOkKo)
+            ? ids.inactivo
+            : (dniValido ? ids.activo : ids.potencial);
+
+          payload.Id_EstdoCliente = estadoFinal;
+          payload.OK_KO = (estadoFinal === ids.inactivo) ? 0 : 1;
+        }
+      } catch (e) {
+        // Si falla, no bloquear el update (compatibilidad sin migración)
+        console.warn('⚠️  [UPDATE] No se pudo calcular Id_EstdoCliente:', e?.message || e);
+      }
       
       // Si hay código postal, validar correspondencia con provincia y país
       if (payload.CodigoPostal && (provinciaId || paisId)) {
@@ -1560,6 +1698,33 @@ class MySQLCRM {
         if (dniValue === '' || dniValue.toLowerCase() === 'pendiente') {
           payload.DNI_CIF = 'Pendiente';
         }
+      }
+
+      // Estado de cliente (nuevo): Id_EstdoCliente
+      // Regla solicitada:
+      // - Si el cliente está inactivo (OK_KO=0) => Inactivo
+      // - Si NO está inactivo:
+      //    * DNI/CIF inválido => Potencial
+      //    * DNI/CIF válido   => Activo
+      const meta = await this._ensureClientesMeta().catch(() => null);
+      const colEstadoCliente = meta?.colEstadoCliente || null;
+      if (colEstadoCliente) {
+        const ids = await this._getEstadoClienteIds().catch(() => ({ potencial: 1, activo: 2, inactivo: 3 }));
+
+        const dniToCheck = payload.DNI_CIF;
+        const dniValido = this._isValidDniCif(dniToCheck);
+        const okKo = payload.OK_KO;
+        const esInactivo = (okKo === 0 || okKo === '0' || okKo === false);
+
+        // Si viene estado explícito y es Inactivo, respetar; el resto se recalcula por regla.
+        const estadoReq = payload.Id_EstdoCliente !== undefined ? Number(payload.Id_EstdoCliente) : null;
+        const estadoFinal = (estadoReq === ids.inactivo || esInactivo)
+          ? ids.inactivo
+          : (dniValido ? ids.activo : ids.potencial);
+
+        payload.Id_EstdoCliente = estadoFinal;
+        // Mantener compatibilidad con OK_KO: inactivo->0; resto->1
+        payload.OK_KO = (estadoFinal === ids.inactivo) ? 0 : 1;
       }
       
       // Por defecto, si no hay país, usar España
@@ -1705,9 +1870,30 @@ class MySQLCRM {
       }
       
       // Actualizar solo OK_KO con valor booleano (1 o 0)
-      const sql = 'UPDATE clientes SET `OK_KO` = ? WHERE id = ?';
-      await this.query(sql, [okKoValue, id]);
+      const meta = await this._ensureClientesMeta().catch(() => null);
+      const colEstadoCliente = meta?.colEstadoCliente || null;
+      let estadoFinal = null;
+      let estadoNombre = null;
+      if (colEstadoCliente) {
+        const ids = await this._getEstadoClienteIds().catch(() => ({ potencial: 1, activo: 2, inactivo: 3 }));
+        // Necesitamos DNI_CIF para decidir Activo vs Potencial cuando se activa
+        const cur = await this.query('SELECT DNI_CIF FROM clientes WHERE id = ? LIMIT 1', [id]).catch(() => []);
+        const dni = cur && cur.length ? cur[0].DNI_CIF : null;
+        const dniValido = this._isValidDniCif(dni);
+        estadoFinal = (okKoValue === 0) ? ids.inactivo : (dniValido ? ids.activo : ids.potencial);
+        const sql = `UPDATE clientes SET \`OK_KO\` = ?, \`${colEstadoCliente}\` = ? WHERE id = ?`;
+        await this.query(sql, [okKoValue, estadoFinal, id]);
+        estadoNombre =
+          estadoFinal === ids.inactivo ? 'Inactivo'
+          : (estadoFinal === ids.activo ? 'Activo' : 'Potencial');
+      } else {
+        const sql = 'UPDATE clientes SET `OK_KO` = ? WHERE id = ?';
+        await this.query(sql, [okKoValue, id]);
+      }
       console.log(`✅ [TOGGLE OK_KO] Cliente ${id} actualizado: OK_KO = ${okKoValue} (${okKoValue === 1 ? 'Activo' : 'Inactivo'})`);
+      if (colEstadoCliente) {
+        return { affectedRows: 1, OK_KO: okKoValue, Id_EstdoCliente: estadoFinal, EstadoClienteNombre: estadoNombre };
+      }
       return { affectedRows: 1, OK_KO: okKoValue };
     } catch (error) {
       console.error('❌ Error actualizando estado de cliente:', error.message);
