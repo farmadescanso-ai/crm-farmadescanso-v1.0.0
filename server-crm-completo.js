@@ -8062,50 +8062,106 @@ const __clientesBuscarMetaCache = {
   searchCols: []
 };
 
+// Schema conocido del proyecto (crm_farmadescanso)
+// Usarlo como fallback cuando la introspección de columnas devuelve vacío.
+const __KNOWN_CLIENTES_SCHEMA = {
+  tClientes: 'clientes',
+  tPedidos: 'pedidos',
+  pkPrimary: 'id',
+  pkFallback: 'Id',
+  colComercialClientes: 'Id_Cial',
+  colTipoCliente: 'Id_TipoCliente',
+  colProvincia: 'Id_Provincia',
+  colOkKo: 'OK_KO',
+  colPedidoCliente: 'Id_Cliente',
+  searchCols: [
+    'Nombre_Razon_Social',
+    'Nombre_Cial',
+    'DNI_CIF',
+    'Email',
+    'Telefono',
+    'Movil',
+    'NumeroFarmacia',
+    'Direccion',
+    'Poblacion',
+    'CodigoPostal',
+    'NomContacto',
+    'Observaciones'
+  ]
+};
+
 app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
   try {
-    // Normalizar para búsquedas case-insensitive (independiente del collation de MySQL)
+    // Búsqueda en BD.
+    // Nota: el schema de producción usa utf8mb4_unicode_ci (case-insensitive), así que evitamos LOWER()
+    // para no inutilizar índices (p.ej. en Nombre_Razon_Social).
     const qRaw = (req.query.q || '').toString().trim();
-    const qLower = qRaw.toLowerCase();
-    if (!qLower || qLower.length < 2) {
-      return res.json({ clientes: [] });
-    }
 
     console.log(`🔍 [BUSCAR CLIENTES] Iniciando búsqueda: "${qRaw}"`);
     
     // Búsqueda en BD (evita cargar miles de clientes en memoria)
-    const qLike = `%${qLower}%`;
-    const qPrefix = `${qLower}%`;
+    const qLike = `%${qRaw}%`;
+    const qPrefix = `${qRaw}%`;
 
     const comercialIdAutenticado = getComercialId(req);
     const esAdmin = getUserIsAdmin(req);
-    const debug = esAdmin && String(req.query.debug || '').trim() === '1';
+    // Debug: permitir debug=1 para cualquier usuario autenticado (no expone datos sensibles: solo metadata y recuentos).
+    const debug = String(req.query.debug || '').trim() === '1';
+
+    // Si la query es demasiado corta, devolver vacío; en debug, incluir metadata para diagnóstico.
+    if (!qRaw || qRaw.length < 2) {
+      if (debug) {
+        return res.json({
+          clientes: [],
+          debug: {
+            q: qRaw,
+            esAdmin,
+            comercialIdAutenticado,
+            reason: 'q_too_short'
+          }
+        });
+      }
+      return res.json({ clientes: [] });
+    }
 
     // Cargar/renovar metadatos (cacheado)
     const now = Date.now();
     const cacheStale = !__clientesBuscarMetaCache.loadedAt || (now - __clientesBuscarMetaCache.loadedAt) > __clientesBuscarMetaCache.ttlMs;
     if (cacheStale) {
-      const resolveTableName = async (lowerName) => {
+      // Resolver nombre real de tabla SIN depender de information_schema (en algunos hostings está restringido).
+      // Estrategia: probar variantes comunes (minúsculas/Capitalizada/MAYÚSCULAS) con SHOW COLUMNS y quedarnos con la que funcione.
+      const probeColumns = async (tableName) => {
         try {
-          const rows = await crm.query(
-            `SELECT table_name
-             FROM information_schema.tables
-             WHERE table_schema = DATABASE()
-               AND LOWER(table_name) = ?
-             ORDER BY (table_name = ?) DESC, table_name ASC
-             LIMIT 1`,
-            [String(lowerName).toLowerCase(), String(lowerName)]
-          );
-          return rows && rows.length ? rows[0].table_name : lowerName;
-        } catch (_) {
-          return lowerName;
+          const rows = await crm.query(`SHOW COLUMNS FROM \`${tableName}\``);
+          return Array.isArray(rows) ? rows : [];
+        } catch (e) {
+          return null; // null = no existe/no accesible
         }
       };
+      const resolveTableAndColumns = async (baseName) => {
+        const base = String(baseName || '').trim();
+        const cap = base ? (base.charAt(0).toUpperCase() + base.slice(1)) : base;
+        const upper = base ? base.toUpperCase() : base;
+        const candidates = Array.from(new Set([base, cap, upper].filter(Boolean)));
 
-      const tClientes = await resolveTableName('clientes');
-      const tPedidos = await resolveTableName('pedidos');
-      const clientesColsRows = await crm.query(`SHOW COLUMNS FROM \`${tClientes}\``).catch(() => []);
-      const pedidosColsRows = await crm.query(`SHOW COLUMNS FROM \`${tPedidos}\``).catch(() => []);
+        for (const cand of candidates) {
+          const cols = await probeColumns(cand);
+          if (cols && cols.length) {
+            return { tableName: cand, colsRows: cols };
+          }
+        }
+
+        // Fallback final: devolver base y columnas vacías (el endpoint seguirá respondiendo, aunque sin resultados)
+        return { tableName: base || baseName, colsRows: [] };
+      };
+
+      const clientesResolved = await resolveTableAndColumns('clientes');
+      const pedidosResolved = await resolveTableAndColumns('pedidos');
+
+      const tClientes = clientesResolved.tableName;
+      const tPedidos = pedidosResolved.tableName;
+      const clientesColsRows = clientesResolved.colsRows || [];
+      const pedidosColsRows = pedidosResolved.colsRows || [];
 
       const clientesCols = new Set((clientesColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
       const pedidosCols = new Set((pedidosColsRows || []).map(r => String(r.Field || r.field || '').trim()).filter(Boolean));
@@ -8135,20 +8191,30 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       const pkPrimary = pickFirst(['id', 'Id'], clientesCols) || 'Id';
       const pkFallback = pkPrimary === 'id' ? 'Id' : 'id';
 
+      // Si la introspección no devolvió columnas, usar el esquema conocido (evita devolver siempre 0 resultados).
+      const useKnownSchema = !clientesCols || clientesCols.size === 0 || !searchCols || searchCols.length === 0;
+
       Object.assign(__clientesBuscarMetaCache, {
         loadedAt: now,
-        tClientes,
-        tPedidos,
-        clientesCols,
-        pedidosCols,
-        pkPrimary,
-        pkFallback,
-        colComercialClientes,
-        colTipoCliente,
-        colProvincia,
-        colOkKo,
-        colPedidoCliente,
-        searchCols
+        tClientes: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.tClientes : tClientes,
+        tPedidos: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.tPedidos : tPedidos,
+        clientesCols: useKnownSchema ? new Set([
+          __KNOWN_CLIENTES_SCHEMA.pkPrimary,
+          __KNOWN_CLIENTES_SCHEMA.colComercialClientes,
+          __KNOWN_CLIENTES_SCHEMA.colTipoCliente,
+          __KNOWN_CLIENTES_SCHEMA.colProvincia,
+          __KNOWN_CLIENTES_SCHEMA.colOkKo,
+          ...__KNOWN_CLIENTES_SCHEMA.searchCols
+        ]) : clientesCols,
+        pedidosCols: useKnownSchema ? new Set([__KNOWN_CLIENTES_SCHEMA.colPedidoCliente]) : pedidosCols,
+        pkPrimary: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.pkPrimary : pkPrimary,
+        pkFallback: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.pkFallback : pkFallback,
+        colComercialClientes: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colComercialClientes : colComercialClientes,
+        colTipoCliente: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colTipoCliente : colTipoCliente,
+        colProvincia: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colProvincia : colProvincia,
+        colOkKo: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colOkKo : colOkKo,
+        colPedidoCliente: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.colPedidoCliente : colPedidoCliente,
+        searchCols: useKnownSchema ? __KNOWN_CLIENTES_SCHEMA.searchCols : searchCols
       });
     }
 
@@ -8171,12 +8237,19 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     const where = [];
     const params = [];
 
-    // Restricción por comercial (no-admin) — detecta la columna real (Id_Cial / ComercialId / comercialId)
+    // Restricción por comercial (no-admin)
+    // Nueva regla: un comercial ve sus clientes + el "pool" (Id_Cial = 1).
     if (!esAdmin && comercialIdAutenticado && colComercialClientes) {
       const comId = parseInt(String(comercialIdAutenticado), 10);
       if (Number.isFinite(comId) && comId > 0) {
-      where.push(`c.\`${colComercialClientes}\` = ?`);
-        params.push(comId);
+        // Si el comercial ya es 1, no hace falta OR.
+        if (comId === 1) {
+          where.push(`c.\`${colComercialClientes}\` = ?`);
+          params.push(comId);
+        } else {
+          where.push(`(c.\`${colComercialClientes}\` = ? OR c.\`${colComercialClientes}\` = 1)`);
+          params.push(comId);
+        }
       }
     }
     
@@ -8205,6 +8278,8 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       // Compatibilidad: OK_KO puede venir como 1/0, 'OK'/'KO' o 'Activo'/'Inactivo'
       if (estado === 'activos') {
         where.push(`(
+          c.\`${colOkKo}\` IS NULL OR TRIM(COALESCE(c.\`${colOkKo}\`, '')) = ''
+          OR
           c.\`${colOkKo}\` = 1 OR c.\`${colOkKo}\` = '1'
           OR UPPER(c.\`${colOkKo}\`) IN ('OK','ACTIVO')
         )`);
@@ -8239,11 +8314,29 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
       }
 
       const qLikeLocal = qLike;
-      if (!searchCols.length) {
-        return [];
-      }
-      whereLocal.push(`(${searchCols.map(col => `LOWER(IFNULL(c.\`${col}\`,'')) LIKE ?`).join(' OR ')})`);
-      paramsLocal.push(...searchCols.map(() => qLikeLocal));
+      // Si por permisos/entorno no pudimos detectar columnas (p.ej. SHOW COLUMNS restringido),
+      // usar un fallback con el esquema conocido de `crm_farmadescanso`.
+      const fallbackSearchCols = [
+        'Nombre_Razon_Social',
+        'Nombre_Cial',
+        'DNI_CIF',
+        'Email',
+        'Telefono',
+        'Movil',
+        'NumeroFarmacia',
+        'Direccion',
+        'Poblacion',
+        'CodigoPostal',
+        'NomContacto',
+        'Observaciones'
+      ];
+
+      const effectiveSearchCols = (searchCols && searchCols.length > 0) ? searchCols : fallbackSearchCols;
+      // Evitar LOWER(IFNULL(...)) para permitir uso de índices cuando se use LIKE 'term%'.
+      // Forzamos collation unicode_ci para robustez aunque la tabla no lo tuviera.
+      // Nota MySQL: la sintaxis correcta es "<expr> COLLATE ... LIKE ?".
+      whereLocal.push(`(${effectiveSearchCols.map(col => `c.\`${col}\` COLLATE utf8mb4_unicode_ci LIKE ?`).join(' OR ')})`);
+      paramsLocal.push(...effectiveSearchCols.map(() => qLikeLocal));
 
       const limitLocal = Math.min(200, Math.max(10, parseInt(req.query.limit || '50', 10) || 50));
 
@@ -8256,13 +8349,20 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         return chosen ? `c.\`${chosen}\`` : 'NULL';
       };
 
-      const exprNombre = pickExpr(['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social']);
-      const exprDni = pickExpr(['DNI_CIF', 'dni_cif', 'NIF', 'nif']);
-      const exprEmail = pickExpr(['Email', 'email']);
+      const exprNombre = (clientesCols && clientesCols.size > 0)
+        ? pickExpr(['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social'])
+        : 'c.`Nombre_Razon_Social`';
+      const exprDni = (clientesCols && clientesCols.size > 0)
+        ? pickExpr(['DNI_CIF', 'dni_cif', 'NIF', 'nif'])
+        : 'c.`DNI_CIF`';
+      const exprEmail = (clientesCols && clientesCols.size > 0)
+        ? pickExpr(['Email', 'email'])
+        : 'c.`Email`';
 
       const sqlLocal = `
         SELECT
           c.\`${idCol}\` AS Id,
+          ${colComercialClientes ? `c.\`${colComercialClientes}\` AS \`Id_Cial\`,` : 'NULL AS `Id_Cial`,'}
           ${pickSelect('Nombre_Razon_Social', ['Nombre_Razon_Social', 'Nombre', 'nombre', 'RazonSocial', 'razon_social'])},
           ${pickSelect('Nombre_Cial', ['Nombre_Cial', 'nombre_cial'])},
           ${pickSelect('DNI_CIF', ['DNI_CIF', 'dni_cif', 'NIF', 'nif'])},
@@ -8279,12 +8379,12 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         WHERE ${whereLocal.join(' AND ')}
         ORDER BY
           CASE
-            WHEN LOWER(IFNULL(${exprNombre},'')) LIKE ? THEN 0
-            WHEN LOWER(IFNULL(${exprDni},'')) LIKE ? THEN 1
-            WHEN LOWER(IFNULL(${exprEmail},'')) LIKE ? THEN 2
+            WHEN IFNULL(${exprNombre},'') COLLATE utf8mb4_unicode_ci LIKE ? THEN 0
+            WHEN IFNULL(${exprDni},'') COLLATE utf8mb4_unicode_ci LIKE ? THEN 1
+            WHEN IFNULL(${exprEmail},'') COLLATE utf8mb4_unicode_ci LIKE ? THEN 2
             ELSE 3
           END,
-          LOWER(IFNULL(${exprNombre},'')) ASC
+          COALESCE(${exprNombre}, '') COLLATE utf8mb4_unicode_ci ASC
         LIMIT ${limitLocal}
       `;
 
@@ -8309,6 +8409,7 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     }
     const clientesFiltrados = (rows || []).map(r => ({
       Id: r.Id ?? r.id,
+      Id_Cial: r.Id_Cial ?? r.id_cial ?? r.IdCial ?? null,
       Nombre_Razon_Social: r.Nombre_Razon_Social,
       Nombre_Cial: r.Nombre_Cial,
       DNI_CIF: r.DNI_CIF,
@@ -8330,12 +8431,19 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
         clientes: clientesFiltrados,
         debug: {
           q: qRaw,
+          esAdmin,
+          comercialIdAutenticado,
           tClientes,
           pkPrimary,
           colComercialClientes,
-          comercialIdAutenticado,
+          estado,
+          tipoCliente,
+          provincia,
+          conVentas,
+          comercialFiltro,
           whereCount: where.length,
-          searchColsCount: (searchCols || []).length
+          searchColsCount: (searchCols || []).length,
+          usingFallbackSearchCols: !(searchCols && searchCols.length > 0)
         }
       });
     }
@@ -8383,7 +8491,25 @@ app.get('/api/tarifas-clientes/precio', requireAuth, async (req, res) => {
       tarifaCliente = tarifaIdOverride;
     } else {
       try {
-        const rowsCliente = await crm.query('SELECT Tarifa FROM clientes WHERE Id = ? OR id = ? LIMIT 1', [clienteId, clienteId]);
+        // Compatibilidad con esquemas donde la tabla se llama `Clientes` (MySQL en Linux puede ser case-sensitive).
+        // Preferimos el nombre ya resuelto por el buscador si existe; si no, probamos variantes.
+        const tClientesResolved = __clientesBuscarMetaCache?.tClientes || null;
+        const candidates = Array.from(new Set([
+          tClientesResolved,
+          'clientes',
+          'Clientes',
+          'CLIENTES'
+        ].filter(Boolean)));
+
+        let rowsCliente = null;
+        for (const t of candidates) {
+          try {
+            rowsCliente = await crm.query(`SELECT Tarifa FROM \`${t}\` WHERE Id = ? OR id = ? LIMIT 1`, [clienteId, clienteId]);
+            break;
+          } catch (_) {
+            rowsCliente = null;
+          }
+        }
         if (rowsCliente && rowsCliente.length > 0) {
           const raw = rowsCliente[0].Tarifa ?? rowsCliente[0].tarifa ?? 0;
           const parsed = Number(raw);
@@ -8568,6 +8694,75 @@ app.post('/api/clientes/:id/okko', requireAuth, async (req, res) => {
       error: error.message || 'Error al actualizar el estado del cliente',
       details: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
+  }
+});
+
+// API: reasignar un cliente del "pool" (Id_Cial=1) al comercial logueado.
+// Regla:
+// - Admin: puede reasignar a cualquier comercial pasando body.toComercialId
+// - Comercial: solo puede reasignar clientes que estén en el pool (Id_Cial=1) hacia sí mismo
+app.post('/api/clientes/:id/asignar', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) {
+      return res.status(400).json({ success: false, error: 'ID de cliente inválido' });
+    }
+
+    const esAdmin = getUserIsAdmin(req);
+    const comercialIdAutenticado = Number(getComercialId(req) || 0);
+    if (!Number.isFinite(comercialIdAutenticado) || comercialIdAutenticado <= 0) {
+      return res.status(401).json({ success: false, error: 'No autenticado' });
+    }
+
+    const toComercialId = esAdmin
+      ? Number(req.body?.toComercialId || comercialIdAutenticado)
+      : comercialIdAutenticado;
+
+    if (!Number.isFinite(toComercialId) || toComercialId <= 0) {
+      return res.status(400).json({ success: false, error: 'toComercialId inválido' });
+    }
+
+    // Obtener estado actual (para validar pool y evitar reasignaciones indebidas)
+    const rows = await crm.query('SELECT id, Id_Cial FROM clientes WHERE id = ? LIMIT 1', [clienteId]).catch(() => []);
+    const cliente = rows && rows.length ? rows[0] : null;
+    if (!cliente) {
+      return res.status(404).json({ success: false, error: 'Cliente no encontrado' });
+    }
+
+    const currentCial = Number(cliente.Id_Cial || 0);
+
+    if (!esAdmin) {
+      if (currentCial !== 1) {
+        return res.status(403).json({
+          success: false,
+          error: 'Solo puedes asignar clientes del pool (Id_Cial=1).'
+        });
+      }
+      if (toComercialId === 1) {
+        return res.status(400).json({ success: false, error: 'No puedes reasignar al pool.' });
+      }
+    }
+
+    // UPDATE protegido: en modo no-admin, solo actualiza si sigue en pool (evita carreras)
+    const result = esAdmin
+      ? await crm.query('UPDATE clientes SET Id_Cial = ? WHERE id = ? LIMIT 1', [toComercialId, clienteId])
+      : await crm.query('UPDATE clientes SET Id_Cial = ? WHERE id = ? AND Id_Cial = 1 LIMIT 1', [toComercialId, clienteId]);
+
+    const affected = result?.affectedRows ?? result?.[0]?.affectedRows ?? 0;
+    if (!affected) {
+      return res.status(409).json({
+        success: false,
+        error: 'No se pudo reasignar (puede que ya no esté en pool).'
+      });
+    }
+
+    return res.json({
+      success: true,
+      data: { clienteId, fromIdCial: currentCial, toIdCial: toComercialId }
+    });
+  } catch (error) {
+    console.error('❌ [ASIGNAR CLIENTE] Error:', error);
+    return res.status(500).json({ success: false, error: 'Error reasignando cliente', details: String(error?.message || '').slice(0, 200) });
   }
 });
 
@@ -10982,7 +11177,24 @@ app.post('/dashboard/pedidos', requireAuth, async (req, res) => {
     // - Si el cliente tiene Tarifa = 0, se permite elegir una tarifa activa para el pedido.
     let tarifaClienteDb = 0;
     try {
-      const rowsCliente = await crm.query('SELECT Tarifa FROM clientes WHERE Id = ? OR id = ? LIMIT 1', [clienteIdNumber, clienteIdNumber]);
+      // Compatibilidad con esquemas donde la tabla se llama `Clientes` (MySQL en Linux puede ser case-sensitive).
+      const tClientesResolved = __clientesBuscarMetaCache?.tClientes || null;
+      const candidates = Array.from(new Set([
+        tClientesResolved,
+        'clientes',
+        'Clientes',
+        'CLIENTES'
+      ].filter(Boolean)));
+
+      let rowsCliente = null;
+      for (const t of candidates) {
+        try {
+          rowsCliente = await crm.query(`SELECT Tarifa FROM \`${t}\` WHERE Id = ? OR id = ? LIMIT 1`, [clienteIdNumber, clienteIdNumber]);
+          break;
+        } catch (_) {
+          rowsCliente = null;
+        }
+      }
       if (rowsCliente && rowsCliente.length > 0) {
         const raw = rowsCliente[0].Tarifa ?? rowsCliente[0].tarifa ?? 0;
         const parsed = Number(raw);
@@ -17396,6 +17608,72 @@ app.get('/api/clientes/count', async (req, res) => {
   } catch (error) {
     console.error('Error obteniendo contador de clientes:', error);
     res.status(500).json({ error: 'Error al obtener contador', count: 0 });
+  }
+});
+
+// ============================================
+// DIAGNÓSTICO (solo autenticados)
+// ============================================
+// Nota: estos endpoints ayudan a confirmar si Vercel está apuntando a la BD correcta
+// y si el buscador de clientes está detectando columnas/filtros.
+app.get('/api/_diag/db', requireAuth, async (req, res) => {
+  try {
+    const rows = await crm.query('SELECT DATABASE() AS db').catch(() => []);
+    const db = rows?.[0]?.db || null;
+    const dbNameCfg = crm?.config?.database || process.env.DB_NAME || null;
+    const isVercel = Boolean(process.env.VERCEL);
+    return res.json({
+      success: true,
+      data: {
+        database: db,
+        dbNameCfg,
+        isVercel,
+        nodeEnv: process.env.NODE_ENV || null
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: 'diag_failed', details: String(e?.message || '').slice(0, 200) });
+  }
+});
+
+app.get('/api/_diag/clientes-buscar', requireAuth, async (req, res) => {
+  try {
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+
+    // Conteo real en BD
+    const totalRows = await crm.query('SELECT COUNT(*) AS c FROM clientes').catch(() => []);
+    const totalClientes = Number(totalRows?.[0]?.c || 0);
+
+    // Columnas existentes (si SHOW COLUMNS falla, aquí lo veremos)
+    const colsRows = await crm.query('SHOW COLUMNS FROM clientes').catch(() => []);
+    const cols = (colsRows || []).map(r => r.Field).filter(Boolean);
+
+    // Probar búsqueda mínima contra BD (sin filtros) para ver si devuelve algo
+    const q = (req.query.q || 'joa').toString();
+    const like = `%${q}%`;
+    const sample = await crm.query(
+      `SELECT id, Id_Cial, Nombre_Razon_Social, DNI_CIF, Email, OK_KO
+       FROM clientes
+       WHERE Nombre_Razon_Social LIKE ? OR Nombre_Cial LIKE ? OR DNI_CIF LIKE ? OR Email LIKE ?
+       LIMIT 5`,
+      [like, like, like, like]
+    ).catch(() => []);
+
+    return res.json({
+      success: true,
+      data: {
+        esAdmin,
+        comercialIdAutenticado,
+        totalClientes,
+        columnasClientesCount: cols.length,
+        columnasClientes: cols.slice(0, 50),
+        sampleCount: sample.length,
+        sample
+      }
+    });
+  } catch (e) {
+    return res.status(500).json({ success: false, error: 'diag_failed', details: String(e?.message || '').slice(0, 250) });
   }
 });
 

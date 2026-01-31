@@ -36,6 +36,36 @@ class MySQLCRM {
     this._schemaEnsured = false;
   }
 
+  // Resolver nombre real de tabla sin depender de information_schema (puede estar restringido en hosting).
+  // Útil en MySQL/MariaDB sobre Linux donde los nombres pueden ser case-sensitive (p.ej. `Clientes` vs `clientes`).
+  async _resolveTableNameCaseInsensitive(baseName) {
+    this._cache = this._cache || {};
+    const base = String(baseName || '').trim();
+    if (!base) return baseName;
+
+    const cacheKey = `tableName:${base}`;
+    if (this._cache[cacheKey] !== undefined) return this._cache[cacheKey];
+
+    const cap = base.charAt(0).toUpperCase() + base.slice(1);
+    const upper = base.toUpperCase();
+    const candidates = Array.from(new Set([base, cap, upper].filter(Boolean)));
+
+    // Probar con SHOW COLUMNS (no requiere information_schema en muchos setups).
+    for (const cand of candidates) {
+      try {
+        await this.query(`SHOW COLUMNS FROM \`${cand}\``);
+        this._cache[cacheKey] = cand;
+        return cand;
+      } catch (_) {
+        // seguir probando
+      }
+    }
+
+    // Fallback: usar el nombre base tal cual.
+    this._cache[cacheKey] = base;
+    return base;
+  }
+
   async _getFormasPagoTableName() {
     this._cache = this._cache || {};
     if (this._cache.formasPagoTableName !== undefined) return this._cache.formasPagoTableName;
@@ -689,7 +719,8 @@ class MySQLCRM {
   // CLIENTES
   async getClientes(comercialId = null) {
     try {
-      let sql = 'SELECT * FROM clientes';
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      let sql = `SELECT * FROM \`${tClientes}\``;
       const params = [];
       
       // Si se proporciona un comercialId, filtrar por él
@@ -1177,7 +1208,8 @@ class MySQLCRM {
 
   async getClienteById(id) {
     try {
-      const sql = 'SELECT * FROM clientes WHERE Id = ? LIMIT 1';
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const sql = `SELECT * FROM \`${tClientes}\` WHERE Id = ? LIMIT 1`;
       const rows = await this.query(sql, [id]);
       return rows.length > 0 ? rows[0] : null;
     } catch (error) {
@@ -1397,7 +1429,8 @@ class MySQLCRM {
       }
       
       values.push(id);
-      const sql = `UPDATE clientes SET ${fields.join(', ')} WHERE Id = ?`;
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const sql = `UPDATE \`${tClientes}\` SET ${fields.join(', ')} WHERE Id = ?`;
       await this.query(sql, values);
       return { affectedRows: 1 };
     } catch (error) {
@@ -1530,8 +1563,9 @@ class MySQLCRM {
       if (!this.connected && !this.pool) {
         await this.connect();
       }
-      
-      const sql = `INSERT INTO clientes (${fields}) VALUES (${placeholders})`;
+
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const sql = `INSERT INTO \`${tClientes}\` (${fields}) VALUES (${placeholders})`;
       // Para INSERT, necesitamos el ResultSetHeader que contiene insertId
       const [result] = await this.pool.execute(sql, values);
       const insertId = result.insertId;

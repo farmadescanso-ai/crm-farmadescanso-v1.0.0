@@ -589,6 +589,8 @@
         
         let clienteSearchTimeout = null;
         let selectedCliente = null;
+        const comercialLogueadoId = Number('<%= comercialLogueadoId || "" %>') || 0;
+        const POOL_COMERCIAL_ID = 1;
         let currentSelectedIndex = -1;
         let tarifaTocadaManualmente = false;
         let tarifaBloqueadaPorCliente = false;
@@ -719,7 +721,7 @@
             }, 300);
         }
 
-        function seleccionarCliente(cliente) {
+        async function seleccionarCliente(cliente) {
             console.log('✅ [PEDIDO] Seleccionando cliente:', cliente);
             selectedCliente = cliente;
             const clienteId = cliente.Id || cliente.id;
@@ -747,6 +749,36 @@
             clienteSelectedDisplay.classList.add('show');
             clienteSearchInput.style.display = 'none';
             clienteDropdown.classList.remove('show');
+
+            // Si el cliente viene del pool (Id_Cial=1) y el comercial logueado no es 1,
+            // preguntar si se reasigna automáticamente a este comercial.
+            try {
+                const clienteIdCial = Number(cliente.Id_Cial || 0);
+                if (comercialLogueadoId > 0 && comercialLogueadoId !== POOL_COMERCIAL_ID && clienteIdCial === POOL_COMERCIAL_ID) {
+                    const ok = window.confirm(
+                        'Este cliente pertenece al pool (comercial 1).\n\n¿Quieres que a partir de ahora sea tuyo y quede asignado a tu comercial?'
+                    );
+                    if (ok) {
+                        const resp = await fetch(`/api/clientes/${encodeURIComponent(clienteId)}/asignar`, {
+                            method: 'POST',
+                            headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({})
+                        });
+                        const data = await resp.json().catch(() => ({}));
+                        if (!resp.ok || !data.success) {
+                            console.warn('⚠️ [PEDIDO] No se pudo reasignar cliente:', data);
+                            alert('No se pudo reasignar el cliente automáticamente. Puedes continuar, pero seguirá en el pool.');
+                        } else {
+                            // actualizar el objeto seleccionado localmente
+                            selectedCliente.Id_Cial = comercialLogueadoId;
+                            console.log('✅ [PEDIDO] Cliente reasignado al comercial logueado:', data.data);
+                        }
+                    }
+                }
+            } catch (e) {
+                console.warn('⚠️ [PEDIDO] Error en lógica de reasignación:', e?.message || e);
+            }
 
             // Regla:
             // - Si cliente.Tarifa > 0 => inamovible (bloquear selector y recalcular)
