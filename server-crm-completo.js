@@ -10514,7 +10514,19 @@ app.post('/dashboard/formas-pago/:id/eliminar', requireAuth, requireAdmin, async
 // Gestión de Especialidades
 function sanitizeReturnTo(returnTo) {
   if (!returnTo) return null;
-  const s = String(returnTo || '').trim();
+  let s = String(returnTo || '').trim();
+  if (!s) return null;
+
+  // Si llega URL-encoded (p.ej. "%2Fdashboard%2Fclientes%2F764%2Feditar"), intentar decodificarlo.
+  // Esto evita que un href con "%2F..." se trate como ruta relativa y acabe en URLs inválidas.
+  try {
+    if (/%2f/i.test(s) || /%3f/i.test(s) || /%26/i.test(s) || /%3d/i.test(s)) {
+      s = decodeURIComponent(s);
+    }
+  } catch (_) {
+    // Si decode falla, seguimos con el valor original
+  }
+
   if (!s) return null;
   if (s.includes('://')) return null; // evita open redirect
   if (!s.startsWith('/dashboard')) return null;
