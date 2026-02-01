@@ -25,10 +25,11 @@ SELECT 1 AS ok FROM `clientes_contactos` LIMIT 1;
 --    - EmailKey: LOWER(TRIM(Email)) (puede ser NULL)
 --
 -- Nota: no tenemos UNIQUE por email/nombre; esta inserción minimiza duplicados.
-INSERT INTO `contactos` (`Nombre`, `Apellidos`, `Email`, `Activo`)
+INSERT INTO `contactos` (`Nombre`, `Apellidos`, `Empresa`, `Email`, `Activo`)
 SELECT
   TRIM(c.NomContacto) AS Nombre,
   NULL AS Apellidos,
+  NULLIF(MAX(TRIM(COALESCE(c.Nombre_Razon_Social, c.Nombre, ''))), '') AS Empresa,
   NULLIF(TRIM(c.Email), '') AS Email,
   1 AS Activo
 FROM `clientes` c

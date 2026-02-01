@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS `contactos` (
   `Apellidos` VARCHAR(180) NULL,
   `Cargo` VARCHAR(120) NULL,
   `Especialidad` VARCHAR(120) NULL,
+  `Empresa` VARCHAR(180) NULL,
 
   `Email` VARCHAR(255) NULL,
   `Movil` VARCHAR(20) NULL,
@@ -51,7 +52,9 @@ CREATE TABLE IF NOT EXISTS `contactos` (
   UNIQUE KEY `ux_contactos_movilnorm` (`MovilNorm`),
 
   KEY `idx_contactos_email` (`Email`),
-  KEY `idx_contactos_nombre` (`Apellidos`, `Nombre`)
+  KEY `idx_contactos_empresa` (`Empresa`),
+  KEY `idx_contactos_nombre` (`Apellidos`, `Nombre`),
+  FULLTEXT KEY `ft_contactos_busqueda` (`Nombre`, `Apellidos`, `Empresa`, `Email`, `Movil`, `Telefono`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 
@@ -89,7 +92,8 @@ CREATE TABLE IF NOT EXISTS `clientes_contactos` (
   KEY `idx_cli_contactos_cliente_activos` (`Id_Cliente`, `VigenteHasta`),
 
   CONSTRAINT `fk_clientes_contactos_cliente`
-    FOREIGN KEY (`Id_Cliente`) REFERENCES `clientes` (`Id`)
+    -- Nota: en este proyecto la PK de clientes suele ser `id` (minúscula).
+    FOREIGN KEY (`Id_Cliente`) REFERENCES `clientes` (`id`)
     ON UPDATE CASCADE
     ON DELETE RESTRICT,
 

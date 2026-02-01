@@ -3085,9 +3085,24 @@ class MySQLCRM {
       }
 
       if (search) {
-        where.push('(Nombre LIKE ? OR Apellidos LIKE ? OR Email LIKE ? OR Movil LIKE ? OR Telefono LIKE ?)');
-        const like = `%${search}%`;
-        params.push(like, like, like, like, like);
+        // Intentar FULLTEXT (rápido) y hacer fallback a LIKE si no existe el índice.
+        // Boolean mode con wildcard por palabra (paco lara -> "paco* lara*").
+        const terms = search
+          .split(/\s+/)
+          .map(t => t.trim())
+          .filter(Boolean)
+          .map(t => `${t.replace(/[^0-9A-Za-zÁÉÍÓÚÜÑáéíóúüñ._@+-]/g, '')}*`)
+          .filter(t => t !== '*')
+          .join(' ');
+
+        if (terms && terms.replace(/\*/g, '').length >= 3) {
+          where.push('(MATCH(Nombre, Apellidos, Empresa, Email, Movil, Telefono) AGAINST (? IN BOOLEAN MODE))');
+          params.push(terms);
+        } else {
+          where.push('(Nombre LIKE ? OR Apellidos LIKE ? OR Empresa LIKE ? OR Email LIKE ? OR Movil LIKE ? OR Telefono LIKE ?)');
+          const like = `%${search}%`;
+          params.push(like, like, like, like, like, like);
+        }
       }
 
       const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
@@ -3096,7 +3111,25 @@ class MySQLCRM {
       sql += ' ORDER BY Apellidos ASC, Nombre ASC';
       sql += ` LIMIT ${limit} OFFSET ${offset}`;
 
-      return await this.query(sql, params);
+      try {
+        return await this.query(sql, params);
+      } catch (e) {
+        // Fallback si FULLTEXT no está disponible en este entorno
+        const msg = String(e?.message || '');
+        if (search && msg.toLowerCase().includes('match') && msg.toLowerCase().includes('against')) {
+          const where2 = where.filter(w => !w.includes('MATCH('));
+          const params2 = params.slice(0, params.length - 1); // quitar terms
+          where2.push('(Nombre LIKE ? OR Apellidos LIKE ? OR Empresa LIKE ? OR Email LIKE ? OR Movil LIKE ? OR Telefono LIKE ?)');
+          const like = `%${search}%`;
+          params2.push(like, like, like, like, like, like);
+          let sql2 = `SELECT * FROM \`${tContactos}\``;
+          if (where2.length) sql2 += ' WHERE ' + where2.join(' AND ');
+          sql2 += ' ORDER BY Apellidos ASC, Nombre ASC';
+          sql2 += ` LIMIT ${limit} OFFSET ${offset}`;
+          return await this.query(sql2, params2);
+        }
+        throw e;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo contactos:', error.message);
       // Importante: no ocultar el error, para que el dashboard pueda mostrar un mensaje claro
@@ -3127,6 +3160,7 @@ class MySQLCRM {
         'Apellidos',
         'Cargo',
         'Especialidad',
+        'Empresa',
         'Email',
         'Movil',
         'Telefono',
@@ -3171,6 +3205,7 @@ class MySQLCRM {
         'Apellidos',
         'Cargo',
         'Especialidad',
+        'Empresa',
         'Email',
         'Movil',
         'Telefono',
