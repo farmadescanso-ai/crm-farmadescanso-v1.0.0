@@ -9868,6 +9868,16 @@ app.get('/dashboard/contactos', requireAuth, async (req, res) => {
     });
   } catch (error) {
     console.error('❌ Error cargando contactos (dashboard):', error);
+    const msg = String(error?.sqlMessage || error?.message || 'Error desconocido');
+    const isNoSuchTable =
+      msg.toLowerCase().includes("doesn't exist") ||
+      msg.toLowerCase().includes('no such table') ||
+      String(error?.code || '').toUpperCase() === 'ER_NO_SUCH_TABLE';
+
+    const errorMsg = isNoSuchTable
+      ? 'No existe la tabla `contactos` en la base de datos. Ejecuta primero el script: scripts/crear-contactos-y-clientes_contactos.sql (y, si quieres importar los contactos existentes de clientes, ejecuta scripts/migrar-contactos-desde-clientes.sql).'
+      : msg;
+
     res.render('dashboard/contactos', {
       title: 'Contactos - Farmadescaso',
       user: req.comercial || req.session?.comercial || req.user || null,
@@ -9876,7 +9886,7 @@ app.get('/dashboard/contactos', requireAuth, async (req, res) => {
       currentPage: 'contactos',
       contactos: [],
       query: req.query,
-      error: error.message
+      error: errorMsg
     });
   }
 });

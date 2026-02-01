@@ -141,3 +141,6 @@ scripts/configurar-usuario-mysql-remoto.sql
 !scripts/recalcular-comisiones-segun-pedido.js
 !scripts/asegurar-integridad-relaciones-indices.sql
 !scripts/crear-estdoClientes.sql
+!scripts/crear-contactos-y-clientes_contactos.sql
+!scripts/alter-clientes-soft-delete.sql
+!scripts/migrar-contactos-desde-clientes.sql

@@ -3080,7 +3080,8 @@ class MySQLCRM {
       return await this.query(sql, params);
     } catch (error) {
       console.error('❌ Error obteniendo contactos:', error.message);
-      return [];
+      // Importante: no ocultar el error, para que el dashboard pueda mostrar un mensaje claro
+      throw error;
     }
   }
 
@@ -3208,7 +3209,7 @@ class MySQLCRM {
       return await this.query(sql, params);
     } catch (error) {
       console.error('❌ Error obteniendo contactos por cliente:', error.message);
-      return [];
+      throw error;
     }
   }
 
@@ -3316,7 +3317,7 @@ class MySQLCRM {
       return await this.query(sql, params);
     } catch (error) {
       console.error('❌ Error obteniendo clientes por contacto:', error.message);
-      return [];
+      throw error;
     }
   }
 
