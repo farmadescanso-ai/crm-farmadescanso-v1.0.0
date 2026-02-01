@@ -3386,6 +3386,166 @@ class MySQLCRM {
     }
   }
 
+  // =====================================================
+  // DIRECCIONES DE ENVÍO
+  // =====================================================
+  async getDireccionesEnvioByCliente(clienteId, options = {}) {
+    try {
+      const includeInactivas = Boolean(options.includeInactivas);
+      const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
+      const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
+
+      let sql = `
+        SELECT
+          d.*,
+          c.Nombre AS Contacto_Nombre,
+          c.Apellidos AS Contacto_Apellidos,
+          c.Email AS Contacto_Email,
+          c.Movil AS Contacto_Movil
+        FROM \`${tDirecciones}\` d
+        LEFT JOIN \`${tContactos}\` c ON c.Id = d.Id_Contacto
+        WHERE d.Id_Cliente = ?
+      `;
+      const params = [clienteId];
+
+      if (!includeInactivas) {
+        sql += ' AND d.Activa = 1';
+      }
+
+      sql += ' ORDER BY d.Activa DESC, d.Es_Principal DESC, d.id DESC';
+
+      return await this.query(sql, params);
+    } catch (error) {
+      // Si la tabla no existe aún, no romper flujos: devolver vacío.
+      const msg = String(error?.sqlMessage || error?.message || '');
+      if (error?.code === 'ER_NO_SUCH_TABLE' || /doesn't exist/i.test(msg)) {
+        return [];
+      }
+      console.error('❌ Error obteniendo direcciones de envío por cliente:', error.message);
+      throw error;
+    }
+  }
+
+  async getDireccionEnvioById(id) {
+    try {
+      const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
+      const rows = await this.query(`SELECT * FROM \`${tDirecciones}\` WHERE id = ? LIMIT 1`, [id]);
+      return rows && rows.length > 0 ? rows[0] : null;
+    } catch (error) {
+      const msg = String(error?.sqlMessage || error?.message || '');
+      if (error?.code === 'ER_NO_SUCH_TABLE' || /doesn't exist/i.test(msg)) return null;
+      console.error('❌ Error obteniendo dirección de envío por ID:', error.message);
+      throw error;
+    }
+  }
+
+  async createDireccionEnvio(payload) {
+    try {
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+
+      const allowed = new Set([
+        'Id_Cliente',
+        'Id_Contacto',
+        'Alias',
+        'Nombre_Destinatario',
+        'Direccion',
+        'Direccion2',
+        'Poblacion',
+        'CodigoPostal',
+        'Id_Provincia',
+        'Id_CodigoPostal',
+        'Id_Pais',
+        'Pais',
+        'Telefono',
+        'Email',
+        'Observaciones',
+        'Es_Principal',
+        'Activa'
+      ]);
+
+      const data = {};
+      for (const [k, v] of Object.entries(payload || {})) {
+        if (!allowed.has(k)) continue;
+        data[k] = v === undefined ? null : v;
+      }
+
+      if (!data.Id_Cliente) throw new Error('Id_Cliente es obligatorio');
+
+      const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
+      const fields = Object.keys(data).map(k => `\`${k}\``).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+      const sql = `INSERT INTO \`${tDirecciones}\` (${fields}) VALUES (${placeholders})`;
+      const result = await this.query(sql, values);
+      return { insertId: result.insertId };
+    } catch (error) {
+      console.error('❌ Error creando dirección de envío:', error.message);
+      throw error;
+    }
+  }
+
+  async updateDireccionEnvio(id, payload) {
+    try {
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+
+      const allowed = new Set([
+        'Id_Contacto',
+        'Alias',
+        'Nombre_Destinatario',
+        'Direccion',
+        'Direccion2',
+        'Poblacion',
+        'CodigoPostal',
+        'Id_Provincia',
+        'Id_CodigoPostal',
+        'Id_Pais',
+        'Pais',
+        'Telefono',
+        'Email',
+        'Observaciones',
+        'Es_Principal',
+        'Activa'
+      ]);
+
+      const fields = [];
+      const values = [];
+      for (const [k, v] of Object.entries(payload || {})) {
+        if (!allowed.has(k)) continue;
+        fields.push(`\`${k}\` = ?`);
+        values.push(v === undefined ? null : v);
+      }
+      if (!fields.length) return { affectedRows: 0 };
+
+      values.push(id);
+      const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
+      const sql = `UPDATE \`${tDirecciones}\` SET ${fields.join(', ')} WHERE id = ?`;
+      const result = await this.query(sql, values);
+      return { affectedRows: result.affectedRows || 0 };
+    } catch (error) {
+      console.error('❌ Error actualizando dirección de envío:', error.message);
+      throw error;
+    }
+  }
+
+  async desactivarDireccionEnvio(id) {
+    try {
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+      const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
+      const sql = `UPDATE \`${tDirecciones}\` SET Activa = 0, Es_Principal = 0 WHERE id = ?`;
+      const result = await this.query(sql, [id]);
+      return { affectedRows: result.affectedRows || 0 };
+    } catch (error) {
+      console.error('❌ Error desactivando dirección de envío:', error.message);
+      throw error;
+    }
+  }
+
   async getClientesByContacto(contactoId, options = {}) {
     try {
       const includeHistorico = Boolean(options.includeHistorico);

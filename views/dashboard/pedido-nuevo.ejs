@@ -254,6 +254,29 @@
                             <div class="invalid-feedback">Selecciona un cliente.</div>
                             <small class="text-muted">Escribe al menos 2 caracteres para buscar</small>
                         </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">¿Envío distinto a fiscal?</label>
+                            <div class="d-flex gap-3 align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="envio_diferente" id="envioIgualFiscal" value="0" <%= String(initialValues.envio_diferente || '0') !== '1' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="envioIgualFiscal">No</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="envio_diferente" id="envioDiferenteFiscal" value="1" <%= String(initialValues.envio_diferente || '0') === '1' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="envioDiferenteFiscal">Sí</label>
+                                </div>
+                            </div>
+                            <div class="form-text">Si es “Sí”, elige una dirección de envío del cliente.</div>
+                        </div>
+                        <div class="col-md-4" id="direccionEnvioWrapper" style="display:none;">
+                            <label class="form-label fw-semibold">Dirección de envío</label>
+                            <select class="form-select" name="direccion_envio_id" id="direccionEnvioSelect">
+                                <option value="">— Seleccionar —</option>
+                            </select>
+                            <div class="form-text">
+                                <a href="#" id="gestionarDireccionesEnvioLink">Gestionar direcciones</a>
+                            </div>
+                        </div>
                         <% if (esAdmin) { %>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Comercial</label>
@@ -750,6 +773,13 @@
             clienteSearchInput.style.display = 'none';
             clienteDropdown.classList.remove('show');
 
+            // Cargar direcciones de envío del cliente para el selector
+            try {
+                await cargarDireccionesEnvio(clienteId);
+            } catch (e) {
+                // no bloquear
+            }
+
             // Si el cliente viene del pool (Id_Cial=1) y el comercial logueado no es 1,
             // preguntar si se reasigna automáticamente a este comercial.
             try {
@@ -825,6 +855,60 @@
                 actualizarCooperativa();
             }
         }
+
+        const direccionEnvioWrapper = document.getElementById('direccionEnvioWrapper');
+        const direccionEnvioSelect = document.getElementById('direccionEnvioSelect');
+        const gestionarDireccionesEnvioLink = document.getElementById('gestionarDireccionesEnvioLink');
+        const radiosEnvio = Array.from(document.querySelectorAll('input[name="envio_diferente"]'));
+
+        function actualizarVisibilidadDireccionEnvio() {
+            const val = String((document.querySelector('input[name="envio_diferente"]:checked')?.value) || '0');
+            if (!direccionEnvioWrapper) return;
+            direccionEnvioWrapper.style.display = (val === '1') ? '' : 'none';
+            if (val !== '1' && direccionEnvioSelect) {
+                direccionEnvioSelect.value = '';
+            }
+        }
+
+        async function cargarDireccionesEnvio(clienteId) {
+            if (!direccionEnvioSelect) return;
+            const id = Number(clienteId || 0);
+            if (!id) {
+                direccionEnvioSelect.innerHTML = '<option value="">— Seleccionar —</option>';
+                return;
+            }
+
+            if (gestionarDireccionesEnvioLink) {
+                gestionarDireccionesEnvioLink.href = `/dashboard/clientes/${encodeURIComponent(String(id))}/direcciones-envio`;
+            }
+
+            direccionEnvioSelect.innerHTML = '<option value="">Cargando...</option>';
+            const resp = await fetch(`/api/clientes/${encodeURIComponent(String(id))}/direcciones-envio`, { headers: { 'Accept': 'application/json' }, credentials: 'include' });
+            const data = await resp.json().catch(() => ({}));
+            const direcciones = (data && data.success && Array.isArray(data.direcciones)) ? data.direcciones : [];
+
+            if (!direcciones.length) {
+                direccionEnvioSelect.innerHTML = '<option value="">(sin direcciones de envío)</option>';
+                return;
+            }
+
+            const initialId = String('<%= (initialValues.direccion_envio_id || "") %>');
+            const principal = direcciones.find(d => Number(d.Es_Principal) === 1) || null;
+
+            direccionEnvioSelect.innerHTML = ['<option value="">— Seleccionar —</option>'].concat(
+                direcciones.map(d => {
+                    const idDir = String(d.id);
+                    const alias = (d.Alias || '').trim() || 'Dirección';
+                    const linea = [d.Direccion, d.CodigoPostal, d.Poblacion].filter(Boolean).join(' · ');
+                    const label = linea ? `${alias} — ${linea}` : alias;
+                    const selected = initialId && initialId === idDir ? ' selected' : (!initialId && principal && String(principal.id) === idDir ? ' selected' : '');
+                    return `<option value="${idDir}"${selected}>${label}</option>`;
+                })
+            ).join('');
+        }
+
+        radiosEnvio.forEach(r => r.addEventListener('change', actualizarVisibilidadDireccionEnvio));
+        actualizarVisibilidadDireccionEnvio();
 
         function limpiarSeleccionCliente() {
             selectedCliente = null;

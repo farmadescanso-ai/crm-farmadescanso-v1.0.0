@@ -191,6 +191,28 @@
                             </select>
                             <div class="invalid-feedback">Selecciona un cliente.</div>
                         </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">¿Envío distinto a fiscal?</label>
+                            <div class="d-flex gap-3 align-items-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="envio_diferente" id="envioIgualFiscalEdit" value="0" <%= String(initialValues.envio_diferente || '0') !== '1' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="envioIgualFiscalEdit">No</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="envio_diferente" id="envioDiferenteFiscalEdit" value="1" <%= String(initialValues.envio_diferente || '0') === '1' ? 'checked' : '' %>>
+                                    <label class="form-check-label" for="envioDiferenteFiscalEdit">Sí</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4" id="direccionEnvioWrapperEdit" style="display:none;">
+                            <label class="form-label fw-semibold">Dirección de envío</label>
+                            <select class="form-select" name="direccion_envio_id" id="direccionEnvioSelectEdit">
+                                <option value="">— Seleccionar —</option>
+                            </select>
+                            <div class="form-text">
+                                <a href="#" id="gestionarDireccionesEnvioLinkEdit">Gestionar direcciones</a>
+                            </div>
+                        </div>
                         <% if (esAdmin && comerciales && comerciales.length > 0) { %>
                         <div class="col-md-4">
                             <label class="form-label fw-semibold">Comercial</label>
@@ -589,6 +611,69 @@
         const numeroCooperativaInput = document.getElementById('numeroCooperativa');
         const cooperativaNombreInput = document.getElementById('cooperativaNombre');
         const formAlert = document.getElementById('formAlert');
+
+        // Dirección de envío (selector)
+        const direccionEnvioWrapperEdit = document.getElementById('direccionEnvioWrapperEdit');
+        const direccionEnvioSelectEdit = document.getElementById('direccionEnvioSelectEdit');
+        const gestionarDireccionesEnvioLinkEdit = document.getElementById('gestionarDireccionesEnvioLinkEdit');
+        const radiosEnvioEdit = Array.from(document.querySelectorAll('input[name="envio_diferente"]'));
+
+        function actualizarVisibilidadDireccionEnvioEdit() {
+            const val = String((document.querySelector('input[name="envio_diferente"]:checked')?.value) || '0');
+            if (!direccionEnvioWrapperEdit) return;
+            direccionEnvioWrapperEdit.style.display = (val === '1') ? '' : 'none';
+            if (val !== '1' && direccionEnvioSelectEdit) {
+                direccionEnvioSelectEdit.value = '';
+            }
+        }
+
+        async function cargarDireccionesEnvioEdit(clienteId) {
+            if (!direccionEnvioSelectEdit) return;
+            const id = Number(clienteId || 0);
+            if (!id) {
+                direccionEnvioSelectEdit.innerHTML = '<option value="">— Seleccionar —</option>';
+                return;
+            }
+            if (gestionarDireccionesEnvioLinkEdit) {
+                gestionarDireccionesEnvioLinkEdit.href = `/dashboard/clientes/${encodeURIComponent(String(id))}/direcciones-envio`;
+            }
+            direccionEnvioSelectEdit.innerHTML = '<option value="">Cargando...</option>';
+            const resp = await fetch(`/api/clientes/${encodeURIComponent(String(id))}/direcciones-envio`, { headers: { 'Accept': 'application/json' }, credentials: 'include' });
+            const data = await resp.json().catch(() => ({}));
+            const direcciones = (data && data.success && Array.isArray(data.direcciones)) ? data.direcciones : [];
+
+            if (!direcciones.length) {
+                direccionEnvioSelectEdit.innerHTML = '<option value="">(sin direcciones de envío)</option>';
+                return;
+            }
+
+            const initialId = String('<%= (initialValues.direccion_envio_id || "") %>');
+            const principal = direcciones.find(d => Number(d.Es_Principal) === 1) || null;
+
+            direccionEnvioSelectEdit.innerHTML = ['<option value="">— Seleccionar —</option>'].concat(
+                direcciones.map(d => {
+                    const idDir = String(d.id);
+                    const alias = (d.Alias || '').trim() || 'Dirección';
+                    const linea = [d.Direccion, d.CodigoPostal, d.Poblacion].filter(Boolean).join(' · ');
+                    const label = linea ? `${alias} — ${linea}` : alias;
+                    const selected = initialId && initialId === idDir ? ' selected' : (!initialId && principal && String(principal.id) === idDir ? ' selected' : '');
+                    return `<option value="${idDir}"${selected}>${label}</option>`;
+                })
+            ).join('');
+        }
+
+        radiosEnvioEdit.forEach(r => r.addEventListener('change', actualizarVisibilidadDireccionEnvioEdit));
+        actualizarVisibilidadDireccionEnvioEdit();
+
+        // Carga inicial + cuando cambia el cliente
+        if (clienteSelect && clienteSelect.value) {
+            cargarDireccionesEnvioEdit(clienteSelect.value).catch(() => {});
+        }
+        if (clienteSelect) {
+            clienteSelect.addEventListener('change', () => {
+                cargarDireccionesEnvioEdit(clienteSelect.value).catch(() => {});
+            });
+        }
  
         const lineasPayloadInput = document.createElement('input');
         lineasPayloadInput.type = 'hidden';

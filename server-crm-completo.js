@@ -7385,6 +7385,240 @@ app.get('/dashboard/clientes/:id/contactos', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================
+// CLIENTES -> DIRECCIONES ENVÍO (CRUD)
+// Debe ir ANTES de /dashboard/clientes/:id
+// ============================================
+app.get('/dashboard/clientes/:id/direcciones-envio', requireAuth, async (req, res) => {
+  try {
+    const idParam = req.params.id;
+    const cliente = await crm.getClienteById(idParam);
+    if (!cliente) {
+      return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+    }
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).render('error', { error: 'Acceso denegado', message: 'No tienes permiso para ver este cliente.' });
+      }
+    }
+
+    const direcciones = await crm.getDireccionesEnvioByCliente(Number(cliente.Id || cliente.id), { includeInactivas: true });
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+
+    res.render('dashboard/cliente-direcciones-envio', {
+      title: `Direcciones de envío - Cliente #${cliente.Id || cliente.id}`,
+      user: userForView,
+      cliente: normalizeObjectUTF8(cliente),
+      direcciones: direcciones || [],
+      query: req.query,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando direcciones de envío:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudieron cargar las direcciones de envío' });
+  }
+});
+
+app.get('/dashboard/clientes/:id/direcciones-envio/nueva', requireAuth, async (req, res) => {
+  try {
+    const idParam = req.params.id;
+    const cliente = await crm.getClienteById(idParam);
+    if (!cliente) return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).render('error', { error: 'Acceso denegado', message: 'No tienes permiso para ver este cliente.' });
+      }
+    }
+
+    const [provincias, contactosCliente] = await Promise.all([
+      crm.getProvincias().catch(() => []),
+      crm.getContactosByCliente(Number(cliente.Id || cliente.id), { includeHistorico: false }).catch(() => [])
+    ]);
+
+    res.render('dashboard/cliente-direccion-envio-form', {
+      title: `Nueva dirección de envío - Cliente #${cliente.Id || cliente.id}`,
+      heading: 'Nueva dirección',
+      user: req.comercial || req.session?.comercial || req.user || null,
+      cliente: normalizeObjectUTF8(cliente),
+      provincias,
+      contactosCliente,
+      values: {},
+      action: `/dashboard/clientes/${encodeURIComponent(String(cliente.Id || cliente.id))}/direcciones-envio`,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando formulario de dirección de envío:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el formulario' });
+  }
+});
+
+app.post('/dashboard/clientes/:id/direcciones-envio', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+
+    const cliente = await crm.getClienteById(clienteId);
+    if (!cliente) return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).render('error', { error: 'Acceso denegado', message: 'No tienes permiso para ver este cliente.' });
+      }
+    }
+
+    const payload = {
+      Id_Cliente: clienteId,
+      Id_Contacto: req.body.Id_Contacto ? Number(req.body.Id_Contacto) : null,
+      Alias: (req.body.Alias || '').trim() || null,
+      Nombre_Destinatario: (req.body.Nombre_Destinatario || '').trim() || null,
+      Direccion: (req.body.Direccion || '').trim() || null,
+      Direccion2: (req.body.Direccion2 || '').trim() || null,
+      Poblacion: (req.body.Poblacion || '').trim() || null,
+      CodigoPostal: (req.body.CodigoPostal || '').trim() || null,
+      Id_Provincia: req.body.Id_Provincia ? Number(req.body.Id_Provincia) : null,
+      Telefono: (req.body.Telefono || '').trim() || null,
+      Email: (req.body.Email || '').trim() || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null,
+      Es_Principal: String(req.body.Es_Principal || '0') === '1' ? 1 : 0,
+      Activa: (req.body.Activa === undefined) ? 1 : (String(req.body.Activa) === '1' ? 1 : 0)
+    };
+
+    await crm.createDireccionEnvio(payload);
+    res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=creada`);
+  } catch (error) {
+    console.error('❌ Error creando dirección de envío:', error);
+    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=crear`);
+  }
+});
+
+app.get('/dashboard/clientes/:id/direcciones-envio/:direccionId/editar', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const direccionId = Number(req.params.direccionId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(direccionId) || direccionId <= 0) throw new Error('direccionId inválido');
+
+    const cliente = await crm.getClienteById(clienteId);
+    if (!cliente) return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).render('error', { error: 'Acceso denegado', message: 'No tienes permiso para ver este cliente.' });
+      }
+    }
+
+    const direccion = await crm.getDireccionEnvioById(direccionId);
+    if (!direccion || Number(direccion.Id_Cliente) !== Number(clienteId)) {
+      return res.status(404).render('error', { error: 'Dirección no encontrada', message: 'La dirección no existe' });
+    }
+
+    const [provincias, contactosCliente] = await Promise.all([
+      crm.getProvincias().catch(() => []),
+      crm.getContactosByCliente(clienteId, { includeHistorico: false }).catch(() => [])
+    ]);
+
+    res.render('dashboard/cliente-direccion-envio-form', {
+      title: `Editar dirección de envío - Cliente #${clienteId}`,
+      heading: 'Editar dirección',
+      user: req.comercial || req.session?.comercial || req.user || null,
+      cliente: normalizeObjectUTF8(cliente),
+      provincias,
+      contactosCliente,
+      values: direccion,
+      action: `/dashboard/clientes/${clienteId}/direcciones-envio/${direccionId}`,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando edición de dirección de envío:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar la dirección' });
+  }
+});
+
+app.post('/dashboard/clientes/:id/direcciones-envio/:direccionId', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const direccionId = Number(req.params.direccionId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(direccionId) || direccionId <= 0) throw new Error('direccionId inválido');
+
+    const cliente = await crm.getClienteById(clienteId);
+    if (!cliente) return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).render('error', { error: 'Acceso denegado', message: 'No tienes permiso para ver este cliente.' });
+      }
+    }
+
+    const payload = {
+      Id_Contacto: req.body.Id_Contacto ? Number(req.body.Id_Contacto) : null,
+      Alias: (req.body.Alias || '').trim() || null,
+      Nombre_Destinatario: (req.body.Nombre_Destinatario || '').trim() || null,
+      Direccion: (req.body.Direccion || '').trim() || null,
+      Direccion2: (req.body.Direccion2 || '').trim() || null,
+      Poblacion: (req.body.Poblacion || '').trim() || null,
+      CodigoPostal: (req.body.CodigoPostal || '').trim() || null,
+      Id_Provincia: req.body.Id_Provincia ? Number(req.body.Id_Provincia) : null,
+      Telefono: (req.body.Telefono || '').trim() || null,
+      Email: (req.body.Email || '').trim() || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null,
+      Es_Principal: String(req.body.Es_Principal || '0') === '1' ? 1 : 0,
+      Activa: (req.body.Activa === undefined) ? 1 : (String(req.body.Activa) === '1' ? 1 : 0)
+    };
+
+    await crm.updateDireccionEnvio(direccionId, payload);
+    res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=actualizada`);
+  } catch (error) {
+    console.error('❌ Error actualizando dirección de envío:', error);
+    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=actualizar`);
+  }
+});
+
+app.post('/dashboard/clientes/:id/direcciones-envio/:direccionId/desactivar', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const direccionId = Number(req.params.direccionId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(direccionId) || direccionId <= 0) throw new Error('direccionId inválido');
+
+    const cliente = await crm.getClienteById(clienteId);
+    if (!cliente) return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).render('error', { error: 'Acceso denegado', message: 'No tienes permiso para ver este cliente.' });
+      }
+    }
+
+    // Si está enlazada a pedidos, igualmente desactivamos (ON DELETE SET NULL no aplica a soft delete).
+    await crm.desactivarDireccionEnvio(direccionId);
+    res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=desactivada`);
+  } catch (error) {
+    console.error('❌ Error desactivando dirección de envío:', error);
+    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=desactivar`);
+  }
+});
+
 app.post('/dashboard/clientes/:id/contactos/vincular', requireAuth, async (req, res) => {
   try {
     const clienteId = Number(req.params.id);
@@ -8602,6 +8836,35 @@ app.get('/api/clientes/buscar', requireAuth, async (req, res) => {
     const msg = String(error?.sqlMessage || error?.message || 'Error desconocido');
     // No devolvemos el SQL completo, solo una pista corta para depurar desde el navegador.
     res.status(500).json({ error: 'Error al buscar clientes', details: msg.slice(0, 250), clientes: [] });
+  }
+});
+
+// API: Direcciones de envío por cliente (para selector de pedidos)
+app.get('/api/clientes/:id/direcciones-envio', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) {
+      return res.status(400).json({ success: false, error: 'clienteId inválido', direcciones: [] });
+    }
+
+    // Seguridad: mismo criterio que detalle de cliente
+    const cliente = await crm.getClienteById(clienteId);
+    if (!cliente) return res.status(404).json({ success: false, error: 'Cliente no encontrado', direcciones: [] });
+
+    const comercialIdAutenticado = getComercialId(req);
+    const esAdmin = getUserIsAdmin(req);
+    if (!esAdmin && comercialIdAutenticado) {
+      const clienteComercialId = cliente.Id_Cial || cliente.id_Cial || cliente.Comercial_id || cliente.comercial_id;
+      if (Number(clienteComercialId) !== Number(comercialIdAutenticado)) {
+        return res.status(403).json({ success: false, error: 'Acceso denegado', direcciones: [] });
+      }
+    }
+
+    const direcciones = await crm.getDireccionesEnvioByCliente(clienteId, { includeInactivas: false });
+    return res.json({ success: true, direcciones: direcciones || [] });
+  } catch (error) {
+    console.error('❌ Error API direcciones de envío:', error);
+    return res.status(500).json({ success: false, error: 'Error interno', direcciones: [] });
   }
 });
 
@@ -11564,6 +11827,15 @@ app.post('/dashboard/pedidos', requireAuth, async (req, res) => {
       pedidoPayload['Id_Cliente'] = clienteIdNumber; // Usar Id_Cliente directamente
     }
 
+    // Dirección de envío (opcional): si se marca como distinta, guardar FK
+    const envioDiferente = String(req.body.envio_diferente || '0') === '1';
+    const direccionEnvioId = Number(req.body.direccion_envio_id || 0);
+    if (envioDiferente && Number.isFinite(direccionEnvioId) && direccionEnvioId > 0) {
+      pedidoPayload['Id_DireccionEnvio'] = direccionEnvioId;
+    } else {
+      // Si no es diferente o no hay dirección válida, no forzar el campo (mantiene NULL por defecto)
+    }
+
     // Tarifa aplicada al pedido (para congelar precios/comisiones)
     // Regla de negocio:
     // - Si el cliente tiene Tarifa > 0, esa se aplica de forma inamovible.
@@ -12531,6 +12803,17 @@ app.get('/dashboard/pedidos/:id/transporte', requireAuth, async (req, res) => {
       }
     }
 
+    // Obtener dirección de envío (si el pedido la tiene)
+    let direccionEnvio = null;
+    try {
+      const dirId = Number(pedidoRaw?.Id_DireccionEnvio || pedidoRaw?.id_direccionenvio || pedidoRaw?.id_direccionEnvio || 0);
+      if (Number.isFinite(dirId) && dirId > 0) {
+        direccionEnvio = await crm.getDireccionEnvioById(dirId);
+      }
+    } catch (e) {
+      direccionEnvio = null;
+    }
+
     // Enriquecer líneas con datos completos del artículo (incluyendo SKU)
     const lineasEnriquecidas = [];
     for (const linea of lineas) {
@@ -12582,6 +12865,7 @@ app.get('/dashboard/pedidos/:id/transporte', requireAuth, async (req, res) => {
       pedidoRaw,
       lineas: lineasEnriquecidas,
       cliente: clienteCompleto,
+      direccionEnvio,
       datosEmpresa,
       user: req.comercial || req.session.comercial,
       fechaGeneracion: new Date(),
@@ -13645,7 +13929,9 @@ app.get('/dashboard/pedidos/:id/editar', requireAuth, async (req, res) => {
       observaciones: pedido.observaciones || pedidoRaw.Observaciones || '',
       numero_cooperativa: pedido.numero_cooperativa || pedidoRaw.numero_cooperativa || '',
       cooperativa_nombre: pedido.cooperativa_nombre || pedidoRaw.cooperativa_nombre || '',
-      numero_pedido: pedido.numero || pedidoRaw.NumPedido || ''
+      numero_pedido: pedido.numero || pedidoRaw.NumPedido || '',
+      envio_diferente: (pedidoRaw && (pedidoRaw.Id_DireccionEnvio || pedidoRaw.id_direccionenvio || pedidoRaw.id_direccionEnvio)) ? '1' : '0',
+      direccion_envio_id: String(pedidoRaw.Id_DireccionEnvio || pedidoRaw.id_direccionenvio || pedidoRaw.id_direccionEnvio || '')
     };
     
     console.log(`📋 [EDITAR PEDIDO] formValues preparado:`, {
@@ -14306,6 +14592,16 @@ app.post('/dashboard/pedidos/:id', requireAuth, async (req, res) => {
     }
     if (fecha_entrega !== undefined) {
       pedidoPayload['FechaEntrega'] = fecha_entrega || null;
+    }
+
+    // Dirección de envío (opcional)
+    const envioDiferente = String(req.body.envio_diferente || '0') === '1';
+    const direccionEnvioId = Number(req.body.direccion_envio_id || 0);
+    if (envioDiferente && Number.isFinite(direccionEnvioId) && direccionEnvioId > 0) {
+      pedidoPayload['Id_DireccionEnvio'] = direccionEnvioId;
+    } else if (!envioDiferente) {
+      // Si el usuario marca "igual que fiscal", limpiar FK
+      pedidoPayload['Id_DireccionEnvio'] = null;
     }
     if (estado) {
       pedidoPayload['EstadoPedido'] = estado || 'Pendiente';

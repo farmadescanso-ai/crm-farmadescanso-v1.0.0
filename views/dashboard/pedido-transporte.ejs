@@ -472,9 +472,16 @@
           <% if (cliente) { %>
             <p><span class="label">Razón Social:</span> <%= cliente.Nombre_Razon_Social || cliente.Nombre || cliente.nombre || '—' %></p>
             <p><span class="label">CIF/DNI:</span> <%= cliente.DNI_CIF || cliente.dni_cif || cliente.DNI || cliente.dni || '—' %></p>
-            <p><span class="label">Dirección:</span> <%= cliente.Direccion || cliente.direccion || '—' %></p>
-            <p><span class="label">Código Postal:</span> <%= cliente.CodigoPostal || cliente.codigoPostal || '—' %></p>
-            <p><span class="label">Población:</span> <%= cliente.Poblacion || cliente.poblacion || '—' %></p>
+            <% if (typeof direccionEnvio !== 'undefined' && direccionEnvio && (direccionEnvio.Direccion || direccionEnvio.Poblacion || direccionEnvio.CodigoPostal)) { %>
+              <p><span class="label">Envío (seleccionado):</span> <%= direccionEnvio.Alias || '—' %></p>
+              <p><span class="label">Dirección:</span> <%= direccionEnvio.Direccion || '—' %></p>
+              <p><span class="label">Código Postal:</span> <%= direccionEnvio.CodigoPostal || '—' %></p>
+              <p><span class="label">Población:</span> <%= direccionEnvio.Poblacion || '—' %></p>
+            <% } else { %>
+              <p><span class="label">Dirección:</span> <%= cliente.Direccion || cliente.direccion || '—' %></p>
+              <p><span class="label">Código Postal:</span> <%= cliente.CodigoPostal || cliente.codigoPostal || '—' %></p>
+              <p><span class="label">Población:</span> <%= cliente.Poblacion || cliente.poblacion || '—' %></p>
+            <% } %>
             <% if (cliente.Provincia || cliente.provincia) { %>
               <p><span class="label">Provincia:</span> <%= cliente.Provincia || cliente.provincia %></p>
             <% } %>

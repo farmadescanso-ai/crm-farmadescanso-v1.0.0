@@ -96,6 +96,14 @@ SET @t_tarifas_precios := (
   LIMIT 1
 );
 
+-- Direcciones de envío (nuevo)
+SET @t_direcciones_envio := (
+  SELECT table_name FROM information_schema.tables
+  WHERE table_schema = @db AND LOWER(table_name)=LOWER('direccionesEnvio')
+  ORDER BY (table_name='direccionesEnvio') DESC, table_name ASC
+  LIMIT 1
+);
+
 -- Helpers (sin IF/THEN): usar variables + SQL dinámico con SELECT IF(...)
 -- Nota: CREATE INDEX no soporta IF NOT EXISTS, así que usamos INFORMATION_SCHEMA.
 
@@ -153,6 +161,37 @@ SET @col := 'Id_Cliente';
 SET @has_col := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col);
 SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=@db AND table_name=@t AND index_name=@idx);
 SET @sql := (SELECT IF(@t IS NOT NULL AND @has_col > 0 AND @has_idx = 0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col, '`)'), 'SELECT 1'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+-- idx_pedidos_id_direccion_envio (si existe)
+SET @idx := 'idx_pedidos_id_direccion_envio';
+SET @col := 'Id_DireccionEnvio';
+SET @has_col := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col);
+SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=@db AND table_name=@t AND index_name=@idx);
+SET @sql := (SELECT IF(@t IS NOT NULL AND @has_col > 0 AND @has_idx = 0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col, '`)'), 'SELECT 1'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+-- =====================================================
+-- 2.1) DIRECCIONES ENVÍO
+-- =====================================================
+SET @t := @t_direcciones_envio;
+
+-- idx_direcciones_envio_cliente
+SET @idx := 'idx_direcciones_envio_cliente';
+SET @col := 'Id_Cliente';
+SET @has_col := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col);
+SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=@db AND table_name=@t AND index_name=@idx);
+SET @sql := (SELECT IF(@t IS NOT NULL AND @has_col > 0 AND @has_idx = 0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col, '`)'), 'SELECT 1'));
+PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
+
+-- idx_direcciones_envio_cliente_activa
+SET @idx := 'idx_direcciones_envio_cliente_activa';
+SET @col1 := 'Id_Cliente';
+SET @col2 := 'Activa';
+SET @has1 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col1);
+SET @has2 := (SELECT COUNT(*) FROM information_schema.columns WHERE table_schema=@db AND table_name=@t AND column_name=@col2);
+SET @has_idx := (SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema=@db AND table_name=@t AND index_name=@idx);
+SET @sql := (SELECT IF(@t IS NOT NULL AND @has1>0 AND @has2>0 AND @has_idx=0, CONCAT('CREATE INDEX ', @idx, ' ON `', @t, '` (`', @col1, '`,`', @col2, '`)'), 'SELECT 1'));
 PREPARE s FROM @sql; EXECUTE s; DEALLOCATE PREPARE s;
 
 -- idx_pedidos_id_cliente_fecha (si existe FechaPedido)
