@@ -3441,9 +3441,7 @@ class MySQLCRM {
 
   async createDireccionEnvio(payload) {
     try {
-      if (!this.connected && !this.pool) {
-        await this.connect();
-      }
+      if (!this.connected && !this.pool) await this.connect();
 
       const allowed = new Set([
         'Id_Cliente',
@@ -3474,12 +3472,38 @@ class MySQLCRM {
       if (!data.Id_Cliente) throw new Error('Id_Cliente es obligatorio');
 
       const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
-      const fields = Object.keys(data).map(k => `\`${k}\``).join(', ');
-      const placeholders = Object.keys(data).map(() => '?').join(', ');
-      const values = Object.values(data);
-      const sql = `INSERT INTO \`${tDirecciones}\` (${fields}) VALUES (${placeholders})`;
-      const result = await this.query(sql, values);
-      return { insertId: result.insertId };
+
+      // Si se marca como principal activa, desmarcar otras antes para evitar UNIQUE.
+      const esPrincipal = Number(data.Es_Principal) === 1;
+      const activa = (data.Activa === undefined || data.Activa === null) ? true : (Number(data.Activa) === 1);
+
+      // Transacción para consistencia
+      if (!this.pool) await this.connect();
+      const conn = await this.pool.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        if (esPrincipal && activa) {
+          await conn.execute(
+            `UPDATE \`${tDirecciones}\` SET Es_Principal = 0 WHERE Id_Cliente = ? AND Activa = 1`,
+            [Number(data.Id_Cliente)]
+          );
+        }
+
+        const fields = Object.keys(data).map(k => `\`${k}\``).join(', ');
+        const placeholders = Object.keys(data).map(() => '?').join(', ');
+        const values = Object.values(data);
+        const sql = `INSERT INTO \`${tDirecciones}\` (${fields}) VALUES (${placeholders})`;
+        const [result] = await conn.execute(sql, values);
+
+        await conn.commit();
+        return { insertId: result.insertId };
+      } catch (e) {
+        try { await conn.rollback(); } catch (_) {}
+        throw e;
+      } finally {
+        conn.release();
+      }
     } catch (error) {
       console.error('❌ Error creando dirección de envío:', error.message);
       throw error;
@@ -3520,11 +3544,44 @@ class MySQLCRM {
       }
       if (!fields.length) return { affectedRows: 0 };
 
-      values.push(id);
       const tDirecciones = await this._resolveTableNameCaseInsensitive('direccionesEnvio');
-      const sql = `UPDATE \`${tDirecciones}\` SET ${fields.join(', ')} WHERE id = ?`;
-      const result = await this.query(sql, values);
-      return { affectedRows: result.affectedRows || 0 };
+
+      // Si se pone como principal activa, desmarcar otras antes.
+      const willSetPrincipal = Object.prototype.hasOwnProperty.call(payload || {}, 'Es_Principal') && Number(payload.Es_Principal) === 1;
+      const willBeActive = !Object.prototype.hasOwnProperty.call(payload || {}, 'Activa') || Number(payload.Activa) === 1;
+
+      if (!this.pool) await this.connect();
+      const conn = await this.pool.getConnection();
+      try {
+        await conn.beginTransaction();
+
+        let clienteId = null;
+        try {
+          const [rows] = await conn.execute(`SELECT Id_Cliente FROM \`${tDirecciones}\` WHERE id = ? LIMIT 1`, [id]);
+          clienteId = rows?.[0]?.Id_Cliente ?? null;
+        } catch (_) {
+          clienteId = null;
+        }
+
+        if (clienteId && willSetPrincipal && willBeActive) {
+          await conn.execute(
+            `UPDATE \`${tDirecciones}\` SET Es_Principal = 0 WHERE Id_Cliente = ? AND Activa = 1`,
+            [Number(clienteId)]
+          );
+        }
+
+        values.push(id);
+        const sql = `UPDATE \`${tDirecciones}\` SET ${fields.join(', ')} WHERE id = ?`;
+        const [result] = await conn.execute(sql, values);
+
+        await conn.commit();
+        return { affectedRows: result.affectedRows || 0 };
+      } catch (e) {
+        try { await conn.rollback(); } catch (_) {}
+        throw e;
+      } finally {
+        conn.release();
+      }
     } catch (error) {
       console.error('❌ Error actualizando dirección de envío:', error.message);
       throw error;

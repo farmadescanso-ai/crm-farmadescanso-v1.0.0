@@ -45,6 +45,9 @@
       <div class="alert alert-danger alert-dismissible fade show" role="alert">
         <i class="fas fa-exclamation-triangle me-2"></i>
         No se pudo completar la operación.
+        <% if (query.details) { %>
+          <div class="mt-2 small text-muted" style="white-space: pre-wrap;"><%= query.details %></div>
+        <% } %>
         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
       </div>
     <% } %>

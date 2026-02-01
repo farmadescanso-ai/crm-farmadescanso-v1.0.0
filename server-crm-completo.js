@@ -7498,7 +7498,16 @@ app.post('/dashboard/clientes/:id/direcciones-envio', requireAuth, async (req, r
     res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=creada`);
   } catch (error) {
     console.error('❌ Error creando dirección de envío:', error);
-    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=crear`);
+    const msg = String(error?.sqlMessage || error?.message || 'Error desconocido');
+    const code = String(error?.code || '');
+    const hint =
+      (code === 'ER_NO_SUCH_TABLE' || /doesn\'t exist/i.test(msg))
+        ? 'No existe la tabla direccionesEnvio. Ejecuta el script scripts/crear-direcciones-envio.sql en la BD de producción.'
+        : (code === 'ER_DUP_ENTRY'
+          ? 'Ya existe una dirección marcada como principal activa para este cliente. Desmarca “principal” o edita la existente.'
+          : null);
+    const details = hint ? `${hint} (${code || 'ERR'}: ${msg})` : `${code || 'ERR'}: ${msg}`;
+    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=crear&details=${encodeURIComponent(details)}`);
   }
 });
 
@@ -7587,7 +7596,10 @@ app.post('/dashboard/clientes/:id/direcciones-envio/:direccionId', requireAuth, 
     res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=actualizada`);
   } catch (error) {
     console.error('❌ Error actualizando dirección de envío:', error);
-    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=actualizar`);
+    const msg = String(error?.sqlMessage || error?.message || 'Error desconocido');
+    const code = String(error?.code || '');
+    const details = `${code || 'ERR'}: ${msg}`;
+    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=actualizar&details=${encodeURIComponent(details)}`);
   }
 });
 
@@ -7615,7 +7627,10 @@ app.post('/dashboard/clientes/:id/direcciones-envio/:direccionId/desactivar', re
     res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=desactivada`);
   } catch (error) {
     console.error('❌ Error desactivando dirección de envío:', error);
-    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=desactivar`);
+    const msg = String(error?.sqlMessage || error?.message || 'Error desconocido');
+    const code = String(error?.code || '');
+    const details = `${code || 'ERR'}: ${msg}`;
+    res.redirect(`/dashboard/clientes/${req.params.id}/direcciones-envio?error=desactivar&details=${encodeURIComponent(details)}`);
   }
 });
 
