@@ -149,3 +149,8 @@ scripts/configurar-usuario-mysql-remoto.sql
 !scripts/crear-contactos-y-clientes_contactos.sql
 !scripts/alter-clientes-soft-delete.sql
 !scripts/migrar-contactos-desde-clientes.sql
+
+# Direcciones de envío (nuevo)
+!scripts/crear-direcciones-envio.sql
+!scripts/alter-pedidos-add-id-direccion-envio.sql
+!scripts/aplicar-direcciones-envio-produccion.sql
