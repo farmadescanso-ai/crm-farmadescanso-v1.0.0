@@ -3079,7 +3079,9 @@ class MySQLCRM {
       const params = [];
 
       if (!includeInactivos) {
-        where.push('Activo = 1');
+        // Compatibilidad: Activo puede venir como 1/0 o como strings ('OK'/'KO', 'SI'/'NO', etc.).
+        // Forzamos a string para evitar conversiones numéricas extrañas en MySQL estricto.
+        where.push("TRIM(UPPER(COALESCE(CONCAT(Activo,''),''))) IN ('1','OK','TRUE','SI','SÍ')");
       }
 
       if (search) {
@@ -3088,7 +3090,8 @@ class MySQLCRM {
         params.push(like, like, like, like, like);
       }
 
-      let sql = 'SELECT * FROM contactos';
+      const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
+      let sql = `SELECT * FROM \`${tContactos}\``;
       if (where.length) sql += ' WHERE ' + where.join(' AND ');
       sql += ' ORDER BY Apellidos ASC, Nombre ASC';
       sql += ` LIMIT ${limit} OFFSET ${offset}`;
@@ -3103,7 +3106,8 @@ class MySQLCRM {
 
   async getContactoById(id) {
     try {
-      const rows = await this.query('SELECT * FROM contactos WHERE Id = ? LIMIT 1', [id]);
+      const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
+      const rows = await this.query(`SELECT * FROM \`${tContactos}\` WHERE Id = ? LIMIT 1`, [id]);
       return rows?.[0] || null;
     } catch (error) {
       console.error('❌ Error obteniendo contacto por ID:', error.message);
@@ -3145,7 +3149,8 @@ class MySQLCRM {
       const placeholders = Object.keys(data).map(() => '?').join(', ');
       const values = Object.values(data);
 
-      const sql = `INSERT INTO contactos (${fields}) VALUES (${placeholders})`;
+      const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
+      const sql = `INSERT INTO \`${tContactos}\` (${fields}) VALUES (${placeholders})`;
       const result = await this.query(sql, values);
       return { insertId: result.insertId };
     } catch (error) {
@@ -3185,7 +3190,8 @@ class MySQLCRM {
       if (!fields.length) return { affectedRows: 0 };
 
       values.push(id);
-      const sql = `UPDATE contactos SET ${fields.join(', ')} WHERE Id = ?`;
+      const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
+      const sql = `UPDATE \`${tContactos}\` SET ${fields.join(', ')} WHERE Id = ?`;
       const result = await this.query(sql, values);
       return { affectedRows: result.affectedRows || 0 };
     } catch (error) {
@@ -3199,6 +3205,8 @@ class MySQLCRM {
       const includeHistorico = Boolean(options.includeHistorico);
       const params = [clienteId];
 
+      const tClientesContactos = await this._resolveTableNameCaseInsensitive('clientes_contactos');
+      const tContactos = await this._resolveTableNameCaseInsensitive('contactos');
       let sql = `
         SELECT
           cc.Id AS Id_Relacion,
@@ -3211,8 +3219,8 @@ class MySQLCRM {
           cc.VigenteHasta,
           cc.MotivoBaja,
           c.*
-        FROM clientes_contactos cc
-        INNER JOIN contactos c ON c.Id = cc.Id_Contacto
+        FROM \`${tClientesContactos}\` cc
+        INNER JOIN \`${tContactos}\` c ON c.Id = cc.Id_Contacto
         WHERE cc.Id_Cliente = ?
       `;
 
@@ -3237,6 +3245,7 @@ class MySQLCRM {
     const esPrincipal = (options.Es_Principal ?? options.es_principal ?? options.esPrincipal) ? 1 : 0;
 
     if (!this.pool) await this.connect();
+    const tClientesContactos = await this._resolveTableNameCaseInsensitive('clientes_contactos');
     const conn = await this.pool.getConnection();
 
     try {
@@ -3248,21 +3257,21 @@ class MySQLCRM {
 
       if (esPrincipal) {
         await conn.execute(
-          'UPDATE clientes_contactos SET Es_Principal = 0 WHERE Id_Cliente = ? AND VigenteHasta IS NULL',
+          `UPDATE \`${tClientesContactos}\` SET Es_Principal = 0 WHERE Id_Cliente = ? AND VigenteHasta IS NULL`,
           [clienteId]
         );
       }
 
       // ¿ya existe relación activa?
       const [rows] = await conn.execute(
-        'SELECT Id FROM clientes_contactos WHERE Id_Cliente = ? AND Id_Contacto = ? AND VigenteHasta IS NULL ORDER BY Id DESC LIMIT 1',
+        `SELECT Id FROM \`${tClientesContactos}\` WHERE Id_Cliente = ? AND Id_Contacto = ? AND VigenteHasta IS NULL ORDER BY Id DESC LIMIT 1`,
         [clienteId, contactoId]
       );
 
       if (rows && rows.length > 0) {
         const relId = rows[0].Id;
         await conn.execute(
-          'UPDATE clientes_contactos SET Rol = ?, Notas = ?, Es_Principal = ? WHERE Id = ?',
+          `UPDATE \`${tClientesContactos}\` SET Rol = ?, Notas = ?, Es_Principal = ? WHERE Id = ?`,
           [rol, notas, esPrincipal, relId]
         );
         await conn.commit();
@@ -3271,7 +3280,7 @@ class MySQLCRM {
 
       // Crear nueva relación activa (histórico intacto)
       const [ins] = await conn.execute(
-        'INSERT INTO clientes_contactos (Id_Cliente, Id_Contacto, Rol, Es_Principal, Notas) VALUES (?, ?, ?, ?, ?)',
+        `INSERT INTO \`${tClientesContactos}\` (Id_Cliente, Id_Contacto, Rol, Es_Principal, Notas) VALUES (?, ?, ?, ?, ?)`,
         [clienteId, contactoId, rol, esPrincipal, notas]
       );
 
@@ -3292,8 +3301,9 @@ class MySQLCRM {
       if (!this.connected && !this.pool) {
         await this.connect();
       }
+      const tClientesContactos = await this._resolveTableNameCaseInsensitive('clientes_contactos');
       const sql = `
-        UPDATE clientes_contactos
+        UPDATE \`${tClientesContactos}\`
         SET VigenteHasta = NOW(), MotivoBaja = ?, Es_Principal = 0
         WHERE Id_Cliente = ? AND Id_Contacto = ? AND VigenteHasta IS NULL
         ORDER BY Id DESC
@@ -3311,6 +3321,9 @@ class MySQLCRM {
     try {
       const includeHistorico = Boolean(options.includeHistorico);
       const params = [contactoId];
+      const tClientesContactos = await this._resolveTableNameCaseInsensitive('clientes_contactos');
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const { pk } = await this._ensureClientesMeta().catch(() => ({ pk: 'Id' }));
 
       let sql = `
         SELECT
@@ -3324,8 +3337,8 @@ class MySQLCRM {
           cc.VigenteHasta,
           cc.MotivoBaja,
           c.*
-        FROM clientes_contactos cc
-        INNER JOIN clientes c ON c.Id = cc.Id_Cliente
+        FROM \`${tClientesContactos}\` cc
+        INNER JOIN \`${tClientes}\` c ON c.\`${pk}\` = cc.Id_Cliente
         WHERE cc.Id_Contacto = ?
       `;
 
