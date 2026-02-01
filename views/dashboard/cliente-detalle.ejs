@@ -14,9 +14,9 @@
 <body>
     <%- include('../partials/navbar-dashboard') %>
     <div class="container py-4">
-        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
             <h3 class="mb-0"><i class="fas fa-user me-2"></i>Cliente #<%= cliente.Id || cliente.id %></h3>
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex flex-wrap align-items-center gap-2">
                 <% 
                 // Convertir "OK"/"KO" de la BD a estado para el switch
                 const okValRaw = (cliente.OK_KO || cliente['OK/KO'] || 'KO').toString().toUpperCase().trim();

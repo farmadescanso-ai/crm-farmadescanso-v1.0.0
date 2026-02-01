@@ -737,6 +737,9 @@
                                             <a class="btn btn-sm btn-outline-info" title="Contactos" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/contactos" role="button">
                                                 <i class="fas fa-address-book"></i>
                                             </a>
+                                            <a class="btn btn-sm btn-outline-secondary" title="Direcciones de envío" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/direcciones-envio" role="button">
+                                                <i class="fas fa-truck"></i>
+                                            </a>
                                             <a class="btn btn-sm btn-outline-warning edit-client" title="Editar" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/editar" role="button">
                                                 <i class="fas fa-edit"></i>
                                             </a>
@@ -1011,6 +1014,9 @@
                     </a>
                     <a class="btn btn-sm btn-outline-info" title="Contactos" href="/dashboard/clientes/${id}/contactos" role="button">
                       <i class="fas fa-address-book"></i>
+                    </a>
+                    <a class="btn btn-sm btn-outline-secondary" title="Direcciones de envío" href="/dashboard/clientes/${id}/direcciones-envio" role="button">
+                      <i class="fas fa-truck"></i>
                     </a>
                     <a class="btn btn-sm btn-outline-warning edit-client" title="Editar" href="/dashboard/clientes/${id}/editar" role="button">
                       <i class="fas fa-edit"></i>
