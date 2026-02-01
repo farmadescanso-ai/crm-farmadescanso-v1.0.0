@@ -413,13 +413,13 @@
                 <h5><i class="fas fa-info-circle me-2"></i>Información Adicional</h5>
                 <div class="row g-3">
                     <div class="col-md-9">
-                        <label class="form-label">Cooperativas</label>
+                        <label class="form-label">Mayoristas</label>
                         <% 
                         const tieneCooperativas = typeof cooperativasCliente !== 'undefined' && cooperativasCliente && Array.isArray(cooperativasCliente) && cooperativasCliente.length > 0;
                         const textoCooperativas = tieneCooperativas ? cooperativasCliente.map(c => (c.Nombre || c.nombre || 'Sin nombre')).join(', ') : 'Sin Asignar';
                         %>
                         <input type="text" class="form-control" value="<%= textoCooperativas %>" readonly>
-                        <small class="text-muted">Las cooperativas se asignan automáticamente desde la tabla clientes_cooperativas</small>
+                        <small class="text-muted">Los mayoristas se asignan automáticamente desde la tabla clientes_cooperativas</small>
                         <% if (tieneCooperativas) { %>
                         <div class="mt-2">
                             <% cooperativasCliente.forEach(function(coop) { %>
