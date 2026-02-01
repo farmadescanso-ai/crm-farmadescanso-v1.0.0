@@ -10143,6 +10143,21 @@ app.post('/dashboard/formas-pago/:id/eliminar', requireAuth, requireAdmin, async
 });
 
 // Gestión de Especialidades
+function sanitizeReturnTo(returnTo) {
+  if (!returnTo) return null;
+  const s = String(returnTo || '').trim();
+  if (!s) return null;
+  if (s.includes('://')) return null; // evita open redirect
+  if (!s.startsWith('/dashboard')) return null;
+  return s;
+}
+
+function withSuccess(url, successValue) {
+  if (!url) return null;
+  const sep = url.includes('?') ? '&' : '?';
+  return `${url}${sep}success=${encodeURIComponent(successValue)}`;
+}
+
 app.get('/dashboard/especialidades', requireAuth, async (req, res) => {
   try {
     const especialidades = await crm.getEspecialidades();
@@ -10151,6 +10166,7 @@ app.get('/dashboard/especialidades', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidades: especialidades || [],
       error: null,
+      currentUrl: req.originalUrl,
       query: req.query
     });
   } catch (error) {
@@ -10160,6 +10176,7 @@ app.get('/dashboard/especialidades', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidades: [],
       error: 'Error cargando especialidades',
+      currentUrl: req.originalUrl,
       query: req.query
     });
   }
@@ -10416,6 +10433,7 @@ app.get('/dashboard/especialidades/nuevo', requireAuth, async (req, res) => {
     user: req.comercial || req.session.comercial,
     especialidad: null,
     error: null,
+    returnTo: sanitizeReturnTo(req.query.returnTo) || '/dashboard/especialidades',
     isNew: true
   });
 });
@@ -10431,6 +10449,7 @@ app.get('/dashboard/especialidades/:id/editar', requireAuth, async (req, res) =>
       user: req.comercial || req.session.comercial,
       especialidad,
       error: null,
+      returnTo: sanitizeReturnTo(req.query.returnTo) || `/dashboard/especialidades/${req.params.id}`,
       isNew: false
     });
   } catch (error) {
@@ -10450,6 +10469,7 @@ app.get('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidad,
       error: null,
+      currentUrl: req.originalUrl,
       query: req.query
     });
   } catch (error) {
@@ -10470,12 +10490,15 @@ app.post('/dashboard/especialidades', requireAuth, async (req, res) => {
         user: req.comercial || req.session.comercial,
         especialidad: req.body,
         error: 'Especialidad es obligatorio',
+        returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/especialidades',
         isNew: true
       });
     }
 
     const result = await crm.createEspecialidad(payload);
     const especialidadId = result.insertId;
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'especialidad_creada'));
     res.redirect(`/dashboard/especialidades/${especialidadId}?success=especialidad_creada`);
   } catch (error) {
     console.error('Error creando especialidad:', error);
@@ -10484,6 +10507,7 @@ app.post('/dashboard/especialidades', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidad: req.body,
       error: error.message || 'Error al crear la especialidad',
+      returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/especialidades',
       isNew: true
     });
   }
@@ -10497,6 +10521,8 @@ app.post('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
     };
     
     await crm.updateEspecialidad(id, payload);
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'especialidad_actualizada'));
     res.redirect(`/dashboard/especialidades/${id}?success=especialidad_actualizada`);
   } catch (error) {
     console.error('Error actualizando especialidad:', error);
@@ -10506,6 +10532,7 @@ app.post('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidad: especialidad || req.body,
       error: error.message || 'Error al actualizar la especialidad',
+      returnTo: sanitizeReturnTo(req.body.returnTo) || `/dashboard/especialidades/${req.params.id}`,
       isNew: false
     });
   }
@@ -10530,6 +10557,7 @@ app.get('/dashboard/especialidades', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidades: especialidades || [],
       error: null,
+      currentUrl: req.originalUrl,
       query: req.query
     });
   } catch (error) {
@@ -10539,6 +10567,7 @@ app.get('/dashboard/especialidades', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidades: [],
       error: 'Error cargando especialidades',
+      currentUrl: req.originalUrl,
       query: req.query
     });
   }
@@ -10550,6 +10579,7 @@ app.get('/dashboard/especialidades/nuevo', requireAuth, async (req, res) => {
     user: req.comercial || req.session.comercial,
     especialidad: null,
     error: null,
+    returnTo: sanitizeReturnTo(req.query.returnTo) || '/dashboard/especialidades',
     isNew: true
   });
 });
@@ -10565,6 +10595,7 @@ app.get('/dashboard/especialidades/:id/editar', requireAuth, async (req, res) =>
       user: req.comercial || req.session.comercial,
       especialidad,
       error: null,
+      returnTo: sanitizeReturnTo(req.query.returnTo) || `/dashboard/especialidades/${req.params.id}`,
       isNew: false
     });
   } catch (error) {
@@ -10584,6 +10615,7 @@ app.get('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidad,
       error: null,
+      currentUrl: req.originalUrl,
       query: req.query
     });
   } catch (error) {
@@ -10604,12 +10636,15 @@ app.post('/dashboard/especialidades', requireAuth, async (req, res) => {
         user: req.comercial || req.session.comercial,
         especialidad: req.body,
         error: 'Especialidad es obligatorio',
+        returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/especialidades',
         isNew: true
       });
     }
 
     const result = await crm.createEspecialidad(payload);
     const especialidadId = result.insertId;
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'especialidad_creada'));
     res.redirect(`/dashboard/especialidades/${especialidadId}?success=especialidad_creada`);
   } catch (error) {
     console.error('Error creando especialidad:', error);
@@ -10618,6 +10653,7 @@ app.post('/dashboard/especialidades', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidad: req.body,
       error: error.message || 'Error al crear la especialidad',
+      returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/especialidades',
       isNew: true
     });
   }
@@ -10631,6 +10667,8 @@ app.post('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
     };
     
     await crm.updateEspecialidad(id, payload);
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'especialidad_actualizada'));
     res.redirect(`/dashboard/especialidades/${id}?success=especialidad_actualizada`);
   } catch (error) {
     console.error('Error actualizando especialidad:', error);
@@ -10640,6 +10678,7 @@ app.post('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
       user: req.comercial || req.session.comercial,
       especialidad: especialidad || req.body,
       error: error.message || 'Error al actualizar la especialidad',
+      returnTo: sanitizeReturnTo(req.body.returnTo) || `/dashboard/especialidades/${req.params.id}`,
       isNew: false
     });
   }

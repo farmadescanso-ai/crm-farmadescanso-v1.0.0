@@ -28,7 +28,7 @@
             </div>
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-primary text-white fs-6">Total: <%= especialidades.length %></span>
-                <a href="/dashboard/especialidades/nuevo" class="btn btn-success"><i class="fas fa-plus me-1"></i>Nueva Especialidad</a>
+                <a href="/dashboard/especialidades/nuevo<%= (typeof currentUrl !== 'undefined' && currentUrl) ? (`?returnTo=${encodeURIComponent(currentUrl)}`) : '' %>" class="btn btn-success"><i class="fas fa-plus me-1"></i>Nueva Especialidad</a>
             </div>
         </div>
 
@@ -65,7 +65,7 @@
                         <td class="text-center">
                             <div class="btn-group" role="group">
                                 <a class="btn btn-sm btn-outline-primary" href="/dashboard/especialidades/<%= esp.id %>"><i class="fas fa-eye"></i></a>
-                                <a class="btn btn-sm btn-outline-warning" href="/dashboard/especialidades/<%= esp.id %>/editar"><i class="fas fa-edit"></i></a>
+                                <a class="btn btn-sm btn-outline-warning" href="/dashboard/especialidades/<%= esp.id %>/editar<%= (typeof currentUrl !== 'undefined' && currentUrl) ? (`?returnTo=${encodeURIComponent(currentUrl)}`) : '' %>"><i class="fas fa-edit"></i></a>
                                 <form action="/dashboard/especialidades/<%= esp.id %>/eliminar" method="POST" class="d-inline" onsubmit="return confirm('¿Eliminar esta especialidad?');">
                                     <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-trash"></i></button>
                                 </form>
