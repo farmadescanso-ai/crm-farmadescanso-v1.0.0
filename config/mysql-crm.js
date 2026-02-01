@@ -1559,9 +1559,9 @@ class MySQLCRM {
           const pais = await this.getPaisById(payload.Id_Pais);
           if (pais) {
             // Normalizar nombre del país antes de guardarlo en campos legacy
-            const { normalizeUTF8 } = require('../utils/normalize-utf8');
+            const { normalizeTitleCaseES } = require('../utils/normalize-utf8');
             payload.CodPais = pais.Id_pais;
-            payload.Pais = normalizeUTF8(pais.Nombre_pais || '');
+            payload.Pais = normalizeTitleCaseES(pais.Nombre_pais || '');
           }
         } catch (error) {
           console.warn('⚠️  No se pudo obtener país por ID:', error.message);
@@ -1760,9 +1760,9 @@ class MySQLCRM {
           const pais = await this.getPaisById(payload.Id_Pais);
           if (pais) {
             // Normalizar nombre del país antes de guardarlo en campos legacy
-            const { normalizeUTF8 } = require('../utils/normalize-utf8');
+            const { normalizeTitleCaseES } = require('../utils/normalize-utf8');
             payload.CodPais = pais.Id_pais;
-            payload.Pais = normalizeUTF8(pais.Nombre_pais || '');
+            payload.Pais = normalizeTitleCaseES(pais.Nombre_pais || '');
           }
         } catch (error) {
           console.warn('⚠️  No se pudo obtener país por ID:', error.message);
@@ -2437,11 +2437,12 @@ class MySQLCRM {
       const rows = await this.query(sql, params);
       // Normalizar texto para evitar mojibake en vistas (tildes/ñ)
       try {
-        const { normalizeUTF8 } = require('../utils/normalize-utf8');
+        const { normalizeUTF8, normalizeTitleCaseES } = require('../utils/normalize-utf8');
         return (rows || []).map(r => ({
           ...r,
-          Nombre: normalizeUTF8(r.Nombre || ''),
-          Pais: normalizeUTF8(r.Pais || '')
+          // Provincias: TitleCase + utf8
+          Nombre: normalizeTitleCaseES(r.Nombre || ''),
+          Pais: normalizeTitleCaseES(r.Pais || '')
         }));
       } catch (_) {
         // fallback: devolver tal cual
@@ -2482,10 +2483,10 @@ class MySQLCRM {
       const sql = 'SELECT * FROM paises ORDER BY Nombre_pais ASC';
       const rows = await this.query(sql);
       try {
-        const { normalizeUTF8 } = require('../utils/normalize-utf8');
+        const { normalizeTitleCaseES } = require('../utils/normalize-utf8');
         return (rows || []).map(r => ({
           ...r,
-          Nombre_pais: normalizeUTF8(r.Nombre_pais || '')
+          Nombre_pais: normalizeTitleCaseES(r.Nombre_pais || '')
         }));
       } catch (_) {
         return rows;
@@ -2503,8 +2504,8 @@ class MySQLCRM {
       const row = rows.length > 0 ? rows[0] : null;
       if (!row) return null;
       try {
-        const { normalizeUTF8 } = require('../utils/normalize-utf8');
-        return { ...row, Nombre_pais: normalizeUTF8(row.Nombre_pais || '') };
+        const { normalizeTitleCaseES } = require('../utils/normalize-utf8');
+        return { ...row, Nombre_pais: normalizeTitleCaseES(row.Nombre_pais || '') };
       } catch (_) {
         return row;
       }
@@ -2521,8 +2522,8 @@ class MySQLCRM {
       const row = rows.length > 0 ? rows[0] : null;
       if (!row) return null;
       try {
-        const { normalizeUTF8 } = require('../utils/normalize-utf8');
-        return { ...row, Nombre_pais: normalizeUTF8(row.Nombre_pais || '') };
+        const { normalizeTitleCaseES } = require('../utils/normalize-utf8');
+        return { ...row, Nombre_pais: normalizeTitleCaseES(row.Nombre_pais || '') };
       } catch (_) {
         return row;
       }

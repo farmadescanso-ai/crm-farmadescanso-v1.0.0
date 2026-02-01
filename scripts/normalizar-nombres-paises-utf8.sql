@@ -26,7 +26,10 @@ WHERE
 
 -- 2) Aplicar solo a filas sospechosas
 UPDATE paises
-SET Nombre_pais = CONVERT(CAST(CONVERT(Nombre_pais USING latin1) AS BINARY) USING utf8mb4)
+SET Nombre_pais = COALESCE(
+  CONVERT(CAST(CONVERT(Nombre_pais USING latin1) AS BINARY) USING utf8mb4),
+  Nombre_pais
+)
 WHERE
   Nombre_pais LIKE '%Ã%'
   OR Nombre_pais LIKE '%Â%'

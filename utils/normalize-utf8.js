@@ -58,6 +58,49 @@ function normalizeUTF8(str) {
 }
 
 /**
+ * Normaliza a "Title Case" (tipo España, Afganistán) pensado para nombres en castellano.
+ * Útil para catálogos como países/provincias donde a veces llegan MAYÚSCULAS con letras sueltas mal.
+ *
+ * Nota: NO usar para nombres libres (razón social, etc.) porque puede alterar formato deseado.
+ */
+function normalizeTitleCaseES(str) {
+  if (str === null || str === undefined) return str;
+  const s = normalizeUTF8(String(str));
+  const trimmed = s.trim();
+  if (!trimmed) return trimmed;
+
+  // Preservar acrónimos cortos (p.ej. "USA", "UAE") si vienen así
+  if (/^[A-Z0-9]{2,4}$/.test(trimmed)) return trimmed;
+
+  const lower = trimmed.toLowerCase();
+  const smallWords = new Set(['de', 'del', 'la', 'las', 'el', 'los', 'y', 'o']);
+
+  const capWord = (w) => {
+    if (!w) return w;
+    // Respetar palabras ya con números/símbolos, pero capitalizar primera letra
+    return w.charAt(0).toUpperCase() + w.slice(1);
+  };
+
+  const out = lower
+    .split(/\s+/)
+    .map((word, idx) => {
+      // Mantener conectores en minúscula salvo primera palabra
+      if (idx > 0 && smallWords.has(word)) return word;
+      // Capitalizar sub-partes separadas por guión
+      return word
+        .split('-')
+        .map((part, pIdx) => {
+          if (idx > 0 && pIdx > 0 && smallWords.has(part)) return part;
+          return capWord(part);
+        })
+        .join('-');
+    })
+    .join(' ');
+
+  return out;
+}
+
+/**
  * Normaliza recursivamente todos los strings en un objeto o array
  */
 function normalizeObjectUTF8(obj) {
@@ -96,5 +139,6 @@ function normalizeObjectUTF8(obj) {
 
 module.exports = {
   normalizeUTF8,
+  normalizeTitleCaseES,
   normalizeObjectUTF8
 };
