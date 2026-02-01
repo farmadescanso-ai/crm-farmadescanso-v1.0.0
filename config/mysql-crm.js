@@ -3055,6 +3055,10 @@ class MySQLCRM {
     try {
       const search = String(options.search || '').trim();
       const includeInactivos = Boolean(options.includeInactivos);
+      // IMPORTANTE (compatibilidad MySQL/MariaDB):
+      // Algunos servidores fallan con "Incorrect arguments to mysqld_stmt_execute"
+      // cuando LIMIT/OFFSET van como parámetros preparados. Por eso los insertamos
+      // como números saneados en el SQL (evita placeholders en LIMIT/OFFSET).
       const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Math.min(500, Number(options.limit))) : 50;
       const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Number(options.offset)) : 0;
 
@@ -3074,8 +3078,7 @@ class MySQLCRM {
       let sql = 'SELECT * FROM contactos';
       if (where.length) sql += ' WHERE ' + where.join(' AND ');
       sql += ' ORDER BY Apellidos ASC, Nombre ASC';
-      sql += ' LIMIT ? OFFSET ?';
-      params.push(limit, offset);
+      sql += ` LIMIT ${limit} OFFSET ${offset}`;
 
       return await this.query(sql, params);
     } catch (error) {
