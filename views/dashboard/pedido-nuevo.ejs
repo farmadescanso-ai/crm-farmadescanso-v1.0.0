@@ -879,7 +879,8 @@
             }
 
             if (gestionarDireccionesEnvioLink) {
-                gestionarDireccionesEnvioLink.href = `/dashboard/clientes/${encodeURIComponent(String(id))}/direcciones-envio`;
+                const returnTo = `${window.location.pathname}${window.location.search}`;
+                gestionarDireccionesEnvioLink.href = `/dashboard/clientes/${encodeURIComponent(String(id))}/direcciones-envio?returnTo=${encodeURIComponent(returnTo)}`;
             }
 
             direccionEnvioSelect.innerHTML = '<option value="">Cargando...</option>';
@@ -909,6 +910,141 @@
 
         radiosEnvio.forEach(r => r.addEventListener('change', actualizarVisibilidadDireccionEnvio));
         actualizarVisibilidadDireccionEnvio();
+
+        // =========================
+        // Volver desde "direcciones envío" sin perder borrador
+        // =========================
+        const DRAFT_KEY = 'pedidoNuevoDraft:v1';
+
+        function leerLineasDesdeDOM() {
+            const filas = Array.from(lineasBody.querySelectorAll('.linea-row'));
+            return filas.map(row => ({
+                articuloId: row.querySelector('.articulo-hidden-input')?.value || '',
+                cantidad: row.querySelector('.cantidad-input')?.value || '',
+                precio: row.querySelector('.precio-input')?.value || '',
+                iva: row.querySelector('.iva-input')?.value || '',
+                descuento: row.querySelector('.descuento-input')?.value || ''
+            }));
+        }
+
+        function guardarBorradorPedido() {
+            try {
+                const draft = {
+                    savedAt: Date.now(),
+                    selectedCliente: selectedCliente || null,
+                    form: {
+                        cliente_id: clienteIdInput?.value || '',
+                        fecha_pedido: document.querySelector('input[name="fecha_pedido"]')?.value || '',
+                        fecha_entrega: document.querySelector('input[name="fecha_entrega"]')?.value || '',
+                        tipo_pedido: document.querySelector('select[name="tipo_pedido"]')?.value || '',
+                        forma_pago: document.querySelector('select[name="forma_pago"]')?.value || '',
+                        estado: document.querySelector('select[name="estado"]')?.value || '',
+                        observaciones: document.querySelector('textarea[name="observaciones"]')?.value || '',
+                        numero_cooperativa: document.querySelector('input[name="numero_cooperativa"]')?.value || '',
+                        cooperativa_nombre: document.querySelector('input[name="cooperativa_nombre"]')?.value || '',
+                        numero_pedido: document.querySelector('input[name="numero_pedido"]')?.value || '',
+                        tarifa_id: document.querySelector('select[name="tarifa_id"]')?.value || '',
+                        envio_diferente: document.querySelector('input[name="envio_diferente"]:checked')?.value || '0',
+                        direccion_envio_id: direccionEnvioSelect?.value || ''
+                    },
+                    descuentoGeneral: descuentoGeneralInput?.value || '',
+                    lineas: leerLineasDesdeDOM()
+                };
+                sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+            } catch (_) {}
+        }
+
+        function restaurarBorradorPedidoSiProcede() {
+            const params = new URLSearchParams(window.location.search);
+            const shouldRestore = params.get('restoreDraft') === '1';
+            if (!shouldRestore) return;
+            try {
+                const raw = sessionStorage.getItem(DRAFT_KEY);
+                if (!raw) return;
+                const draft = JSON.parse(raw);
+                if (!draft || !draft.form) return;
+
+                // cliente (restaurar UI sin prompts)
+                if (draft.selectedCliente && (draft.selectedCliente.Id || draft.selectedCliente.id)) {
+                    selectedCliente = draft.selectedCliente;
+                    const cid = draft.selectedCliente.Id || draft.selectedCliente.id;
+                    if (clienteIdInput) clienteIdInput.value = String(cid);
+                    clienteSelectedName.textContent = draft.selectedCliente.Nombre_Razon_Social || draft.selectedCliente.Nombre || '-';
+                    const detalles = [];
+                    if (draft.selectedCliente.DNI_CIF) detalles.push(`DNI/CIF: ${draft.selectedCliente.DNI_CIF}`);
+                    if (draft.selectedCliente.Email) detalles.push(`Email: ${draft.selectedCliente.Email}`);
+                    if (draft.selectedCliente.Telefono || draft.selectedCliente.Movil) detalles.push(`Tel: ${draft.selectedCliente.Telefono || draft.selectedCliente.Movil}`);
+                    if (draft.selectedCliente.Poblacion) detalles.push(`Población: ${draft.selectedCliente.Poblacion}`);
+                    clienteSelectedDetails.textContent = detalles.join(' · ');
+                    clienteSelectedDisplay.classList.add('show');
+                    clienteSearchInput.style.display = 'none';
+                }
+
+                // cabecera
+                const setVal = (sel, v) => { const el = document.querySelector(sel); if (el && v !== undefined) el.value = v; };
+                setVal('input[name="fecha_pedido"]', draft.form.fecha_pedido);
+                setVal('input[name="fecha_entrega"]', draft.form.fecha_entrega);
+                setVal('select[name="tipo_pedido"]', draft.form.tipo_pedido);
+                setVal('select[name="forma_pago"]', draft.form.forma_pago);
+                setVal('select[name="estado"]', draft.form.estado);
+                setVal('textarea[name="observaciones"]', draft.form.observaciones);
+                setVal('input[name="numero_cooperativa"]', draft.form.numero_cooperativa);
+                setVal('input[name="cooperativa_nombre"]', draft.form.cooperativa_nombre);
+                setVal('select[name="tarifa_id"]', draft.form.tarifa_id);
+                if (descuentoGeneralInput) descuentoGeneralInput.value = draft.descuentoGeneral || '';
+
+                // líneas
+                try {
+                    lineasBody.innerHTML = '';
+                    const lineas = Array.isArray(draft.lineas) ? draft.lineas : [];
+                    if (lineas.length) {
+                        lineas.forEach(l => crearLinea({
+                            articuloId: l.articuloId,
+                            cantidad: l.cantidad,
+                            precio: l.precio,
+                            iva: l.iva,
+                            descuento: l.descuento
+                        }));
+                    } else {
+                        crearLinea();
+                    }
+                } catch (_) {}
+
+                // Dirección envío: aplicar params del retorno (prioridad)
+                const envioDif = params.get('envio_diferente') || draft.form.envio_diferente || '0';
+                const dirId = params.get('direccion_envio_id') || draft.form.direccion_envio_id || '';
+                const radio = document.querySelector(`input[name="envio_diferente"][value="${envioDif}"]`);
+                if (radio) radio.checked = true;
+                actualizarVisibilidadDireccionEnvio();
+                if (clienteIdInput?.value) {
+                    cargarDireccionesEnvio(clienteIdInput.value).then(() => {
+                        if (direccionEnvioSelect && dirId) {
+                            direccionEnvioSelect.value = String(dirId);
+                        }
+                    }).catch(() => {});
+                }
+
+                recalcularTotales();
+
+                // limpiar flag de URL pero mantener el borrador (por si vuelve a entrar)
+                params.delete('restoreDraft');
+                const newQs = params.toString();
+                const newUrl = `${window.location.pathname}${newQs ? `?${newQs}` : ''}`;
+                window.history.replaceState({}, '', newUrl);
+            } catch (_) {}
+        }
+
+        // Guardar borrador al salir hacia direcciones
+        if (gestionarDireccionesEnvioLink) {
+            gestionarDireccionesEnvioLink.addEventListener('click', (e) => {
+                try {
+                    if (!clienteIdInput?.value) return;
+                    guardarBorradorPedido();
+                } catch (_) {}
+            });
+        }
+
+        restaurarBorradorPedidoSiProcede();
 
         function limpiarSeleccionCliente() {
             selectedCliente = null;

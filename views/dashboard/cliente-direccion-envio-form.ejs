@@ -34,6 +34,9 @@
 
     <% const v = values || {}; %>
     <form method="POST" action="<%= action %>">
+      <% if (typeof returnTo !== 'undefined' && returnTo) { %>
+        <input type="hidden" name="returnTo" value="<%= returnTo %>">
+      <% } %>
       <div class="card shadow-sm">
         <div class="card-body">
           <div class="row g-3">

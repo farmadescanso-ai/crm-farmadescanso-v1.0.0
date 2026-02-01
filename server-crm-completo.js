@@ -7408,12 +7408,15 @@ app.get('/dashboard/clientes/:id/direcciones-envio', requireAuth, async (req, re
 
     const direcciones = await crm.getDireccionesEnvioByCliente(Number(cliente.Id || cliente.id), { includeInactivas: true });
     const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const returnToRaw = (req.query.returnTo || '').toString().trim();
+    const returnTo = (returnToRaw.startsWith('/dashboard/pedidos') ? returnToRaw : '');
 
     res.render('dashboard/cliente-direcciones-envio', {
       title: `Direcciones de envío - Cliente #${cliente.Id || cliente.id}`,
       user: userForView,
       cliente: normalizeObjectUTF8(cliente),
       direcciones: direcciones || [],
+      returnTo,
       query: req.query,
       error: null
     });
@@ -7443,6 +7446,9 @@ app.get('/dashboard/clientes/:id/direcciones-envio/nueva', requireAuth, async (r
       crm.getContactosByCliente(Number(cliente.Id || cliente.id), { includeHistorico: false }).catch(() => [])
     ]);
 
+    const returnToRaw = (req.query.returnTo || '').toString().trim();
+    const returnTo = (returnToRaw.startsWith('/dashboard/pedidos') ? returnToRaw : '');
+
     res.render('dashboard/cliente-direccion-envio-form', {
       title: `Nueva dirección de envío - Cliente #${cliente.Id || cliente.id}`,
       heading: 'Nueva dirección',
@@ -7452,6 +7458,7 @@ app.get('/dashboard/clientes/:id/direcciones-envio/nueva', requireAuth, async (r
       contactosCliente,
       values: {},
       action: `/dashboard/clientes/${encodeURIComponent(String(cliente.Id || cliente.id))}/direcciones-envio`,
+      returnTo,
       error: null
     });
   } catch (error) {
@@ -7495,7 +7502,14 @@ app.post('/dashboard/clientes/:id/direcciones-envio', requireAuth, async (req, r
       Activa: (req.body.Activa === undefined) ? 1 : (String(req.body.Activa) === '1' ? 1 : 0)
     };
 
-    await crm.createDireccionEnvio(payload);
+    const creado = await crm.createDireccionEnvio(payload);
+    const newId = creado?.insertId || null;
+    const returnToRaw = (req.body.returnTo || req.query.returnTo || '').toString().trim();
+    const returnTo = (returnToRaw.startsWith('/dashboard/pedidos') ? returnToRaw : '');
+    if (returnTo && newId) {
+      const sep = returnTo.includes('?') ? '&' : '?';
+      return res.redirect(`${returnTo}${sep}restoreDraft=1&envio_diferente=1&direccion_envio_id=${encodeURIComponent(String(newId))}`);
+    }
     res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=creada`);
   } catch (error) {
     console.error('❌ Error creando dirección de envío:', error);
@@ -7541,6 +7555,9 @@ app.get('/dashboard/clientes/:id/direcciones-envio/:direccionId/editar', require
       crm.getContactosByCliente(clienteId, { includeHistorico: false }).catch(() => [])
     ]);
 
+    const returnToRaw = (req.query.returnTo || '').toString().trim();
+    const returnTo = (returnToRaw.startsWith('/dashboard/pedidos') ? returnToRaw : '');
+
     res.render('dashboard/cliente-direccion-envio-form', {
       title: `Editar dirección de envío - Cliente #${clienteId}`,
       heading: 'Editar dirección',
@@ -7550,6 +7567,7 @@ app.get('/dashboard/clientes/:id/direcciones-envio/:direccionId/editar', require
       contactosCliente,
       values: direccion,
       action: `/dashboard/clientes/${clienteId}/direcciones-envio/${direccionId}`,
+      returnTo,
       error: null
     });
   } catch (error) {
@@ -7595,6 +7613,12 @@ app.post('/dashboard/clientes/:id/direcciones-envio/:direccionId', requireAuth, 
     };
 
     await crm.updateDireccionEnvio(direccionId, payload);
+    const returnToRaw = (req.body.returnTo || req.query.returnTo || '').toString().trim();
+    const returnTo = (returnToRaw.startsWith('/dashboard/pedidos') ? returnToRaw : '');
+    if (returnTo) {
+      const sep = returnTo.includes('?') ? '&' : '?';
+      return res.redirect(`${returnTo}${sep}restoreDraft=1&envio_diferente=1&direccion_envio_id=${encodeURIComponent(String(direccionId))}`);
+    }
     res.redirect(`/dashboard/clientes/${clienteId}/direcciones-envio?success=actualizada`);
   } catch (error) {
     console.error('❌ Error actualizando dirección de envío:', error);

@@ -635,7 +635,8 @@
                 return;
             }
             if (gestionarDireccionesEnvioLinkEdit) {
-                gestionarDireccionesEnvioLinkEdit.href = `/dashboard/clientes/${encodeURIComponent(String(id))}/direcciones-envio`;
+                const returnTo = `${window.location.pathname}${window.location.search}`;
+                gestionarDireccionesEnvioLinkEdit.href = `/dashboard/clientes/${encodeURIComponent(String(id))}/direcciones-envio?returnTo=${encodeURIComponent(returnTo)}`;
             }
             direccionEnvioSelectEdit.innerHTML = '<option value="">Cargando...</option>';
             const resp = await fetch(`/api/clientes/${encodeURIComponent(String(id))}/direcciones-envio`, { headers: { 'Accept': 'application/json' }, credentials: 'include' });
@@ -674,6 +675,116 @@
                 cargarDireccionesEnvioEdit(clienteSelect.value).catch(() => {});
             });
         }
+
+        // =========================
+        // Volver desde "direcciones envío" sin perder borrador
+        // =========================
+        const DRAFT_KEY_EDIT = `pedidoEditarDraft:v1:<%= pedido && pedido.id ? pedido.id : '0' %>`;
+
+        function leerLineasDesdeDOMEdit() {
+            const filas = Array.from(lineasBody.querySelectorAll('.linea-row'));
+            return filas.map(row => ({
+                articuloId: row.querySelector('.articulo-hidden-input')?.value || '',
+                cantidad: row.querySelector('.cantidad-input')?.value || '',
+                precio: row.querySelector('.precio-input')?.value || '',
+                iva: row.querySelector('.iva-input')?.value || '',
+                descuento: row.querySelector('.descuento-input')?.value || ''
+            }));
+        }
+
+        function guardarBorradorPedidoEdit() {
+            try {
+                const draft = {
+                    savedAt: Date.now(),
+                    form: {
+                        cliente_id: clienteSelect?.value || '',
+                        fecha_pedido: document.querySelector('input[name="fecha_pedido"]')?.value || '',
+                        fecha_entrega: document.querySelector('input[name="fecha_entrega"]')?.value || '',
+                        tipo_pedido: document.querySelector('select[name="tipo_pedido"]')?.value || '',
+                        forma_pago: document.querySelector('select[name="forma_pago"]')?.value || '',
+                        estado: document.querySelector('select[name="estado"]')?.value || '',
+                        observaciones: document.querySelector('textarea[name="observaciones"]')?.value || '',
+                        numero_cooperativa: document.querySelector('input[name="numero_cooperativa"]')?.value || '',
+                        cooperativa_nombre: document.querySelector('input[name="cooperativa_nombre"]')?.value || '',
+                        envio_diferente: document.querySelector('input[name="envio_diferente"]:checked')?.value || '0',
+                        direccion_envio_id: direccionEnvioSelectEdit?.value || ''
+                    },
+                    descuentoGeneral: descuentoGeneralInput?.value || '',
+                    lineas: leerLineasDesdeDOMEdit()
+                };
+                sessionStorage.setItem(DRAFT_KEY_EDIT, JSON.stringify(draft));
+            } catch (_) {}
+        }
+
+        function restaurarBorradorPedidoEditSiProcede() {
+            const params = new URLSearchParams(window.location.search);
+            const shouldRestore = params.get('restoreDraft') === '1';
+            if (!shouldRestore) return;
+            try {
+                const raw = sessionStorage.getItem(DRAFT_KEY_EDIT);
+                if (!raw) return;
+                const draft = JSON.parse(raw);
+                if (!draft || !draft.form) return;
+
+                const setVal = (sel, v) => { const el = document.querySelector(sel); if (el && v !== undefined) el.value = v; };
+                if (clienteSelect && draft.form.cliente_id) clienteSelect.value = draft.form.cliente_id;
+                setVal('input[name="fecha_pedido"]', draft.form.fecha_pedido);
+                setVal('input[name="fecha_entrega"]', draft.form.fecha_entrega);
+                setVal('select[name="tipo_pedido"]', draft.form.tipo_pedido);
+                setVal('select[name="forma_pago"]', draft.form.forma_pago);
+                setVal('select[name="estado"]', draft.form.estado);
+                setVal('textarea[name="observaciones"]', draft.form.observaciones);
+                setVal('input[name="numero_cooperativa"]', draft.form.numero_cooperativa);
+                setVal('input[name="cooperativa_nombre"]', draft.form.cooperativa_nombre);
+                if (descuentoGeneralInput) descuentoGeneralInput.value = draft.descuentoGeneral || '';
+
+                // líneas
+                try {
+                    lineasBody.innerHTML = '';
+                    const lineas = Array.isArray(draft.lineas) ? draft.lineas : [];
+                    if (lineas.length) {
+                        lineas.forEach(l => crearLinea({
+                            articuloId: l.articuloId,
+                            cantidad: l.cantidad,
+                            precio: l.precio,
+                            iva: l.iva,
+                            descuento: l.descuento
+                        }));
+                    } else {
+                        crearLinea();
+                    }
+                } catch (_) {}
+
+                // Dirección envío: aplicar params del retorno (prioridad)
+                const envioDif = params.get('envio_diferente') || draft.form.envio_diferente || '0';
+                const dirId = params.get('direccion_envio_id') || draft.form.direccion_envio_id || '';
+                const radio = document.querySelector(`input[name="envio_diferente"][value="${envioDif}"]`);
+                if (radio) radio.checked = true;
+                actualizarVisibilidadDireccionEnvioEdit();
+                if (clienteSelect?.value) {
+                    cargarDireccionesEnvioEdit(clienteSelect.value).then(() => {
+                        if (direccionEnvioSelectEdit && dirId) {
+                            direccionEnvioSelectEdit.value = String(dirId);
+                        }
+                    }).catch(() => {});
+                }
+
+                recalcularTotales();
+
+                params.delete('restoreDraft');
+                const newQs = params.toString();
+                const newUrl = `${window.location.pathname}${newQs ? `?${newQs}` : ''}`;
+                window.history.replaceState({}, '', newUrl);
+            } catch (_) {}
+        }
+
+        if (gestionarDireccionesEnvioLinkEdit) {
+            gestionarDireccionesEnvioLinkEdit.addEventListener('click', () => {
+                guardarBorradorPedidoEdit();
+            });
+        }
+
+        restaurarBorradorPedidoEditSiProcede();
  
         const lineasPayloadInput = document.createElement('input');
         lineasPayloadInput.type = 'hidden';
