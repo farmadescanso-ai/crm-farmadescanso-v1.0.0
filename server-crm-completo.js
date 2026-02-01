@@ -7348,6 +7348,79 @@ app.post('/dashboard/clientes/:id/mandato-sepa/send', requireAuth, async (req, r
   }
 });
 
+// ============================================
+// CLIENTES -> CONTACTOS (vista y gestión de vínculos)
+// Debe ir ANTES de /dashboard/clientes/:id
+// ============================================
+app.get('/dashboard/clientes/:id/contactos', requireAuth, async (req, res) => {
+  try {
+    const idParam = req.params.id;
+    const cliente = await crm.getClienteById(idParam);
+    if (!cliente) {
+      return res.status(404).render('error', { error: 'Cliente no encontrado', message: 'El cliente no existe' });
+    }
+
+    const includeHistorico = String(req.query.includeHistorico || '') === '1' || String(req.query.includeHistorico || '').toLowerCase() === 'true';
+    const relaciones = await crm.getContactosByCliente(Number(cliente.Id || cliente.id), { includeHistorico });
+    const contactosDisponibles = await crm.getContactos({ includeInactivos: false, limit: 500, offset: 0 });
+
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const esAdmin = getUserIsAdmin(req);
+
+    res.render('dashboard/cliente-contactos', {
+      title: `Contactos del cliente #${cliente.Id || cliente.id}`,
+      user: userForView,
+      esAdmin,
+      isAdmin: esAdmin,
+      currentPage: 'clientes',
+      cliente: normalizeObjectUTF8(cliente),
+      relaciones: relaciones || [],
+      contactosDisponibles: contactosDisponibles || [],
+      query: req.query,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando contactos de cliente:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudieron cargar los contactos del cliente' });
+  }
+});
+
+app.post('/dashboard/clientes/:id/contactos/vincular', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const contactoId = Number(req.body.contactoId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(contactoId) || contactoId <= 0) throw new Error('contactoId inválido');
+
+    const options = {
+      Rol: (req.body.Rol || '').trim() || null,
+      Notas: (req.body.Notas || '').trim() || null,
+      Es_Principal: String(req.body.Es_Principal || '0') === '1'
+    };
+
+    await crm.vincularContactoACliente(clienteId, contactoId, options);
+    res.redirect(`/dashboard/clientes/${clienteId}/contactos?success=vinculo_creado`);
+  } catch (error) {
+    console.error('❌ Error vinculando contacto a cliente (dashboard):', error);
+    res.redirect(`/dashboard/clientes/${req.params.id}/contactos?error=vinculo_error`);
+  }
+});
+
+app.post('/dashboard/clientes/:id/contactos/:contactoId/cerrar', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const contactoId = Number(req.params.contactoId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(contactoId) || contactoId <= 0) throw new Error('contactoId inválido');
+
+    await crm.cerrarVinculoContactoCliente(clienteId, contactoId, { MotivoBaja: null });
+    res.redirect(`/dashboard/clientes/${clienteId}/contactos?success=vinculo_cerrado`);
+  } catch (error) {
+    console.error('❌ Error cerrando vínculo (dashboard):', error);
+    res.redirect(`/dashboard/clientes/${req.params.id}/contactos?error=cerrar_error`);
+  }
+});
+
 // Ruta para ver detalle de cliente (DEBE estar DESPUÉS de todas las rutas específicas)
 app.get('/dashboard/clientes/:id', requireAuth, async (req, res, next) => {
   try {
@@ -7386,6 +7459,7 @@ app.get('/dashboard/clientes/:id', requireAuth, async (req, res, next) => {
     const viewData = {
       title: `Cliente #${req.params.id} - Detalle`,
       user: userForView,
+      currentPage: 'clientes',
       cliente: normalizeObjectUTF8(cliente),
       error: null,
       query: req.query
@@ -9761,6 +9835,241 @@ app.get('/dashboard/especialidades', requireAuth, async (req, res) => {
       error: 'Error cargando especialidades',
       query: req.query
     });
+  }
+});
+
+// ============================================
+// CONTACTOS (CRUD) + vistas de relación
+// ============================================
+
+app.get('/dashboard/contactos', requireAuth, async (req, res) => {
+  try {
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const esAdmin = getUserIsAdmin(req);
+
+    const q = String(req.query.q || '').trim();
+    const includeInactivos = String(req.query.includeInactivos || '0') === '1';
+    const contactos = await crm.getContactos({
+      search: q || '',
+      includeInactivos,
+      limit: 500,
+      offset: 0
+    });
+
+    res.render('dashboard/contactos', {
+      title: 'Contactos - Farmadescaso',
+      user: userForView,
+      esAdmin,
+      isAdmin: esAdmin,
+      currentPage: 'contactos',
+      contactos: contactos || [],
+      query: req.query,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando contactos (dashboard):', error);
+    res.render('dashboard/contactos', {
+      title: 'Contactos - Farmadescaso',
+      user: req.comercial || req.session?.comercial || req.user || null,
+      esAdmin: getUserIsAdmin(req),
+      isAdmin: getUserIsAdmin(req),
+      currentPage: 'contactos',
+      contactos: [],
+      query: req.query,
+      error: error.message
+    });
+  }
+});
+
+app.get('/dashboard/contactos/nuevo', requireAuth, async (req, res) => {
+  const userForView = req.comercial || req.session?.comercial || req.user || null;
+  const esAdmin = getUserIsAdmin(req);
+  res.render('dashboard/contacto-editar', {
+    title: 'Nuevo Contacto - Farmadescaso',
+    user: userForView,
+    esAdmin,
+    isAdmin: esAdmin,
+    currentPage: 'contactos',
+    isNew: true,
+    contacto: null,
+    error: null
+  });
+});
+
+app.post('/dashboard/contactos/nuevo', requireAuth, async (req, res) => {
+  try {
+    const payload = {
+      Nombre: (req.body.Nombre || '').trim(),
+      Apellidos: (req.body.Apellidos || '').trim() || null,
+      Cargo: (req.body.Cargo || '').trim() || null,
+      Especialidad: (req.body.Especialidad || '').trim() || null,
+      Email: (req.body.Email || '').trim() || null,
+      Movil: (req.body.Movil || '').trim() || null,
+      Telefono: (req.body.Telefono || '').trim() || null,
+      Extension: (req.body.Extension || '').trim() || null,
+      Notas: (req.body.Notas || '').trim() || null,
+      Activo: String(req.body.Activo || '1') === '1' ? 1 : 0
+    };
+
+    const result = await crm.createContacto(payload);
+    res.redirect(`/dashboard/contactos/${result.insertId}?success=contacto_creado`);
+  } catch (error) {
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const esAdmin = getUserIsAdmin(req);
+    res.render('dashboard/contacto-editar', {
+      title: 'Nuevo Contacto - Farmadescaso',
+      user: userForView,
+      esAdmin,
+      isAdmin: esAdmin,
+      currentPage: 'contactos',
+      isNew: true,
+      contacto: req.body || null,
+      error: error.message
+    });
+  }
+});
+
+app.get('/dashboard/contactos/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const contacto = await crm.getContactoById(req.params.id);
+    if (!contacto) {
+      return res.status(404).render('error', { error: 'Contacto no encontrado', message: 'El contacto no existe' });
+    }
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const esAdmin = getUserIsAdmin(req);
+    res.render('dashboard/contacto-editar', {
+      title: `Editar Contacto #${contacto.Id}`,
+      user: userForView,
+      esAdmin,
+      isAdmin: esAdmin,
+      currentPage: 'contactos',
+      isNew: false,
+      contacto,
+      error: null
+    });
+  } catch (error) {
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el contacto' });
+  }
+});
+
+app.post('/dashboard/contactos/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isFinite(id) || id <= 0) throw new Error('ID inválido');
+
+    const payload = {
+      Nombre: (req.body.Nombre || '').trim(),
+      Apellidos: (req.body.Apellidos || '').trim() || null,
+      Cargo: (req.body.Cargo || '').trim() || null,
+      Especialidad: (req.body.Especialidad || '').trim() || null,
+      Email: (req.body.Email || '').trim() || null,
+      Movil: (req.body.Movil || '').trim() || null,
+      Telefono: (req.body.Telefono || '').trim() || null,
+      Extension: (req.body.Extension || '').trim() || null,
+      Notas: (req.body.Notas || '').trim() || null,
+      Activo: String(req.body.Activo || '1') === '1' ? 1 : 0
+    };
+
+    await crm.updateContacto(id, payload);
+    res.redirect(`/dashboard/contactos/${id}?success=contacto_actualizado`);
+  } catch (error) {
+    console.error('❌ Error actualizando contacto (dashboard):', error);
+    res.redirect(`/dashboard/contactos/${req.params.id}?error=contacto_actualizar_error`);
+  }
+});
+
+app.get('/dashboard/contactos/:id/clientes', requireAuth, async (req, res) => {
+  try {
+    const contacto = await crm.getContactoById(req.params.id);
+    if (!contacto) {
+      return res.status(404).render('error', { error: 'Contacto no encontrado', message: 'El contacto no existe' });
+    }
+
+    const includeHistorico = String(req.query.includeHistorico || '') === '1' || String(req.query.includeHistorico || '').toLowerCase() === 'true';
+    const relaciones = await crm.getClientesByContacto(Number(contacto.Id), { includeHistorico });
+
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const esAdmin = getUserIsAdmin(req);
+
+    res.render('dashboard/contacto-clientes', {
+      title: `Clientes del contacto #${contacto.Id}`,
+      user: userForView,
+      esAdmin,
+      isAdmin: esAdmin,
+      currentPage: 'contactos',
+      contacto,
+      relaciones: relaciones || [],
+      query: req.query,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando clientes del contacto (dashboard):', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudieron cargar los clientes del contacto' });
+  }
+});
+
+app.post('/dashboard/contactos/:id/clientes/vincular', requireAuth, async (req, res) => {
+  try {
+    const contactoId = Number(req.params.id);
+    const clienteId = Number(req.body.clienteId);
+    if (!Number.isFinite(contactoId) || contactoId <= 0) throw new Error('contactoId inválido');
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+
+    const options = {
+      Rol: (req.body.Rol || '').trim() || null,
+      Notas: (req.body.Notas || '').trim() || null,
+      Es_Principal: String(req.body.Es_Principal || '0') === '1'
+    };
+
+    await crm.vincularContactoACliente(clienteId, contactoId, options);
+    res.redirect(`/dashboard/contactos/${contactoId}/clientes?success=vinculo_creado`);
+  } catch (error) {
+    console.error('❌ Error vinculando cliente a contacto (dashboard):', error);
+    res.redirect(`/dashboard/contactos/${req.params.id}/clientes?error=vinculo_error`);
+  }
+});
+
+app.post('/dashboard/contactos/:id/clientes/:clienteId/cerrar', requireAuth, async (req, res) => {
+  try {
+    const contactoId = Number(req.params.id);
+    const clienteId = Number(req.params.clienteId);
+    if (!Number.isFinite(contactoId) || contactoId <= 0) throw new Error('contactoId inválido');
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+
+    await crm.cerrarVinculoContactoCliente(clienteId, contactoId, { MotivoBaja: null });
+    res.redirect(`/dashboard/contactos/${contactoId}/clientes?success=vinculo_cerrado`);
+  } catch (error) {
+    console.error('❌ Error cerrando vínculo (dashboard contacto->clientes):', error);
+    res.redirect(`/dashboard/contactos/${req.params.id}/clientes?error=cerrar_error`);
+  }
+});
+
+app.get('/dashboard/contactos/:id', requireAuth, async (req, res) => {
+  try {
+    // Evitar conflicto con /dashboard/contactos/nuevo
+    if (req.params.id === 'nuevo') return res.redirect('/dashboard/contactos/nuevo');
+
+    const contacto = await crm.getContactoById(req.params.id);
+    if (!contacto) {
+      return res.status(404).render('error', { error: 'Contacto no encontrado', message: 'El contacto no existe' });
+    }
+
+    const userForView = req.comercial || req.session?.comercial || req.user || null;
+    const esAdmin = getUserIsAdmin(req);
+
+    res.render('dashboard/contacto-detalle', {
+      title: `Contacto #${contacto.Id} - Detalle`,
+      user: userForView,
+      esAdmin,
+      isAdmin: esAdmin,
+      currentPage: 'contactos',
+      contacto,
+      query: req.query,
+      error: null
+    });
+  } catch (error) {
+    console.error('❌ Error cargando detalle de contacto:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el contacto' });
   }
 });
 
@@ -17899,6 +18208,97 @@ app.get('/api/visitas', requireAuth, async (req, res) => {
     res.json({ success: true, data: visitas, count: visitas.length });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// API CONTACTOS (persona global) + vínculo con clientes (historial)
+// ============================================
+
+// Listado de contactos (búsqueda opcional)
+app.get('/api/contactos', requireAuth, async (req, res) => {
+  try {
+    const search = String(req.query.search || '').trim();
+    const includeInactivos = String(req.query.includeInactivos || '').toLowerCase() === 'true' || String(req.query.includeInactivos || '') === '1';
+    const limit = Number.isFinite(Number(req.query.limit)) ? Number(req.query.limit) : 50;
+    const offset = Number.isFinite(Number(req.query.offset)) ? Number(req.query.offset) : 0;
+
+    const contactos = await crm.getContactos({ search, includeInactivos, limit, offset });
+    res.json({ success: true, data: contactos, count: contactos.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Crear contacto (persona)
+app.post('/api/contactos', requireAuth, async (req, res) => {
+  try {
+    const result = await crm.createContacto(req.body || {});
+    res.status(201).json({ success: true, data: { id: result.insertId }, message: 'Contacto creado exitosamente' });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Detalle de contacto
+app.get('/api/contactos/:id', requireAuth, async (req, res) => {
+  try {
+    const contacto = await crm.getContactoById(req.params.id);
+    if (!contacto) return res.status(404).json({ success: false, error: 'Contacto no encontrado' });
+    res.json({ success: true, data: contacto });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Actualizar contacto
+app.put('/api/contactos/:id', requireAuth, async (req, res) => {
+  try {
+    const r = await crm.updateContacto(req.params.id, req.body || {});
+    res.json({ success: true, affectedRows: r.affectedRows || 0 });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Listar contactos de un cliente
+app.get('/api/clientes/:id/contactos', requireAuth, async (req, res) => {
+  try {
+    const includeHistorico = String(req.query.includeHistorico || '').toLowerCase() === 'true' || String(req.query.includeHistorico || '') === '1';
+    const rows = await crm.getContactosByCliente(req.params.id, { includeHistorico });
+    res.json({ success: true, data: rows, count: rows.length });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Vincular contacto existente a un cliente (crea relación activa o actualiza la activa)
+app.post('/api/clientes/:id/contactos/:contactoId', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const contactoId = Number(req.params.contactoId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(contactoId) || contactoId <= 0) throw new Error('contactoId inválido');
+
+    const r = await crm.vincularContactoACliente(clienteId, contactoId, req.body || {});
+    res.status(201).json({ success: true, data: r });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
+  }
+});
+
+// Cerrar vínculo activo (histórico: pone VigenteHasta)
+app.delete('/api/clientes/:id/contactos/:contactoId', requireAuth, async (req, res) => {
+  try {
+    const clienteId = Number(req.params.id);
+    const contactoId = Number(req.params.contactoId);
+    if (!Number.isFinite(clienteId) || clienteId <= 0) throw new Error('clienteId inválido');
+    if (!Number.isFinite(contactoId) || contactoId <= 0) throw new Error('contactoId inválido');
+
+    const r = await crm.cerrarVinculoContactoCliente(clienteId, contactoId, req.body || {});
+    res.json({ success: true, affectedRows: r.affectedRows || 0 });
+  } catch (error) {
+    res.status(400).json({ success: false, error: error.message });
   }
 });
 

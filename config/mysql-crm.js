@@ -3050,6 +3050,276 @@ class MySQLCRM {
     }
   }
 
+  // CONTACTOS (persona global) + relación M:N con clientes (historial)
+  async getContactos(options = {}) {
+    try {
+      const search = String(options.search || '').trim();
+      const includeInactivos = Boolean(options.includeInactivos);
+      const limit = Number.isFinite(Number(options.limit)) ? Math.max(1, Math.min(500, Number(options.limit))) : 50;
+      const offset = Number.isFinite(Number(options.offset)) ? Math.max(0, Number(options.offset)) : 0;
+
+      const where = [];
+      const params = [];
+
+      if (!includeInactivos) {
+        where.push('Activo = 1');
+      }
+
+      if (search) {
+        where.push('(Nombre LIKE ? OR Apellidos LIKE ? OR Email LIKE ? OR Movil LIKE ? OR Telefono LIKE ?)');
+        const like = `%${search}%`;
+        params.push(like, like, like, like, like);
+      }
+
+      let sql = 'SELECT * FROM contactos';
+      if (where.length) sql += ' WHERE ' + where.join(' AND ');
+      sql += ' ORDER BY Apellidos ASC, Nombre ASC';
+      sql += ' LIMIT ? OFFSET ?';
+      params.push(limit, offset);
+
+      return await this.query(sql, params);
+    } catch (error) {
+      console.error('❌ Error obteniendo contactos:', error.message);
+      return [];
+    }
+  }
+
+  async getContactoById(id) {
+    try {
+      const rows = await this.query('SELECT * FROM contactos WHERE Id = ? LIMIT 1', [id]);
+      return rows?.[0] || null;
+    } catch (error) {
+      console.error('❌ Error obteniendo contacto por ID:', error.message);
+      return null;
+    }
+  }
+
+  async createContacto(payload) {
+    try {
+      // Asegurar conexión
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+
+      const allowed = new Set([
+        'Nombre',
+        'Apellidos',
+        'Cargo',
+        'Especialidad',
+        'Email',
+        'Movil',
+        'Telefono',
+        'Extension',
+        'Notas',
+        'Activo'
+      ]);
+
+      const data = {};
+      for (const [k, v] of Object.entries(payload || {})) {
+        if (!allowed.has(k)) continue;
+        data[k] = (v === undefined ? null : v);
+      }
+
+      if (!data.Nombre || String(data.Nombre).trim() === '') {
+        throw new Error('El campo Nombre es obligatorio');
+      }
+
+      const fields = Object.keys(data).map(k => `\`${k}\``).join(', ');
+      const placeholders = Object.keys(data).map(() => '?').join(', ');
+      const values = Object.values(data);
+
+      const sql = `INSERT INTO contactos (${fields}) VALUES (${placeholders})`;
+      const result = await this.query(sql, values);
+      return { insertId: result.insertId };
+    } catch (error) {
+      console.error('❌ Error creando contacto:', error.message);
+      throw error;
+    }
+  }
+
+  async updateContacto(id, payload) {
+    try {
+      // Asegurar conexión
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+
+      const allowed = new Set([
+        'Nombre',
+        'Apellidos',
+        'Cargo',
+        'Especialidad',
+        'Email',
+        'Movil',
+        'Telefono',
+        'Extension',
+        'Notas',
+        'Activo'
+      ]);
+
+      const fields = [];
+      const values = [];
+      for (const [k, v] of Object.entries(payload || {})) {
+        if (!allowed.has(k)) continue;
+        fields.push(`\`${k}\` = ?`);
+        values.push(v === undefined ? null : v);
+      }
+
+      if (!fields.length) return { affectedRows: 0 };
+
+      values.push(id);
+      const sql = `UPDATE contactos SET ${fields.join(', ')} WHERE Id = ?`;
+      const result = await this.query(sql, values);
+      return { affectedRows: result.affectedRows || 0 };
+    } catch (error) {
+      console.error('❌ Error actualizando contacto:', error.message);
+      throw error;
+    }
+  }
+
+  async getContactosByCliente(clienteId, options = {}) {
+    try {
+      const includeHistorico = Boolean(options.includeHistorico);
+      const params = [clienteId];
+
+      let sql = `
+        SELECT
+          cc.Id AS Id_Relacion,
+          cc.Id_Cliente,
+          cc.Id_Contacto,
+          cc.Rol,
+          cc.Es_Principal,
+          cc.Notas AS NotasRelacion,
+          cc.VigenteDesde,
+          cc.VigenteHasta,
+          cc.MotivoBaja,
+          c.*
+        FROM clientes_contactos cc
+        INNER JOIN contactos c ON c.Id = cc.Id_Contacto
+        WHERE cc.Id_Cliente = ?
+      `;
+
+      if (!includeHistorico) {
+        sql += ' AND cc.VigenteHasta IS NULL';
+      }
+
+      sql += ' ORDER BY (cc.VigenteHasta IS NULL) DESC, cc.Es_Principal DESC, c.Apellidos ASC, c.Nombre ASC, cc.Id DESC';
+
+      return await this.query(sql, params);
+    } catch (error) {
+      console.error('❌ Error obteniendo contactos por cliente:', error.message);
+      return [];
+    }
+  }
+
+  async vincularContactoACliente(clienteId, contactoId, options = {}) {
+    // Crea o actualiza la relación activa (histórico: no reabre filas antiguas, crea nueva si no existe activa).
+    // Si Es_Principal=1, desmarca otros principales activos del cliente en la misma transacción.
+    const rol = options.Rol ?? options.rol ?? null;
+    const notas = options.Notas ?? options.notas ?? null;
+    const esPrincipal = (options.Es_Principal ?? options.es_principal ?? options.esPrincipal) ? 1 : 0;
+
+    if (!this.pool) await this.connect();
+    const conn = await this.pool.getConnection();
+
+    try {
+      await conn.beginTransaction();
+
+      if (esPrincipal) {
+        await conn.execute(
+          'UPDATE clientes_contactos SET Es_Principal = 0 WHERE Id_Cliente = ? AND VigenteHasta IS NULL',
+          [clienteId]
+        );
+      }
+
+      // ¿ya existe relación activa?
+      const [rows] = await conn.execute(
+        'SELECT Id FROM clientes_contactos WHERE Id_Cliente = ? AND Id_Contacto = ? AND VigenteHasta IS NULL ORDER BY Id DESC LIMIT 1',
+        [clienteId, contactoId]
+      );
+
+      if (rows && rows.length > 0) {
+        const relId = rows[0].Id;
+        await conn.execute(
+          'UPDATE clientes_contactos SET Rol = ?, Notas = ?, Es_Principal = ? WHERE Id = ?',
+          [rol, notas, esPrincipal, relId]
+        );
+        await conn.commit();
+        return { action: 'updated', Id_Relacion: relId };
+      }
+
+      // Crear nueva relación activa (histórico intacto)
+      const [ins] = await conn.execute(
+        'INSERT INTO clientes_contactos (Id_Cliente, Id_Contacto, Rol, Es_Principal, Notas) VALUES (?, ?, ?, ?, ?)',
+        [clienteId, contactoId, rol, esPrincipal, notas]
+      );
+
+      await conn.commit();
+      return { action: 'inserted', Id_Relacion: ins.insertId };
+    } catch (error) {
+      try { await conn.rollback(); } catch (_) {}
+      console.error('❌ Error vinculando contacto a cliente:', error.message);
+      throw error;
+    } finally {
+      conn.release();
+    }
+  }
+
+  async cerrarVinculoContactoCliente(clienteId, contactoId, options = {}) {
+    try {
+      const motivo = options.MotivoBaja ?? options.motivoBaja ?? options.motivo ?? null;
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+      const sql = `
+        UPDATE clientes_contactos
+        SET VigenteHasta = NOW(), MotivoBaja = ?, Es_Principal = 0
+        WHERE Id_Cliente = ? AND Id_Contacto = ? AND VigenteHasta IS NULL
+        ORDER BY Id DESC
+        LIMIT 1
+      `;
+      const result = await this.query(sql, [motivo, clienteId, contactoId]);
+      return { affectedRows: result.affectedRows || 0 };
+    } catch (error) {
+      console.error('❌ Error cerrando vínculo contacto-cliente:', error.message);
+      throw error;
+    }
+  }
+
+  async getClientesByContacto(contactoId, options = {}) {
+    try {
+      const includeHistorico = Boolean(options.includeHistorico);
+      const params = [contactoId];
+
+      let sql = `
+        SELECT
+          cc.Id AS Id_Relacion,
+          cc.Id_Cliente,
+          cc.Id_Contacto,
+          cc.Rol,
+          cc.Es_Principal,
+          cc.Notas AS NotasRelacion,
+          cc.VigenteDesde,
+          cc.VigenteHasta,
+          cc.MotivoBaja,
+          c.*
+        FROM clientes_contactos cc
+        INNER JOIN clientes c ON c.Id = cc.Id_Cliente
+        WHERE cc.Id_Contacto = ?
+      `;
+
+      if (!includeHistorico) {
+        sql += ' AND cc.VigenteHasta IS NULL';
+      }
+
+      sql += ' ORDER BY (cc.VigenteHasta IS NULL) DESC, cc.Es_Principal DESC, c.Id ASC, cc.Id DESC';
+      return await this.query(sql, params);
+    } catch (error) {
+      console.error('❌ Error obteniendo clientes por contacto:', error.message);
+      return [];
+    }
+  }
+
   // VISITAS
   async getVisitas(comercialId = null) {
     try {

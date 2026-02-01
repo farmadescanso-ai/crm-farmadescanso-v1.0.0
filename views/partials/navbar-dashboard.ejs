@@ -34,6 +34,13 @@
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'contactos' ? 'active' : '' %>"
+                       href="/dashboard/contactos"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Contactos" title="Contactos">
+                        <i class="fas fa-address-book me-1"></i><span class="nav-label">Contactos</span>
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'pedidos' ? 'active' : '' %>"
                        href="/dashboard/pedidos"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Pedidos" title="Pedidos">

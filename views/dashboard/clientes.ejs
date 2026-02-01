@@ -227,6 +227,19 @@
         .table tbody tr td {
             vertical-align: top !important;
         }
+
+        /* Acciones: asegurar que los iconos se vean siempre (tamaño + centrado) */
+        .acciones-btns .btn.btn-sm {
+            width: 36px;
+            height: 36px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .acciones-btns .btn.btn-sm i {
+            line-height: 1;
+        }
         
         /* Tabla: ajustar al contenido, sin anchos forzados */
         .table {
@@ -717,20 +730,25 @@
                                       : (estadoLabel.toLowerCase() === 'inactivo' ? 'bg-secondary' : 'bg-warning');
                                     %>
                                     <td class="text-center">
-                                        <a class="btn btn-sm btn-outline-primary me-1 view-client" title="Ver" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" role="button">
-                                            <i class="fas fa-eye"></i>
-                                        </a>
-                                        <a class="btn btn-sm btn-outline-warning me-1 edit-client" title="Editar" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/editar" role="button">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <button class="btn btn-sm <%= estadoActivo ? 'btn-success' : 'btn-danger' %> toggle-estado" title="<%= estadoActivo ? 'Desactivar' : 'Activar' %>" data-id="<%= cliente.Id || cliente.id %>" data-estado="<%= estadoActivo ? 'OK' : 'KO' %>">
-                                            <i class="fas fa-toggle-<%= estadoActivo ? 'on' : 'off' %>"></i>
-                                        </button>
-                                        <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-                                        <button class="btn btn-sm btn-outline-danger ms-1 delete-client" title="Borrar Registro" data-id="<%= cliente.Id || cliente.id %>" data-nombre="<%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Cliente' %>">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                        <% } %>
+                                        <div class="acciones-btns d-inline-flex align-items-center justify-content-center gap-1">
+                                            <a class="btn btn-sm btn-outline-primary view-client" title="Ver" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>" role="button">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-info" title="Contactos" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/contactos" role="button">
+                                                <i class="fas fa-address-book"></i>
+                                            </a>
+                                            <a class="btn btn-sm btn-outline-warning edit-client" title="Editar" href="/dashboard/clientes/<%= cliente.Id || cliente.id %>/editar" role="button">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-sm <%= estadoActivo ? 'btn-success' : 'btn-danger' %> toggle-estado" title="<%= estadoActivo ? 'Desactivar' : 'Activar' %>" data-id="<%= cliente.Id || cliente.id %>" data-estado="<%= estadoActivo ? 'OK' : 'KO' %>">
+                                                <i class="fas fa-toggle-<%= estadoActivo ? 'on' : 'off' %>"></i>
+                                            </button>
+                                            <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+                                            <button class="btn btn-sm btn-outline-danger delete-client" title="Borrar Registro" data-id="<%= cliente.Id || cliente.id %>" data-nombre="<%= cliente.Nombre_Razon_Social || cliente.Nombre || 'Cliente' %>">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                            <% } %>
+                                        </div>
                                     </td>
                                     <td><%= tipoClienteNombre %></td>
                                     <td class="text-end"><%= new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(cliente.VentasAcumuladasYear || 0)) %></td>
@@ -987,20 +1005,25 @@
             return `
               <tr class="client-row" data-cliente-encoded="${encoded}">
                 <td class="text-center">
-                  <a class="btn btn-sm btn-outline-primary me-1 view-client" title="Ver" href="/dashboard/clientes/${id}" role="button">
-                    <i class="fas fa-eye"></i>
-                  </a>
-                  <a class="btn btn-sm btn-outline-warning me-1 edit-client" title="Editar" href="/dashboard/clientes/${id}/editar" role="button">
-                    <i class="fas fa-edit"></i>
-                  </a>
-                  <button class="btn btn-sm ${estadoActivo ? 'btn-success' : 'btn-danger'} toggle-estado" title="${estadoActivo ? 'Desactivar' : 'Activar'}" data-id="${id}" data-estado="${estadoActivo ? 'OK' : 'KO'}">
-                    <i class="fas fa-toggle-${estadoActivo ? 'on' : 'off'}"></i>
-                  </button>
-                  <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
-                  <button class="btn btn-sm btn-outline-danger ms-1 delete-client" title="Borrar Registro" data-id="${id}" data-nombre="${escapeHtml(nombre)}">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                  <% } %>
+                  <div class="acciones-btns d-inline-flex align-items-center justify-content-center gap-1">
+                    <a class="btn btn-sm btn-outline-primary view-client" title="Ver" href="/dashboard/clientes/${id}" role="button">
+                      <i class="fas fa-eye"></i>
+                    </a>
+                    <a class="btn btn-sm btn-outline-info" title="Contactos" href="/dashboard/clientes/${id}/contactos" role="button">
+                      <i class="fas fa-address-book"></i>
+                    </a>
+                    <a class="btn btn-sm btn-outline-warning edit-client" title="Editar" href="/dashboard/clientes/${id}/editar" role="button">
+                      <i class="fas fa-edit"></i>
+                    </a>
+                    <button class="btn btn-sm ${estadoActivo ? 'btn-success' : 'btn-danger'} toggle-estado" title="${estadoActivo ? 'Desactivar' : 'Activar'}" data-id="${id}" data-estado="${estadoActivo ? 'OK' : 'KO'}">
+                      <i class="fas fa-toggle-${estadoActivo ? 'on' : 'off'}"></i>
+                    </button>
+                    <% if (typeof isAdmin !== 'undefined' && isAdmin) { %>
+                    <button class="btn btn-sm btn-outline-danger delete-client" title="Borrar Registro" data-id="${id}" data-nombre="${escapeHtml(nombre)}">
+                      <i class="fas fa-trash"></i>
+                    </button>
+                    <% } %>
+                  </div>
                 </td>
                 <td>${escapeHtml(tipoClienteNombre)}</td>
                 <td class="text-end">${escapeHtml(ventasYearFormatted)}</td>

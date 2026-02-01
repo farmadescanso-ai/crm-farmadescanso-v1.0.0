@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .table-container { max-height: 75vh; overflow: auto; border: 1px solid #dee2e6; border-radius: 0.75rem; }
+        .table th { position: sticky; top: 0; background-color: #fff; z-index: 10; border-bottom: 2px solid #dee2e6; }
+        .row-item:hover { background-color: rgba(11, 137, 27, 0.05); }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container-fluid mt-4">
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+            <div>
+                <h1 class="mb-0 text-primary"><i class="fas fa-address-book me-1 text-primary"></i>Contactos</h1>
+                <p class="text-muted mb-0">Gestiona personas (contactos) y sus relaciones con clientes</p>
+            </div>
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary text-white fs-6">Mostrados: <%= contactos.length %></span>
+                <a href="/dashboard/contactos/nuevo" class="btn btn-success"><i class="fas fa-plus me-1"></i>Nuevo Contacto</a>
+            </div>
+        </div>
+
+        <form class="row g-2 align-items-end mb-3" method="GET" action="/dashboard/contactos">
+            <div class="col-md-6">
+                <label class="form-label">Buscar</label>
+                <input type="text" class="form-control" name="q" placeholder="Nombre, apellidos, email, móvil..." value="<%= (query && query.q) ? query.q : '' %>">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Incluir inactivos</label>
+                <select class="form-select" name="includeInactivos">
+                    <option value="0" <%= (query && String(query.includeInactivos) === '1') ? '' : 'selected' %>>No</option>
+                    <option value="1" <%= (query && String(query.includeInactivos) === '1') ? 'selected' : '' %>>Sí</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex gap-2">
+                <button class="btn btn-primary w-100" type="submit"><i class="fas fa-search me-1"></i>Buscar</button>
+                <a class="btn btn-outline-secondary w-100" href="/dashboard/contactos">Limpiar</a>
+            </div>
+        </form>
+
+        <% if (query && query.success) { %>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>Operación realizada correctamente.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+        <% if (error || (query && query.error)) { %>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i><%= error || 'No se pudo completar la acción solicitada.' %>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <% } %>
+
+        <div class="table-container">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 80px;">ID</th>
+                        <th>Nombre</th>
+                        <th>Email</th>
+                        <th>Móvil</th>
+                        <th>Teléfono</th>
+                        <th>Especialidad</th>
+                        <th>Activo</th>
+                        <th class="text-center" style="width: 220px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% if (!contactos || contactos.length === 0) { %>
+                    <tr><td colspan="8" class="text-center text-muted py-4"><i class="fas fa-inbox fa-2x mb-2"></i><br>No hay contactos</td></tr>
+                    <% } else { %>
+                    <% contactos.forEach(function(c) { %>
+                    <tr class="row-item">
+                        <td><%= c.Id %></td>
+                        <td>
+                            <strong><%= (c.Apellidos ? (c.Apellidos + ', ') : '') + (c.Nombre || '') %></strong>
+                            <% if (c.Cargo) { %><div class="text-muted small"><%= c.Cargo %></div><% } %>
+                        </td>
+                        <td><%= c.Email || '—' %></td>
+                        <td><%= c.Movil || '—' %></td>
+                        <td><%= c.Telefono || '—' %></td>
+                        <td><%= c.Especialidad || '—' %></td>
+                        <td>
+                            <% if (Number(c.Activo) === 1) { %>
+                                <span class="badge bg-success">Sí</span>
+                            <% } else { %>
+                                <span class="badge bg-secondary">No</span>
+                            <% } %>
+                        </td>
+                        <td class="text-center">
+                            <div class="btn-group" role="group">
+                                <a class="btn btn-sm btn-outline-primary" title="Ver" href="/dashboard/contactos/<%= c.Id %>"><i class="fas fa-eye"></i></a>
+                                <a class="btn btn-sm btn-outline-warning" title="Editar" href="/dashboard/contactos/<%= c.Id %>/editar"><i class="fas fa-edit"></i></a>
+                                <a class="btn btn-sm btn-outline-info" title="Ver clientes" href="/dashboard/contactos/<%= c.Id %>/clientes"><i class="fas fa-link"></i></a>
+                            </div>
+                        </td>
+                    </tr>
+                    <% }) %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/go-to-top.js"></script>
+
+    <!-- Go to Top Button -->
+    <button id="goToTop" class="go-to-top" title="Ir arriba">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+</body>
+</html>
+
