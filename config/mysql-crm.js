@@ -2435,6 +2435,17 @@ class MySQLCRM {
       
       sql += ' ORDER BY Nombre ASC';
       const rows = await this.query(sql, params);
+      // Normalizar texto para evitar mojibake en vistas (tildes/ñ)
+      try {
+        const { normalizeUTF8 } = require('../utils/normalize-utf8');
+        return (rows || []).map(r => ({
+          ...r,
+          Nombre: normalizeUTF8(r.Nombre || ''),
+          Pais: normalizeUTF8(r.Pais || '')
+        }));
+      } catch (_) {
+        // fallback: devolver tal cual
+      }
       console.log(`✅ [PROVINCIAS] Obtenidas ${rows.length} provincias${filtroPais ? ' de ' + filtroPais : ''}`);
       return rows;
     } catch (error) {
@@ -2470,7 +2481,15 @@ class MySQLCRM {
     try {
       const sql = 'SELECT * FROM paises ORDER BY Nombre_pais ASC';
       const rows = await this.query(sql);
-      return rows;
+      try {
+        const { normalizeUTF8 } = require('../utils/normalize-utf8');
+        return (rows || []).map(r => ({
+          ...r,
+          Nombre_pais: normalizeUTF8(r.Nombre_pais || '')
+        }));
+      } catch (_) {
+        return rows;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo países:', error.message);
       return [];
@@ -2481,7 +2500,14 @@ class MySQLCRM {
     try {
       const sql = 'SELECT * FROM paises WHERE id = ? LIMIT 1';
       const rows = await this.query(sql, [id]);
-      return rows.length > 0 ? rows[0] : null;
+      const row = rows.length > 0 ? rows[0] : null;
+      if (!row) return null;
+      try {
+        const { normalizeUTF8 } = require('../utils/normalize-utf8');
+        return { ...row, Nombre_pais: normalizeUTF8(row.Nombre_pais || '') };
+      } catch (_) {
+        return row;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo país por ID:', error.message);
       return null;
@@ -2492,7 +2518,14 @@ class MySQLCRM {
     try {
       const sql = 'SELECT * FROM paises WHERE Id_pais = ? LIMIT 1';
       const rows = await this.query(sql, [codigoISO]);
-      return rows.length > 0 ? rows[0] : null;
+      const row = rows.length > 0 ? rows[0] : null;
+      if (!row) return null;
+      try {
+        const { normalizeUTF8 } = require('../utils/normalize-utf8');
+        return { ...row, Nombre_pais: normalizeUTF8(row.Nombre_pais || '') };
+      } catch (_) {
+        return row;
+      }
     } catch (error) {
       console.error('❌ Error obteniendo país por código ISO:', error.message);
       return null;
