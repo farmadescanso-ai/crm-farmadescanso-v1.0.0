@@ -23,7 +23,8 @@ DETERMINISTIC
 BEGIN
   DECLARE orig VARCHAR(255);
   DECLARE x VARCHAR(255);
-  DECLARE out VARCHAR(255) DEFAULT '';
+  -- "OUT" es palabra reservada, no usarla como nombre de variable
+  DECLARE outStr VARCHAR(255) DEFAULT '';
   DECLARE token VARCHAR(255);
   DECLARE rest VARCHAR(255);
   DECLARE firstWord TINYINT DEFAULT 1;
@@ -45,7 +46,10 @@ BEGIN
 
   -- Normalizar espacios y pasar a minúsculas
   SET x = LOWER(orig);
-  SET x = REGEXP_REPLACE(x, '[[:space:]]+', ' ');
+  -- Compatibilidad: evitar REGEXP_REPLACE (no está en algunos MariaDB/MySQL antiguos)
+  WHILE LOCATE('  ', x) > 0 DO
+    SET x = REPLACE(x, '  ', ' ');
+  END WHILE;
   SET x = TRIM(x);
 
   WHILE x <> '' DO
@@ -90,17 +94,17 @@ BEGIN
       END WHILE;
     END IF;
 
-    IF out = '' THEN
-      SET out = builtToken;
+    IF outStr = '' THEN
+      SET outStr = builtToken;
     ELSE
-      SET out = CONCAT(out, ' ', builtToken);
+      SET outStr = CONCAT(outStr, ' ', builtToken);
     END IF;
 
     SET firstWord = 0;
     SET x = rest;
   END WHILE;
 
-  RETURN out;
+  RETURN outStr;
 END$$
 DELIMITER ;
 
