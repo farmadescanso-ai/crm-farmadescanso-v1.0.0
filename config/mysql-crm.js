@@ -265,6 +265,13 @@ class MySQLCRM {
       await connection.query("SET character_set_connection=utf8mb4");
       await connection.query("SET character_set_client=utf8mb4");
       await connection.query("SET character_set_results=utf8mb4");
+      // Asegurar zona horaria Madrid/España para que NOW()/CURRENT_TIMESTAMP se graben en ese huso.
+      // Si el servidor no tiene tablas de zona horaria cargadas, puede fallar; en ese caso lo dejamos en default.
+      try {
+        await connection.query("SET time_zone = 'Europe/Madrid'");
+      } catch (tzErr) {
+        console.warn('⚠️ [DB TZ] No se pudo establecer time_zone=Europe/Madrid. Usando zona horaria por defecto del servidor.', tzErr?.message || tzErr);
+      }
       await connection.ping();
       connection.release();
       
@@ -323,6 +330,12 @@ class MySQLCRM {
         await connection.query("SET character_set_connection=utf8mb4");
         await connection.query("SET character_set_client=utf8mb4");
         await connection.query("SET character_set_results=utf8mb4");
+        // Zona horaria para esta sesión (Madrid/España)
+        try {
+          await connection.query("SET time_zone = 'Europe/Madrid'");
+        } catch (_) {
+          // no romper consultas si el servidor no lo soporta
+        }
         
         // Agregar timeout a la consulta
         const result = await Promise.race([
@@ -3227,6 +3240,10 @@ class MySQLCRM {
     const conn = await this.pool.getConnection();
 
     try {
+      // Asegurar zona horaria en esta sesión de transacción
+      try {
+        await conn.query("SET time_zone = 'Europe/Madrid'");
+      } catch (_) {}
       await conn.beginTransaction();
 
       if (esPrincipal) {
