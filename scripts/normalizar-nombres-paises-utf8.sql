@@ -14,23 +14,24 @@
 SELECT
   id,
   Id_pais,
-  Nombre_pais AS before,
-  CONVERT(BINARY CONVERT(Nombre_pais USING latin1) USING utf8mb4) AS after
+  Nombre_pais AS nombre_before,
+  -- Reparación estándar de mojibake: interpretar caracteres como latin1 (bytes) y reconvertir a utf8mb4
+  CONVERT(CAST(CONVERT(Nombre_pais USING latin1) AS BINARY) USING utf8mb4) AS nombre_after
 FROM paises
 WHERE
-  Nombre_pais REGEXP 'Ã|Â|├|�'
-  OR Nombre_pais LIKE '%Ã%'
+  Nombre_pais LIKE '%Ã%'
   OR Nombre_pais LIKE '%Â%'
-  OR Nombre_pais LIKE '%├%';
+  OR Nombre_pais LIKE '%├%'
+  OR Nombre_pais LIKE '%�%';
 
 -- 2) Aplicar solo a filas sospechosas
 UPDATE paises
-SET Nombre_pais = CONVERT(BINARY CONVERT(Nombre_pais USING latin1) USING utf8mb4)
+SET Nombre_pais = CONVERT(CAST(CONVERT(Nombre_pais USING latin1) AS BINARY) USING utf8mb4)
 WHERE
-  Nombre_pais REGEXP 'Ã|Â|├|�'
-  OR Nombre_pais LIKE '%Ã%'
+  Nombre_pais LIKE '%Ã%'
   OR Nombre_pais LIKE '%Â%'
-  OR Nombre_pais LIKE '%├%';
+  OR Nombre_pais LIKE '%├%'
+  OR Nombre_pais LIKE '%�%';
 
 -- 3) (Opcional) Asegurar collation consistente (si tu servidor mezcla collations)
 -- ALTER TABLE paises CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
