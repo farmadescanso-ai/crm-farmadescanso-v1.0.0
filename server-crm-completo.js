@@ -7073,6 +7073,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     // Comercial crea clientes para sí mismo.
     const comerciales = esAdmin ? await crm.getComerciales().catch(() => []) : [];
     const tarifasClientes = await crm.query('SELECT Id, NombreTarifa, Activa, FechaFin FROM tarifasClientes ORDER BY NombreTarifa ASC').catch(() => []);
+    const contactosDisponibles = await crm.getContactos({ includeInactivos: false, limit: 200, offset: 0 }).catch(() => []);
     
     res.render('dashboard/cliente-editar', {
       title: 'Nuevo Cliente - Farmadescaso',
@@ -7088,6 +7089,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       monedas: monedas || [],
       comerciales: comerciales || [],
       tarifasClientes: tarifasClientes || [],
+      contactosDisponibles: contactosDisponibles || [],
       isNew: true,
       esAdmin,
       comercialIdAutenticado: comercialIdAutenticado || null,
@@ -7900,7 +7902,6 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       'Email': 'Email',
       'Telefono': 'Telefono',
       'Movil': 'Movil',
-      'NomContacto': 'NomContacto',
       'Direccion': 'Direccion',
       'Poblacion': 'Poblacion',
       'Id_Provincia': 'Id_Provincia',
@@ -7951,6 +7952,19 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
         }
         
         payload[dbField] = value;
+      }
+    }
+
+    // Contacto por defecto (opcional)
+    const contactoDefaultId = Number(req.body.Id_Contacto_Default || 0);
+    let contactoDefault = null;
+    if (Number.isFinite(contactoDefaultId) && contactoDefaultId > 0) {
+      contactoDefault = await crm.getContactoById(contactoDefaultId).catch(() => null);
+      if (contactoDefault) {
+        const nombre = String(contactoDefault.Nombre || '').trim();
+        const apellidos = String(contactoDefault.Apellidos || '').trim();
+        const display = `${nombre}${apellidos ? ` ${apellidos}` : ''}`.trim();
+        if (display) payload.NomContacto = display; // campo legacy en clientes
       }
     }
 
@@ -8113,6 +8127,15 @@ app.post('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
     }
     
     console.log(`✅ [CREAR CLIENTE] Redirigiendo a cliente ID: ${clienteId}`);
+
+    // Vincular como contacto principal (mismo tratamiento que direccionesEnvio: opcional)
+    if (contactoDefault && clienteId) {
+      try {
+        await crm.vincularContactoACliente(Number(clienteId), Number(contactoDefaultId), { Es_Principal: true });
+      } catch (e) {
+        console.warn('⚠️ [CREAR CLIENTE] No se pudo vincular contacto por defecto:', e?.message || e);
+      }
+    }
     res.redirect(`/dashboard/clientes/${clienteId}?success=cliente_creado`);
   } catch (error) {
     console.error('❌ [CREAR CLIENTE] Error completo:', {
