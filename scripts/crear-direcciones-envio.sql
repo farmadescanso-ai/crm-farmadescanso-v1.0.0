@@ -31,6 +31,7 @@ CREATE TABLE IF NOT EXISTS `direccionesEnvio` (
 
   -- Contacto para la entrega
   `Telefono` VARCHAR(20) NULL,
+  `Movil` VARCHAR(20) NULL,
   `Email` VARCHAR(255) NULL,
 
   `Observaciones` TEXT NULL,

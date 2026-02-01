@@ -154,3 +154,4 @@ scripts/configurar-usuario-mysql-remoto.sql
 !scripts/crear-direcciones-envio.sql
 !scripts/alter-pedidos-add-id-direccion-envio.sql
 !scripts/aplicar-direcciones-envio-produccion.sql
+!scripts/alter-direcciones-envio-add-movil.sql
