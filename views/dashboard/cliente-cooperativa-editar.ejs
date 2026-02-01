@@ -139,7 +139,9 @@
                         <% } %>
 
                         <% const formAction = isNew ? '/dashboard/clientes-cooperativas' : `/dashboard/clientes-cooperativas/${clienteCooperativa.id}`; %>
+                        <% const backUrl = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : '/dashboard/clientes-cooperativas'; %>
                         <form method="post" action="<%= formAction %>">
+                            <input type="hidden" name="returnTo" value="<%= backUrl %>">
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
                                 <div class="cliente-search-container">
@@ -186,7 +188,7 @@
                                 <small class="form-text text-muted">Número de asociado del cliente en la cooperativa (opcional)</small>
                             </div>
                             <div class="d-flex justify-content-end gap-2">
-                                <a href="/dashboard/clientes-cooperativas" class="btn btn-secondary">Cancelar</a>
+                                <a href="<%= backUrl %>" class="btn btn-secondary">Volver</a>
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-save me-1"></i>Guardar
                                 </button>
@@ -211,6 +213,33 @@
         let clienteSearchTimeout = null;
         let selectedCliente = null;
         let currentSelectedIndex = -1;
+
+        // Prefill cliente desde query (?clienteId=...)
+        <% if (isNew && prefillClienteId) { %>
+        <% const clientePrefill = clientes.find(c => String(c.Id || c.id) === String(prefillClienteId)); %>
+        <% if (clientePrefill) { %>
+        selectedCliente = {
+            Id: <%= clientePrefill.Id || clientePrefill.id %>,
+            Nombre_Razon_Social: '<%= (clientePrefill.Nombre_Razon_Social || clientePrefill.Nombre || clientePrefill.nombre || '').replace(/'/g, "\\'") %>',
+            DNI_CIF: '<%= (clientePrefill.DNI_CIF || clientePrefill.dni_cif || '').replace(/'/g, "\\'") %>',
+            Email: '<%= (clientePrefill.Email || clientePrefill.email || '').replace(/'/g, "\\'") %>',
+            Telefono: '<%= (clientePrefill.Telefono || clientePrefill.telefono || '').replace(/'/g, "\\'") %>',
+            Movil: '<%= (clientePrefill.Movil || clientePrefill.movil || '').replace(/'/g, "\\'") %>',
+            Poblacion: '<%= (clientePrefill.Poblacion || clientePrefill.poblacion || '').replace(/'/g, "\\'") %>'
+        };
+        clienteIdInput.value = selectedCliente.Id;
+        clienteSearchInput.value = selectedCliente.Nombre_Razon_Social;
+        clienteSelectedName.textContent = selectedCliente.Nombre_Razon_Social;
+        const detallesPrefill = [];
+        if (selectedCliente.DNI_CIF) detallesPrefill.push(`DNI/CIF: ${selectedCliente.DNI_CIF}`);
+        if (selectedCliente.Email) detallesPrefill.push(`Email: ${selectedCliente.Email}`);
+        if (selectedCliente.Telefono || selectedCliente.Movil) detallesPrefill.push(`Tel: ${selectedCliente.Telefono || selectedCliente.Movil}`);
+        if (selectedCliente.Poblacion) detallesPrefill.push(`Población: ${selectedCliente.Poblacion}`);
+        clienteSelectedDetails.textContent = detallesPrefill.join(' · ');
+        clienteSelectedDisplay.classList.add('show');
+        clienteSearchInput.style.display = 'none';
+        <% } %>
+        <% } %>
         
         // Si hay un cliente inicial desde el formulario
         <% if (clienteCooperativa && clienteCooperativa.Id_Cliente) { %>

@@ -9793,13 +9793,17 @@ app.get('/dashboard/clientes-cooperativas/nuevo', requireAuth, async (req, res) 
       crm.getClientes().catch(err => { console.error('Error obteniendo clientes:', err); return []; }),
       crm.getCooperativas().catch(err => { console.error('Error obteniendo cooperativas:', err); return []; })
     ]);
+    const prefillClienteId = Number(req.query.clienteId || 0) || null;
     
     res.render('dashboard/cliente-cooperativa-editar', {
       title: 'Nueva Relación Cliente-Cooperativa - Farmadescaso',
       user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-cooperativas',
       clienteCooperativa: null,
       clientes: clientes || [],
       cooperativas: cooperativas || [],
+      prefillClienteId,
+      returnTo: sanitizeReturnTo(req.query.returnTo) || '/dashboard/clientes-cooperativas',
       error: null,
       isNew: true
     });
@@ -9973,9 +9977,12 @@ app.post('/dashboard/clientes-cooperativas', requireAuth, async (req, res) => {
       return res.render('dashboard/cliente-cooperativa-editar', {
         title: 'Nueva Relación Cliente-Cooperativa - Farmadescaso',
         user: req.comercial || req.session.comercial,
+        currentPage: 'clientes-cooperativas',
         clienteCooperativa: req.body,
         clientes: clientes || [],
         cooperativas: cooperativas || [],
+        prefillClienteId: Number(req.body.Id_Cliente || 0) || null,
+        returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/clientes-cooperativas',
         error: 'Cliente y Cooperativa son obligatorios',
         isNew: true
       });
@@ -9989,7 +9996,9 @@ app.post('/dashboard/clientes-cooperativas', requireAuth, async (req, res) => {
     if (!clienteCooperativaId) {
       throw new Error('No se pudo obtener el ID de la relación creada');
     }
-    
+
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'relacion_creada'));
     res.redirect(`/dashboard/clientes-cooperativas/${clienteCooperativaId}?success=relacion_creada`);
   } catch (error) {
     console.error('Error creando relación cliente-cooperativa:', error);
@@ -10001,9 +10010,12 @@ app.post('/dashboard/clientes-cooperativas', requireAuth, async (req, res) => {
     res.render('dashboard/cliente-cooperativa-editar', {
       title: 'Nueva Relación Cliente-Cooperativa - Farmadescaso',
       user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-cooperativas',
       clienteCooperativa: req.body,
       clientes: clientes || [],
       cooperativas: cooperativas || [],
+      prefillClienteId: Number(req.body.Id_Cliente || 0) || null,
+      returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/clientes-cooperativas',
       error: error.message || 'Error al crear la relación',
       isNew: true
     });
@@ -10029,15 +10041,20 @@ app.post('/dashboard/clientes-cooperativas/:id', requireAuth, async (req, res) =
       return res.render('dashboard/cliente-cooperativa-editar', {
         title: `Relación #${id} - Editar`,
         user: req.comercial || req.session.comercial,
+        currentPage: 'clientes-cooperativas',
         clienteCooperativa: clienteCooperativa || req.body,
         clientes: clientes || [],
         cooperativas: cooperativas || [],
+        prefillClienteId: Number(req.body.Id_Cliente || 0) || null,
+        returnTo: sanitizeReturnTo(req.body.returnTo) || `/dashboard/clientes-cooperativas/${id}`,
         error: 'Cliente y Cooperativa son obligatorios',
         isNew: false
       });
     }
     
     await crm.updateClienteCooperativa(id, payload);
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'relacion_actualizada'));
     res.redirect(`/dashboard/clientes-cooperativas/${id}?success=relacion_actualizada`);
   } catch (error) {
     console.error('Error actualizando relación cliente-cooperativa:', error);
@@ -10050,9 +10067,12 @@ app.post('/dashboard/clientes-cooperativas/:id', requireAuth, async (req, res) =
     res.render('dashboard/cliente-cooperativa-editar', {
       title: `Relación #${req.params.id} - Editar`,
       user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-cooperativas',
       clienteCooperativa: clienteCooperativa || req.body,
       clientes: clientes || [],
       cooperativas: cooperativas || [],
+      prefillClienteId: Number(req.body.Id_Cliente || 0) || null,
+      returnTo: sanitizeReturnTo(req.body.returnTo) || `/dashboard/clientes-cooperativas/${req.params.id}`,
       error: error.message || 'Error al actualizar la relación',
       isNew: false
     });

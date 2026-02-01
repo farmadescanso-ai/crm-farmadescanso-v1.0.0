@@ -416,10 +416,24 @@
                         <label class="form-label">Mayoristas</label>
                         <% 
                         const tieneCooperativas = typeof cooperativasCliente !== 'undefined' && cooperativasCliente && Array.isArray(cooperativasCliente) && cooperativasCliente.length > 0;
-                        const textoCooperativas = tieneCooperativas ? cooperativasCliente.map(c => (c.Nombre || c.nombre || 'Sin nombre')).join(', ') : 'Sin Asignar';
+                        const textoCooperativas = tieneCooperativas
+                          ? cooperativasCliente.map(c => {
+                              const nombre = (c.Nombre || c.nombre || 'Sin nombre');
+                              const num = (c.NumAsociado || '').toString().trim();
+                              return num ? `${nombre} (${num})` : nombre;
+                            }).join(', ')
+                          : 'Sin Asignar';
+                        const clienteIdVal = (cliente && (cliente.Id || cliente.id)) ? (cliente.Id || cliente.id) : null;
                         %>
                         <input type="text" class="form-control" value="<%= textoCooperativas %>" readonly>
                         <small class="text-muted">Los mayoristas se asignan automáticamente desde la tabla clientes_cooperativas</small>
+                        <% if (clienteIdVal) { %>
+                          <div class="mt-2">
+                            <a class="btn btn-sm btn-outline-primary" href="/dashboard/clientes-cooperativas/nuevo?clienteId=<%= clienteIdVal %>&returnTo=<%= encodeURIComponent('/dashboard/clientes/' + clienteIdVal + '/editar') %>">
+                              <i class="fas fa-link me-1"></i>Asignar / Añadir
+                            </a>
+                          </div>
+                        <% } %>
                         <% if (tieneCooperativas) { %>
                         <div class="mt-2">
                             <% cooperativasCliente.forEach(function(coop) { %>
@@ -440,7 +454,6 @@
                             ? (grupoComprasCliente.GrupoNombre || grupoComprasCliente.Nombre)
                             : null;
                           const textoGrupoCompras = nombreGrupoCompras ? nombreGrupoCompras : 'Sin Asignar';
-                          const clienteIdVal = (cliente && (cliente.Id || cliente.id)) ? (cliente.Id || cliente.id) : null;
                         %>
                         <input type="text" class="form-control" value="<%= textoGrupoCompras %>" readonly>
                         <small class="text-muted">Se asigna desde “Clientes-Grupos de compras”. Solo puede haber 1 grupo activo por cliente.</small>
