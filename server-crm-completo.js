@@ -7082,6 +7082,7 @@ app.get('/dashboard/clientes/nuevo', requireAuth, async (req, res) => {
       provincias: provincias || [],
       paises: paisesNormalizados,
       cooperativasCliente: [],
+      grupoComprasCliente: null,
       tiposClientes: tiposClientes || [],
       estadosClientes: estadosClientes || [],
       formasPago: formasPago || [],
@@ -7120,10 +7121,11 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
     
     // Obtener todos los datos necesarios para los selectores
     console.log(`📋 [EDITAR CLIENTE] Cargando datos adicionales...`);
-    const [provincias, paises, cooperativasCliente, tiposClientes, estadosClientes, formasPago, idiomas, monedas, comerciales] = await Promise.all([
+    const [provincias, paises, cooperativasCliente, grupoComprasCliente, tiposClientes, estadosClientes, formasPago, idiomas, monedas, comerciales] = await Promise.all([
       crm.getProvincias().catch(err => { console.error('Error obteniendo provincias:', err); return []; }),
       crm.getPaises().catch(err => { console.error('Error obteniendo países:', err); return []; }),
       crm.getCooperativasByClienteId(clienteId).catch(err => { console.error('Error obteniendo cooperativas:', err); return []; }),
+      crm.getGrupoComprasActivoByClienteId(clienteId).catch(err => { console.error('Error obteniendo grupo de compras:', err); return null; }),
       crm.query('SELECT id, Tipo FROM tipos_clientes').catch(err => { console.error('Error obteniendo tipos clientes:', err); return []; }),
       crm.query('SELECT id, Nombre FROM estdoClientes ORDER BY id ASC').catch(() => ([
         { id: 1, Nombre: 'Potencial' },
@@ -7149,6 +7151,7 @@ app.get('/dashboard/clientes/:id/editar', requireAuth, async (req, res) => {
       provincias: provincias || [],
       paises: paisesNormalizados,
       cooperativasCliente: cooperativasCliente ? cooperativasCliente.map(c => normalizeObjectUTF8(c)) : [],
+      grupoComprasCliente: grupoComprasCliente ? normalizeObjectUTF8(grupoComprasCliente) : null,
       tiposClientes: tiposClientes || [],
       estadosClientes: estadosClientes || [],
       formasPago: formasPago || [],
@@ -9378,6 +9381,372 @@ app.post('/dashboard/cooperativas/:id/eliminar', requireAuth, async (req, res) =
   } catch (error) {
     console.error('Error eliminando cooperativa:', error);
     res.redirect(`/dashboard/cooperativas/${req.params.id}?error=error_eliminando`);
+  }
+});
+
+// ============================================================
+// Gestión de Grupos de compras
+// ============================================================
+app.get('/dashboard/grupos-compras', requireAuth, async (req, res) => {
+  try {
+    const gruposCompras = await crm.getGruposCompras().catch(() => []);
+    res.render('dashboard/grupos-compras', {
+      title: 'Grupos de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'grupos-compras',
+      gruposCompras: gruposCompras || [],
+      error: null,
+      query: req.query
+    });
+  } catch (error) {
+    console.error('Error cargando grupos de compras:', error);
+    res.render('dashboard/grupos-compras', {
+      title: 'Grupos de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'grupos-compras',
+      gruposCompras: [],
+      error: 'Error cargando grupos de compras',
+      query: req.query
+    });
+  }
+});
+
+app.get('/dashboard/grupos-compras/nuevo', requireAuth, async (req, res) => {
+  res.render('dashboard/grupo-compra-editar', {
+    title: 'Nuevo Grupo de compras - Farmadescaso',
+    user: req.comercial || req.session.comercial,
+    currentPage: 'grupos-compras',
+    grupo: null,
+    error: null,
+    returnTo: sanitizeReturnTo(req.query.returnTo) || '/dashboard/grupos-compras',
+    isNew: true
+  });
+});
+
+app.get('/dashboard/grupos-compras/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const grupo = await crm.getGrupoComprasById(req.params.id);
+    if (!grupo) return res.status(404).render('error', { error: 'Grupo no encontrado', message: 'El grupo no existe' });
+    res.render('dashboard/grupo-compra-editar', {
+      title: `Grupo de compras #${req.params.id} - Editar`,
+      user: req.comercial || req.session.comercial,
+      currentPage: 'grupos-compras',
+      grupo,
+      error: null,
+      returnTo: sanitizeReturnTo(req.query.returnTo) || `/dashboard/grupos-compras/${req.params.id}`,
+      isNew: false
+    });
+  } catch (error) {
+    console.error('Error cargando formulario de grupo:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el formulario' });
+  }
+});
+
+app.get('/dashboard/grupos-compras/:id', requireAuth, async (req, res) => {
+  try {
+    const grupo = await crm.getGrupoComprasById(req.params.id);
+    if (!grupo) return res.status(404).render('error', { error: 'Grupo no encontrado', message: 'El grupo no existe' });
+    res.render('dashboard/grupo-compra-detalle', {
+      title: `Grupo de compras #${req.params.id} - Detalle`,
+      user: req.comercial || req.session.comercial,
+      currentPage: 'grupos-compras',
+      grupo,
+      error: null,
+      query: req.query
+    });
+  } catch (error) {
+    console.error('Error cargando detalle de grupo:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el grupo' });
+  }
+});
+
+app.post('/dashboard/grupos-compras', requireAuth, async (req, res) => {
+  try {
+    const payload = {
+      Nombre: (req.body.Nombre || '').trim(),
+      CIF: (req.body.CIF || '').trim() || null,
+      Email: (req.body.Email || '').trim() || null,
+      Telefono: (req.body.Telefono || '').trim() || null,
+      Contacto: (req.body.Contacto || '').trim() || null,
+      Direccion: (req.body.Direccion || '').trim() || null,
+      Poblacion: (req.body.Poblacion || '').trim() || null,
+      CodigoPostal: (req.body.CodigoPostal || '').trim() || null,
+      Provincia: (req.body.Provincia || '').trim() || null,
+      Pais: (req.body.Pais || '').trim() || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null,
+      Activo: String(req.body.Activo || '1') === '1' ? 1 : 0
+    };
+
+    if (!payload.Nombre) {
+      return res.render('dashboard/grupo-compra-editar', {
+        title: 'Nuevo Grupo de compras - Farmadescaso',
+        user: req.comercial || req.session.comercial,
+        currentPage: 'grupos-compras',
+        grupo: req.body,
+        error: 'Nombre es obligatorio',
+        returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/grupos-compras',
+        isNew: true
+      });
+    }
+
+    const result = await crm.createGrupoCompras(payload);
+    const id = result.insertId;
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'grupo_compra_creado'));
+    res.redirect(`/dashboard/grupos-compras/${id}?success=grupo_compra_creado`);
+  } catch (error) {
+    console.error('Error creando grupo de compras:', error);
+    res.render('dashboard/grupo-compra-editar', {
+      title: 'Nuevo Grupo de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'grupos-compras',
+      grupo: req.body,
+      error: error.message || 'Error al crear el grupo',
+      returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/grupos-compras',
+      isNew: true
+    });
+  }
+});
+
+app.post('/dashboard/grupos-compras/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const payload = {
+      Nombre: (req.body.Nombre || '').trim(),
+      CIF: (req.body.CIF || '').trim() || null,
+      Email: (req.body.Email || '').trim() || null,
+      Telefono: (req.body.Telefono || '').trim() || null,
+      Contacto: (req.body.Contacto || '').trim() || null,
+      Direccion: (req.body.Direccion || '').trim() || null,
+      Poblacion: (req.body.Poblacion || '').trim() || null,
+      CodigoPostal: (req.body.CodigoPostal || '').trim() || null,
+      Provincia: (req.body.Provincia || '').trim() || null,
+      Pais: (req.body.Pais || '').trim() || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null,
+      Activo: String(req.body.Activo || '1') === '1' ? 1 : 0
+    };
+
+    await crm.updateGrupoCompras(id, payload);
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'grupo_compra_actualizado'));
+    res.redirect(`/dashboard/grupos-compras/${id}?success=grupo_compra_actualizado`);
+  } catch (error) {
+    console.error('Error actualizando grupo de compras:', error);
+    const grupo = await crm.getGrupoComprasById(req.params.id).catch(() => null);
+    res.render('dashboard/grupo-compra-editar', {
+      title: `Grupo de compras #${req.params.id} - Editar`,
+      user: req.comercial || req.session.comercial,
+      currentPage: 'grupos-compras',
+      grupo: grupo || req.body,
+      error: error.message || 'Error al actualizar el grupo',
+      returnTo: sanitizeReturnTo(req.body.returnTo) || `/dashboard/grupos-compras/${req.params.id}`,
+      isNew: false
+    });
+  }
+});
+
+app.post('/dashboard/grupos-compras/:id/eliminar', requireAuth, async (req, res) => {
+  try {
+    await crm.deleteGrupoCompras(req.params.id);
+    res.redirect('/dashboard/grupos-compras?success=grupo_compra_eliminado');
+  } catch (error) {
+    console.error('Error eliminando grupo de compras:', error);
+    res.redirect(`/dashboard/grupos-compras/${req.params.id}?error=error_eliminando`);
+  }
+});
+
+// ============================================================
+// Gestión de Clientes - Grupos de compras (1 activo por cliente)
+// ============================================================
+app.get('/dashboard/clientes-grupos-compras', requireAuth, async (req, res) => {
+  try {
+    const relaciones = await crm.getClientesGruposCompras().catch(() => []);
+    res.render('dashboard/clientes-grupos-compras', {
+      title: 'Clientes - Grupos de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relaciones: relaciones || [],
+      error: null,
+      query: req.query
+    });
+  } catch (error) {
+    console.error('Error cargando clientes-gruposCompras:', error);
+    res.render('dashboard/clientes-grupos-compras', {
+      title: 'Clientes - Grupos de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relaciones: [],
+      error: 'Error cargando asignaciones',
+      query: req.query
+    });
+  }
+});
+
+app.get('/dashboard/clientes-grupos-compras/nuevo', requireAuth, async (req, res) => {
+  try {
+    const [clientes, grupos] = await Promise.all([
+      crm.getClientes().catch(() => []),
+      crm.getGruposCompras().catch(() => [])
+    ]);
+    const prefillClienteId = Number(req.query.clienteId || 0) || null;
+    res.render('dashboard/cliente-grupo-compra-editar', {
+      title: 'Nueva asignación Cliente-Grupo de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relacion: null,
+      clientes: clientes || [],
+      grupos: grupos || [],
+      prefillClienteId,
+      returnTo: sanitizeReturnTo(req.query.returnTo) || '/dashboard/clientes-grupos-compras',
+      error: null,
+      isNew: true
+    });
+  } catch (error) {
+    console.error('Error cargando formulario nuevo clientes-gruposCompras:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el formulario' });
+  }
+});
+
+app.get('/dashboard/clientes-grupos-compras/:id/editar', requireAuth, async (req, res) => {
+  try {
+    const relacion = await crm.getClienteGrupoComprasById(req.params.id);
+    if (!relacion) return res.status(404).render('error', { error: 'Asignación no encontrada', message: 'No existe' });
+    const [clientes, grupos] = await Promise.all([
+      crm.getClientes().catch(() => []),
+      crm.getGruposCompras().catch(() => [])
+    ]);
+    res.render('dashboard/cliente-grupo-compra-editar', {
+      title: `Asignación #${req.params.id} - Editar`,
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relacion,
+      clientes: clientes || [],
+      grupos: grupos || [],
+      prefillClienteId: null,
+      returnTo: sanitizeReturnTo(req.query.returnTo) || `/dashboard/clientes-grupos-compras/${req.params.id}`,
+      error: null,
+      isNew: false
+    });
+  } catch (error) {
+    console.error('Error cargando edición clientes-gruposCompras:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el formulario' });
+  }
+});
+
+app.get('/dashboard/clientes-grupos-compras/:id', requireAuth, async (req, res) => {
+  try {
+    const relacion = await crm.getClienteGrupoComprasById(req.params.id);
+    if (!relacion) return res.status(404).render('error', { error: 'Asignación no encontrada', message: 'No existe' });
+    res.render('dashboard/cliente-grupo-compra-detalle', {
+      title: `Asignación #${req.params.id} - Detalle`,
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relacion,
+      error: null,
+      query: req.query
+    });
+  } catch (error) {
+    console.error('Error cargando detalle clientes-gruposCompras:', error);
+    res.status(500).render('error', { error: 'Error', message: 'No se pudo cargar el detalle' });
+  }
+});
+
+app.post('/dashboard/clientes-grupos-compras', requireAuth, async (req, res) => {
+  try {
+    const payload = {
+      Id_Cliente: Number(req.body.Id_Cliente),
+      Id_GrupoCompras: Number(req.body.Id_GrupoCompras),
+      NumSocio: (req.body.NumSocio || '').trim() || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null
+    };
+    if (!payload.Id_Cliente || !payload.Id_GrupoCompras) {
+      const [clientes, grupos] = await Promise.all([
+        crm.getClientes().catch(() => []),
+        crm.getGruposCompras().catch(() => [])
+      ]);
+      return res.render('dashboard/cliente-grupo-compra-editar', {
+        title: 'Nueva asignación Cliente-Grupo de compras - Farmadescaso',
+        user: req.comercial || req.session.comercial,
+        currentPage: 'clientes-grupos-compras',
+        relacion: req.body,
+        clientes: clientes || [],
+        grupos: grupos || [],
+        prefillClienteId: Number(req.body.Id_Cliente || 0) || null,
+        returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/clientes-grupos-compras',
+        error: 'Cliente y Grupo son obligatorios',
+        isNew: true
+      });
+    }
+
+    const result = await crm.createClienteGrupoCompras(payload);
+    const id = result.insertId;
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'asignacion_grupo_compra_creada'));
+    res.redirect(`/dashboard/clientes-grupos-compras/${id}?success=asignacion_grupo_compra_creada`);
+  } catch (error) {
+    console.error('Error creando asignación grupo compra:', error);
+    const [clientes, grupos] = await Promise.all([
+      crm.getClientes().catch(() => []),
+      crm.getGruposCompras().catch(() => [])
+    ]);
+    res.render('dashboard/cliente-grupo-compra-editar', {
+      title: 'Nueva asignación Cliente-Grupo de compras - Farmadescaso',
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relacion: req.body,
+      clientes: clientes || [],
+      grupos: grupos || [],
+      prefillClienteId: Number(req.body.Id_Cliente || 0) || null,
+      returnTo: sanitizeReturnTo(req.body.returnTo) || '/dashboard/clientes-grupos-compras',
+      error: error.message || 'Error al crear la asignación',
+      isNew: true
+    });
+  }
+});
+
+app.post('/dashboard/clientes-grupos-compras/:id', requireAuth, async (req, res) => {
+  try {
+    const id = req.params.id;
+    const payload = {
+      Id_GrupoCompras: Number(req.body.Id_GrupoCompras),
+      NumSocio: (req.body.NumSocio || '').trim() || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null
+    };
+    await crm.updateClienteGrupoCompras(id, payload);
+    const returnTo = sanitizeReturnTo(req.body.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'asignacion_grupo_compra_actualizada'));
+    res.redirect(`/dashboard/clientes-grupos-compras/${id}?success=asignacion_grupo_compra_actualizada`);
+  } catch (error) {
+    console.error('Error actualizando asignación grupo compra:', error);
+    const relacion = await crm.getClienteGrupoComprasById(req.params.id).catch(() => null);
+    const [clientes, grupos] = await Promise.all([
+      crm.getClientes().catch(() => []),
+      crm.getGruposCompras().catch(() => [])
+    ]);
+    res.render('dashboard/cliente-grupo-compra-editar', {
+      title: `Asignación #${req.params.id} - Editar`,
+      user: req.comercial || req.session.comercial,
+      currentPage: 'clientes-grupos-compras',
+      relacion: relacion || req.body,
+      clientes: clientes || [],
+      grupos: grupos || [],
+      prefillClienteId: null,
+      returnTo: sanitizeReturnTo(req.body.returnTo) || `/dashboard/clientes-grupos-compras/${req.params.id}`,
+      error: error.message || 'Error al actualizar la asignación',
+      isNew: false
+    });
+  }
+});
+
+app.post('/dashboard/clientes-grupos-compras/:id/cerrar', requireAuth, async (req, res) => {
+  try {
+    await crm.cerrarClienteGrupoCompras(req.params.id);
+    const returnTo = sanitizeReturnTo(req.body.returnTo) || sanitizeReturnTo(req.query.returnTo);
+    if (returnTo) return res.redirect(withSuccess(returnTo, 'asignacion_grupo_compra_cerrada'));
+    res.redirect(`/dashboard/clientes-grupos-compras/${req.params.id}?success=asignacion_grupo_compra_cerrada`);
+  } catch (error) {
+    console.error('Error cerrando asignación grupo compra:', error);
+    res.redirect(`/dashboard/clientes-grupos-compras/${req.params.id}?error=cerrar_error`);
   }
 });
 

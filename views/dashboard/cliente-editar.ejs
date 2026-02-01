@@ -433,6 +433,25 @@
                         </div>
                         <% } %>
                     </div>
+                    <div class="col-md-9">
+                        <label class="form-label">Grupo de compras</label>
+                        <%
+                          const nombreGrupoCompras = (typeof grupoComprasCliente !== 'undefined' && grupoComprasCliente && (grupoComprasCliente.GrupoNombre || grupoComprasCliente.Nombre))
+                            ? (grupoComprasCliente.GrupoNombre || grupoComprasCliente.Nombre)
+                            : null;
+                          const textoGrupoCompras = nombreGrupoCompras ? nombreGrupoCompras : 'Sin Asignar';
+                          const clienteIdVal = (cliente && (cliente.Id || cliente.id)) ? (cliente.Id || cliente.id) : null;
+                        %>
+                        <input type="text" class="form-control" value="<%= textoGrupoCompras %>" readonly>
+                        <small class="text-muted">Se asigna desde “Clientes-Grupos de compras”. Solo puede haber 1 grupo activo por cliente.</small>
+                        <% if (clienteIdVal) { %>
+                          <div class="mt-2">
+                            <a class="btn btn-sm btn-outline-primary" href="/dashboard/clientes-grupos-compras/nuevo?clienteId=<%= clienteIdVal %>&returnTo=<%= encodeURIComponent('/dashboard/clientes/' + clienteIdVal + '/editar') %>">
+                              <i class="fas fa-link me-1"></i>Asignar / Cambiar
+                            </a>
+                          </div>
+                        <% } %>
+                    </div>
                 </div>
             </div>
 

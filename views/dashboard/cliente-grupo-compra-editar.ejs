@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <style>
+        .cliente-search-container { position: relative; }
+        .cliente-search-input { width: 100%; padding: 0.375rem 2.5rem 0.375rem 0.75rem; border: 1px solid #ced4da; border-radius: 0.375rem; }
+        .cliente-search-icon { position: absolute; right: 0.75rem; top: 50%; transform: translateY(-50%); color: #6c757d; pointer-events: none; }
+        .cliente-dropdown { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ced4da; border-radius: 0.375rem; max-height: 400px; overflow-y: auto; z-index: 1000; box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15); display: none; margin-top: 0.25rem; }
+        .cliente-dropdown.show { display: block; }
+        .cliente-dropdown-item { padding: 0.75rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: background-color 0.2s; }
+        .cliente-dropdown-item:hover, .cliente-dropdown-item.selected { background-color: #e7f1ff; }
+        .cliente-selected-display { display: none; padding: 0.5rem 0.75rem; background-color: #e7f1ff; border: 1px solid #86b7fe; border-radius: 0.375rem; margin-top: 0.25rem; }
+        .cliente-selected-display.show { display: block; }
+        .cliente-selected-name { font-weight: 600; color: #0d6efd; }
+        .cliente-selected-details { font-size: 0.875rem; color: #6c757d; margin-top: 0.25rem; }
+    </style>
+
+    <%- include('../partials/navbar-styles') %></head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-9">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="fas <%= isNew ? 'fa-plus' : 'fa-edit' %> me-2"></i>
+                            <%= isNew ? 'Nueva asignación Cliente-Grupo de compras' : `Editar asignación #${relacion.id}` %>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <% if (error) { %><div class="alert alert-danger"><%= error %></div><% } %>
+
+                        <% const formAction = isNew ? '/dashboard/clientes-grupos-compras' : `/dashboard/clientes-grupos-compras/${relacion.id}`; %>
+                        <% const backUrl = (typeof returnTo !== 'undefined' && returnTo) ? returnTo : '/dashboard/clientes-grupos-compras'; %>
+
+                        <form method="post" action="<%= formAction %>">
+                            <input type="hidden" name="returnTo" value="<%= backUrl %>">
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Cliente <span class="text-danger">*</span></label>
+                                <div class="cliente-search-container">
+                                    <input type="text" id="clienteSearchInput" class="form-control cliente-search-input" placeholder="Buscar por nombre, DNI/CIF, email, teléfono..." autocomplete="off" <%= isNew ? 'required' : '' %>>
+                                    <i class="fas fa-search cliente-search-icon"></i>
+                                    <div id="clienteDropdown" class="cliente-dropdown"></div>
+                                    <div id="clienteSelectedDisplay" class="cliente-selected-display">
+                                        <div class="cliente-selected-name" id="clienteSelectedName"></div>
+                                        <div class="cliente-selected-details" id="clienteSelectedDetails"></div>
+                                    </div>
+                                    <input type="hidden" name="Id_Cliente" id="clienteIdInput" value="<%= relacion ? (relacion.Id_Cliente || '') : '' %>" <%= isNew ? 'required' : '' %>>
+                                </div>
+                                <small class="form-text text-muted">Al guardar se desactiva cualquier asignación activa anterior de este cliente.</small>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Grupo de compras <span class="text-danger">*</span></label>
+                                <select name="Id_GrupoCompras" class="form-select" required>
+                                    <option value="">— Seleccionar grupo —</option>
+                                    <% grupos.forEach(function(g) { %>
+                                      <% const gid = g.id || g.Id; %>
+                                      <% const selected = relacion ? (relacion.Id_GrupoCompras || '') : ''; %>
+                                      <option value="<%= gid %>" <%= String(selected) === String(gid) ? 'selected' : '' %>><%= g.Nombre || '' %></option>
+                                    <% }); %>
+                                </select>
+                            </div>
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Nº Socio</label>
+                                    <input type="text" name="NumSocio" class="form-control" value="<%= relacion ? (relacion.NumSocio || '') : '' %>">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Observaciones</label>
+                                    <textarea name="Observaciones" class="form-control" rows="4"><%= relacion ? (relacion.Observaciones || '') : '' %></textarea>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-end gap-2 mt-3">
+                                <a href="<%= backUrl %>" class="btn btn-secondary">Volver</a>
+                                <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const clientes = <%- JSON.stringify(clientes || []) %>;
+        const clienteSearchInput = document.getElementById('clienteSearchInput');
+        const clienteDropdown = document.getElementById('clienteDropdown');
+        const clienteIdInput = document.getElementById('clienteIdInput');
+        const clienteSelectedDisplay = document.getElementById('clienteSelectedDisplay');
+        const clienteSelectedName = document.getElementById('clienteSelectedName');
+        const clienteSelectedDetails = document.getElementById('clienteSelectedDetails');
+
+        const setSelectedCliente = (c) => {
+            if (!c) return;
+            const id = c.Id || c.id;
+            const nombre = c.Nombre_Razon_Social || c.Nombre || c.nombre || '';
+            const dni = c.DNI_CIF || c.dni_cif || '';
+            const email = c.Email || c.email || '';
+            const tel = c.Telefono || c.telefono || c.Movil || c.movil || '';
+            const pob = c.Poblacion || c.poblacion || '';
+
+            clienteIdInput.value = id;
+            clienteSearchInput.value = nombre;
+            clienteSelectedName.textContent = nombre;
+            const parts = [];
+            if (dni) parts.push(`DNI/CIF: ${dni}`);
+            if (email) parts.push(`Email: ${email}`);
+            if (tel) parts.push(`Tel: ${tel}`);
+            if (pob) parts.push(`Población: ${pob}`);
+            clienteSelectedDetails.textContent = parts.join(' · ');
+            clienteSelectedDisplay.classList.add('show');
+        };
+
+        // Preselección por query ?clienteId=...
+        <% if (prefillClienteId) { %>
+          (function(){
+            const pre = clientes.find(c => String(c.Id || c.id) === String(<%= prefillClienteId %>));
+            if (pre) setSelectedCliente(pre);
+          })();
+        <% } %>
+
+        // Preselección cuando editamos
+        <% if (!isNew && relacion && relacion.Id_Cliente) { %>
+          (function(){
+            const pre = clientes.find(c => String(c.Id || c.id) === String(<%= relacion.Id_Cliente %>));
+            if (pre) setSelectedCliente(pre);
+          })();
+        <% } %>
+
+        let timeout = null;
+        const renderDropdown = (items) => {
+            clienteDropdown.innerHTML = '';
+            if (!items.length) {
+                clienteDropdown.classList.remove('show');
+                return;
+            }
+            items.slice(0, 50).forEach(c => {
+                const id = c.Id || c.id;
+                const nombre = c.Nombre_Razon_Social || c.Nombre || c.nombre || 'Cliente';
+                const dni = c.DNI_CIF || c.dni_cif || '';
+                const div = document.createElement('div');
+                div.className = 'cliente-dropdown-item';
+                div.innerHTML = `<div><strong>${nombre}</strong></div><div class="text-muted small">${dni ? `DNI/CIF: ${dni}` : ''}</div>`;
+                div.addEventListener('click', () => {
+                    setSelectedCliente(c);
+                    clienteDropdown.classList.remove('show');
+                });
+                clienteDropdown.appendChild(div);
+            });
+            clienteDropdown.classList.add('show');
+        };
+
+        if (clienteSearchInput) {
+            clienteSearchInput.addEventListener('input', () => {
+                clearTimeout(timeout);
+                const q = (clienteSearchInput.value || '').trim().toLowerCase();
+                if (q.length < 2) {
+                    clienteDropdown.classList.remove('show');
+                    return;
+                }
+                timeout = setTimeout(() => {
+                    const items = clientes.filter(c => {
+                        const nombre = String(c.Nombre_Razon_Social || c.Nombre || c.nombre || '').toLowerCase();
+                        const dni = String(c.DNI_CIF || c.dni_cif || '').toLowerCase();
+                        const email = String(c.Email || c.email || '').toLowerCase();
+                        return nombre.includes(q) || dni.includes(q) || email.includes(q);
+                    });
+                    renderDropdown(items);
+                }, 150);
+            });
+
+            document.addEventListener('click', (e) => {
+                if (!clienteDropdown.contains(e.target) && e.target !== clienteSearchInput) {
+                    clienteDropdown.classList.remove('show');
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+

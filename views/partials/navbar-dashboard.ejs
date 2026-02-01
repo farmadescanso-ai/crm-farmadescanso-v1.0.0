@@ -61,11 +61,25 @@
                         <i class="fas fa-handshake me-1"></i><span class="nav-label">Cooperativas</span>
                     </a>
                 </li>
+                <li class="nav-item d-none d-lg-block">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'grupos-compras' ? 'active' : '' %>"
+                       href="/dashboard/grupos-compras"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Grupos de compras" title="Grupos de compras">
+                        <i class="fas fa-users me-1"></i><span class="nav-label">Grupos Compra</span>
+                    </a>
+                </li>
                 <li class="nav-item d-none d-xl-block">
                     <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-cooperativas' ? 'active' : '' %>"
                        href="/dashboard/clientes-cooperativas"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes-Cooperativas" title="Clientes-Cooperativas">
                         <i class="fas fa-link me-1"></i><span class="nav-label">Clientes-Cooperativas</span>
+                    </a>
+                </li>
+                <li class="nav-item d-none d-xl-block">
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-grupos-compras' ? 'active' : '' %>"
+                       href="/dashboard/clientes-grupos-compras"
+                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes-Grupos compras" title="Clientes-Grupos compras">
+                        <i class="fas fa-link me-1"></i><span class="nav-label">Clientes-Grupos</span>
                     </a>
                 </li>
                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>

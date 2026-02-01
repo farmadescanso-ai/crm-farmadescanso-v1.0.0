@@ -155,3 +155,7 @@ scripts/configurar-usuario-mysql-remoto.sql
 !scripts/alter-pedidos-add-id-direccion-envio.sql
 !scripts/aplicar-direcciones-envio-produccion.sql
 !scripts/alter-direcciones-envio-add-movil.sql
+
+# Grupos de compras (nuevo)
+!scripts/crear-grupos-compras.sql
+!scripts/crear-clientes_grupos_compras.sql

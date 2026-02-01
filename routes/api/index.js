@@ -11,6 +11,7 @@ const pedidosRoutes = require('./pedidos');
 const visitasRoutes = require('./visitas');
 const comercialesRoutes = require('./comerciales');
 const cooperativasRoutes = require('./cooperativas');
+const gruposComprasRoutes = require('./grupos-compras');
 const formasPagoRoutes = require('./formas-pago');
 const especialidadesRoutes = require('./especialidades');
 const centrosSaludRoutes = require('./centros-salud');
@@ -24,6 +25,7 @@ router.use('/pedidos', requireApiKey, pedidosRoutes);
 router.use('/visitas', requireApiKey, visitasRoutes);
 router.use('/comerciales', requireApiKey, comercialesRoutes);
 router.use('/cooperativas', requireApiKey, cooperativasRoutes);
+router.use('/grupos-compras', requireApiKey, gruposComprasRoutes);
 router.use('/formas-pago', requireApiKey, formasPagoRoutes);
 router.use('/especialidades', requireApiKey, especialidadesRoutes);
 router.use('/centros-salud', requireApiKey, centrosSaludRoutes);
@@ -42,6 +44,7 @@ router.get('/', (req, res) => {
       visitas: '/api/visitas',
       comerciales: '/api/comerciales',
       cooperativas: '/api/cooperativas',
+      gruposCompras: '/api/grupos-compras',
       formasPago: '/api/formas-pago',
       especialidades: '/api/especialidades',
       centrosSalud: '/api/centros-salud',

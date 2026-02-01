@@ -2182,6 +2182,236 @@ class MySQLCRM {
     }
   }
 
+  // ============================================================
+  // GRUPOS DE COMPRAS (CRUD + relación con clientes)
+  // ============================================================
+
+  async getGruposCompras() {
+    try {
+      const t = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      const rows = await this.query(`SELECT * FROM \`${t}\` ORDER BY id ASC`).catch(async () => {
+        // fallback por si la PK está como Id en algún entorno
+        return await this.query(`SELECT * FROM \`${t}\` ORDER BY Id ASC`);
+      });
+      return rows || [];
+    } catch (error) {
+      console.error('❌ Error obteniendo gruposCompras:', error.message);
+      return [];
+    }
+  }
+
+  async getGrupoComprasById(id) {
+    try {
+      const t = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      try {
+        const rows = await this.query(`SELECT * FROM \`${t}\` WHERE id = ? LIMIT 1`, [id]);
+        return rows?.[0] || null;
+      } catch (_) {
+        const rows = await this.query(`SELECT * FROM \`${t}\` WHERE Id = ? LIMIT 1`, [id]);
+        return rows?.[0] || null;
+      }
+    } catch (error) {
+      console.error('❌ Error obteniendo grupoCompras por ID:', error.message);
+      return null;
+    }
+  }
+
+  async createGrupoCompras(payload) {
+    try {
+      const t = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      const fields = Object.keys(payload).map(k => `\`${k}\``).join(', ');
+      const placeholders = Object.keys(payload).map(() => '?').join(', ');
+      const values = Object.values(payload);
+      const sql = `INSERT INTO \`${t}\` (${fields}) VALUES (${placeholders})`;
+      const result = await this.query(sql, values);
+      return { insertId: result.insertId || result.insertId };
+    } catch (error) {
+      console.error('❌ Error creando grupoCompras:', error.message);
+      throw error;
+    }
+  }
+
+  async updateGrupoCompras(id, payload) {
+    try {
+      const t = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      const fields = Object.keys(payload).map(k => `\`${k}\` = ?`).join(', ');
+      const values = Object.values(payload);
+      values.push(id);
+      const sql = `UPDATE \`${t}\` SET ${fields} WHERE id = ?`;
+      try {
+        await this.query(sql, values);
+      } catch (_) {
+        const sql2 = `UPDATE \`${t}\` SET ${fields} WHERE Id = ?`;
+        await this.query(sql2, values);
+      }
+      return { affectedRows: 1 };
+    } catch (error) {
+      console.error('❌ Error actualizando grupoCompras:', error.message);
+      throw error;
+    }
+  }
+
+  async deleteGrupoCompras(id) {
+    try {
+      const t = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      try {
+        await this.query(`DELETE FROM \`${t}\` WHERE id = ?`, [id]);
+      } catch (_) {
+        await this.query(`DELETE FROM \`${t}\` WHERE Id = ?`, [id]);
+      }
+      return { affectedRows: 1 };
+    } catch (error) {
+      console.error('❌ Error eliminando grupoCompras:', error.message);
+      throw error;
+    }
+  }
+
+  async getClientesGruposCompras() {
+    try {
+      const tRel = await this._resolveTableNameCaseInsensitive('clientes_gruposCompras');
+      const tGr = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const sql = `
+        SELECT
+          cg.id,
+          cg.Id_Cliente,
+          cg.Id_GrupoCompras,
+          cg.NumSocio,
+          cg.Observaciones,
+          cg.Activa,
+          cg.Fecha_Alta,
+          cg.Fecha_Baja,
+          c.Nombre_Razon_Social as ClienteNombre,
+          g.Nombre as GrupoNombre
+        FROM \`${tRel}\` cg
+        LEFT JOIN \`${tClientes}\` c ON cg.Id_Cliente = c.id
+        LEFT JOIN \`${tGr}\` g ON cg.Id_GrupoCompras = g.id
+        ORDER BY cg.id DESC
+      `;
+      const rows = await this.query(sql);
+      return rows || [];
+    } catch (error) {
+      console.error('❌ Error obteniendo clientes_gruposCompras:', error.message);
+      return [];
+    }
+  }
+
+  async getClienteGrupoComprasById(id) {
+    try {
+      const tRel = await this._resolveTableNameCaseInsensitive('clientes_gruposCompras');
+      const tGr = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      const tClientes = await this._resolveTableNameCaseInsensitive('clientes');
+      const sql = `
+        SELECT
+          cg.*,
+          c.Nombre_Razon_Social as ClienteNombre,
+          g.Nombre as GrupoNombre
+        FROM \`${tRel}\` cg
+        LEFT JOIN \`${tClientes}\` c ON cg.Id_Cliente = c.id
+        LEFT JOIN \`${tGr}\` g ON cg.Id_GrupoCompras = g.id
+        WHERE cg.id = ? LIMIT 1
+      `;
+      const rows = await this.query(sql, [id]);
+      return rows?.[0] || null;
+    } catch (error) {
+      console.error('❌ Error obteniendo cliente_grupoCompras por ID:', error.message);
+      return null;
+    }
+  }
+
+  async getGrupoComprasActivoByClienteId(clienteId) {
+    try {
+      const tRel = await this._resolveTableNameCaseInsensitive('clientes_gruposCompras');
+      const tGr = await this._resolveTableNameCaseInsensitive('gruposCompras');
+      const sql = `
+        SELECT cg.*, g.Nombre as GrupoNombre
+        FROM \`${tRel}\` cg
+        LEFT JOIN \`${tGr}\` g ON cg.Id_GrupoCompras = g.id
+        WHERE cg.Id_Cliente = ? AND cg.Activa = 1
+        ORDER BY cg.id DESC
+        LIMIT 1
+      `;
+      const rows = await this.query(sql, [clienteId]);
+      return rows?.[0] || null;
+    } catch (error) {
+      console.error('❌ Error obteniendo grupoCompras activo del cliente:', error.message);
+      return null;
+    }
+  }
+
+  async createClienteGrupoCompras(payload) {
+    // payload: { Id_Cliente, Id_GrupoCompras, NumSocio?, Observaciones? }
+    if (!this.pool) await this.connect();
+    const connection = await this.pool.getConnection();
+    try {
+      // Asegurar zona horaria en esta sesión de transacción
+      try {
+        await connection.query("SET time_zone = 'Europe/Madrid'");
+      } catch (_) {}
+      await connection.beginTransaction();
+
+      const tRel = await this._resolveTableNameCaseInsensitive('clientes_gruposCompras');
+
+      // Desactivar relación activa previa (si existe) para este cliente
+      await connection.execute(
+        `UPDATE \`${tRel}\` SET Activa = 0, Fecha_Baja = NOW() WHERE Id_Cliente = ? AND Activa = 1`,
+        [payload.Id_Cliente]
+      );
+
+      const insertPayload = {
+        Id_Cliente: payload.Id_Cliente,
+        Id_GrupoCompras: payload.Id_GrupoCompras,
+        NumSocio: payload.NumSocio || null,
+        Observaciones: payload.Observaciones || null,
+        Activa: 1
+      };
+
+      const fields = Object.keys(insertPayload).map(k => `\`${k}\``).join(', ');
+      const placeholders = Object.keys(insertPayload).map(() => '?').join(', ');
+      const values = Object.values(insertPayload);
+
+      const [result] = await connection.execute(
+        `INSERT INTO \`${tRel}\` (${fields}) VALUES (${placeholders})`,
+        values
+      );
+
+      await connection.commit();
+      return { insertId: result.insertId };
+    } catch (error) {
+      try { await connection.rollback(); } catch (_) {}
+      console.error('❌ Error creando cliente_grupoCompras:', error.message);
+      throw error;
+    } finally {
+      connection.release();
+    }
+  }
+
+  async updateClienteGrupoCompras(id, payload) {
+    try {
+      const tRel = await this._resolveTableNameCaseInsensitive('clientes_gruposCompras');
+      const fields = Object.keys(payload).map(k => `\`${k}\` = ?`).join(', ');
+      const values = Object.values(payload);
+      values.push(id);
+      const sql = `UPDATE \`${tRel}\` SET ${fields} WHERE id = ?`;
+      await this.query(sql, values);
+      return { affectedRows: 1 };
+    } catch (error) {
+      console.error('❌ Error actualizando cliente_grupoCompras:', error.message);
+      throw error;
+    }
+  }
+
+  async cerrarClienteGrupoCompras(id) {
+    try {
+      const tRel = await this._resolveTableNameCaseInsensitive('clientes_gruposCompras');
+      await this.query(`UPDATE \`${tRel}\` SET Activa = 0, Fecha_Baja = NOW() WHERE id = ?`, [id]);
+      return { affectedRows: 1 };
+    } catch (error) {
+      console.error('❌ Error cerrando cliente_grupoCompras:', error.message);
+      throw error;
+    }
+  }
+
   async findCooperativaByNombre(nombre) {
     try {
       const sql = 'SELECT * FROM cooperativas WHERE Nombre = ? OR nombre = ? LIMIT 1';
