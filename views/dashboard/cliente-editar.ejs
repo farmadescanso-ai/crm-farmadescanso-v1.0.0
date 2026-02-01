@@ -239,11 +239,11 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Código Postal</label>
-                        <input type="text" name="CodigoPostal" class="form-control" value="<%= cliente ? (cliente.CodigoPostal || '') : '' %>">
+                        <input type="text" name="CodigoPostal" id="inputCodigoPostal" class="form-control" value="<%= cliente ? (cliente.CodigoPostal || '') : '' %>">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Provincia</label>
-                        <select name="Id_Provincia" class="form-select">
+                        <select name="Id_Provincia" id="selectProvincia" class="form-select">
                             <option value="">— Seleccionar provincia —</option>
                             <% if (typeof provincias !== 'undefined' && provincias && provincias.length > 0) { %>
                                 <% provincias.forEach(function(provincia) { %>
@@ -295,7 +295,7 @@
                 <div class="row g-3">
                     <div class="col-md-3">
                         <label class="form-label">Idioma</label>
-                        <select name="Id_Idioma" class="form-select">
+                        <select name="Id_Idioma" id="selectIdioma" class="form-select">
                             <option value="">— Seleccionar idioma —</option>
                             <% if (typeof idiomas !== 'undefined' && idiomas && idiomas.length > 0) { %>
                                 <% idiomas.forEach(function(idioma) { %>
@@ -310,7 +310,7 @@
                     </div>
                     <div class="col-md-3">
                         <label class="form-label">Moneda</label>
-                        <select name="Id_Moneda" class="form-select">
+                        <select name="Id_Moneda" id="selectMoneda" class="form-select">
                             <option value="">— Seleccionar moneda —</option>
                             <% if (typeof monedas !== 'undefined' && monedas && monedas.length > 0) { %>
                                 <% monedas.forEach(function(moneda) { %>
@@ -431,6 +431,96 @@
         </form>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+      // Auto-relleno por Código Postal: Provincia + País + Idioma + Moneda
+      (function () {
+        const cpInput = document.getElementById('inputCodigoPostal');
+        const selProv = document.getElementById('selectProvincia');
+        const selPais = document.getElementById('selectPais');
+        const codPaisInput = document.querySelector('input[name="CodPais"]');
+        const selIdioma = document.getElementById('selectIdioma');
+        const selMoneda = document.getElementById('selectMoneda');
+
+        if (!cpInput || !selProv || !selPais || !selIdioma || !selMoneda) return;
+
+        // No pisar cambios manuales
+        [selProv, selPais, selIdioma, selMoneda].forEach(el => {
+          el.addEventListener('change', () => { el.dataset.userTouched = '1'; }, { passive: true });
+        });
+
+        const pickOptionByText = (select, includesText) => {
+          const wanted = String(includesText || '').toLowerCase();
+          if (!wanted) return null;
+          const opts = Array.from(select.options || []);
+          const found = opts.find(o => String(o.text || '').toLowerCase().includes(wanted));
+          return found ? String(found.value) : null;
+        };
+
+        const setSelectValueSoft = (select, value) => {
+          if (!value) return;
+          // solo si está vacío o si el usuario no lo tocó manualmente
+          if (select.dataset.userTouched === '1' && String(select.value || '').trim() !== '') return;
+          select.value = String(value);
+          // disparar change para que otras lógicas (si existen) reaccionen
+          try { select.dispatchEvent(new Event('change', { bubbles: true })); } catch (_) {}
+        };
+
+        const setDefaultsIfEmpty = () => {
+          if (!selIdioma.value) {
+            const v = pickOptionByText(selIdioma, 'español') || pickOptionByText(selIdioma, 'espanol');
+            if (v) selIdioma.value = v;
+          }
+          if (!selMoneda.value) {
+            const v = pickOptionByText(selMoneda, 'euro');
+            if (v) selMoneda.value = v;
+          }
+        };
+
+        let t = null;
+        const resolve = async () => {
+          const cp = String(cpInput.value || '').replace(/[^0-9]/g, '');
+          if (cp.length < 4) return;
+
+          try {
+            const res = await fetch(`/api/codigos-postales/resolve?cp=${encodeURIComponent(cp)}`, {
+              credentials: 'include',
+              headers: { 'Accept': 'application/json' }
+            });
+            const json = await res.json().catch(() => null);
+            if (!res.ok || !json || !json.success) return;
+
+            const d = json.data || {};
+            setSelectValueSoft(selProv, d.provinciaId);
+            setSelectValueSoft(selPais, d.paisId);
+            setSelectValueSoft(selIdioma, d.idiomaId);
+            setSelectValueSoft(selMoneda, d.monedaId);
+
+            if (codPaisInput && d.paisIso && !codPaisInput.value) {
+              codPaisInput.value = String(d.paisIso);
+            }
+          } catch (_) {
+            // silencioso (no bloquear el formulario)
+          }
+        };
+
+        cpInput.addEventListener('input', () => {
+          clearTimeout(t);
+          t = setTimeout(resolve, 350);
+        }, { passive: true });
+
+        cpInput.addEventListener('blur', () => {
+          clearTimeout(t);
+          resolve();
+        }, { passive: true });
+
+        // Defaults iniciales: España -> Español, Euro (si están vacíos)
+        setDefaultsIfEmpty();
+        // Si ya hay CP, resolver al cargar
+        if (String(cpInput.value || '').trim()) {
+          setTimeout(resolve, 50);
+        }
+      })();
+    </script>
     <script src="/js/go-to-top.js"></script>
 
     <% if (isNew) { %>

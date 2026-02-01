@@ -18111,6 +18111,81 @@ app.get('/api/clientes/codigo-postal/:idCodigoPostal', requireAuth, async (req, 
   }
 });
 
+// ============================================
+// API: Resolver CP -> Provincia/País/Idioma/Moneda (para auto-relleno en cliente-editar)
+// ============================================
+app.get('/api/codigos-postales/resolve', requireAuth, async (req, res) => {
+  try {
+    const raw = String(req.query.cp || '').trim();
+    const cp = raw.replace(/[^0-9]/g, '');
+    if (!cp || cp.length < 4) {
+      return res.status(400).json({ success: false, error: 'Código postal inválido' });
+    }
+
+    const { detectarPais } = require('./scripts/asociar-provincia-por-codigo-postal');
+    const paisIso = detectarPais(cp) || 'ES';
+
+    // Provincias: para ES/PT resolvemos por prefijo/código.
+    const provincias = await crm.getProvincias(paisIso).catch(() => []);
+    let provincia = null;
+    if (paisIso === 'ES' && cp.length >= 2) {
+      const pref = cp.slice(0, 2);
+      const codeNum = Number(pref);
+      // Match robusto: id==codeNum OR Codigo==codeNum OR Codigo=='XX'
+      provincia = (provincias || []).find(p => Number(p.id || p.Id) === codeNum)
+        || (provincias || []).find(p => Number(p.Codigo) === codeNum)
+        || (provincias || []).find(p => String(p.Codigo || '').padStart(2, '0') === pref);
+    } else if (paisIso === 'PT') {
+      // Para PT la función necesita provinciasDB con "Codigo" tipo PTxx
+      const { obtenerCodigoProvinciaPortugal } = require('./scripts/asociar-provincia-por-codigo-postal');
+      const cod = obtenerCodigoProvinciaPortugal(cp);
+      if (cod) provincia = (provincias || []).find(p => String(p.Codigo || '').trim() === String(cod).trim()) || null;
+    }
+
+    const pais = await crm.getPaisByCodigoISO(paisIso).catch(() => null);
+
+    // Idioma/Moneda por defecto por país (mínimo viable)
+    const idiomaPorPais = {
+      ES: 'Español',
+      PT: 'Portugués'
+    };
+    const monedaPorPais = {
+      ES: 'Euro',
+      PT: 'Euro'
+    };
+
+    const idiomaNombre = idiomaPorPais[paisIso] || null;
+    const monedaNombre = monedaPorPais[paisIso] || 'Euro';
+
+    const idiomaRow = idiomaNombre
+      ? await crm.query('SELECT id, Nombre FROM idiomas WHERE LOWER(Nombre) = LOWER(?) LIMIT 1', [idiomaNombre]).catch(() => [])
+      : [];
+    const monedaRow = monedaNombre
+      ? await crm.query('SELECT id, Nombre FROM monedas WHERE LOWER(Nombre) = LOWER(?) LIMIT 1', [monedaNombre]).catch(() => [])
+      : [];
+
+    const idiomaId = idiomaRow?.[0]?.id || null;
+    const monedaId = monedaRow?.[0]?.id || null;
+
+    return res.json({
+      success: true,
+      data: {
+        cp,
+        paisIso,
+        paisId: pais ? (pais.id || pais.Id) : null,
+        paisNombre: pais ? (pais.Nombre_pais || pais.Nombre || null) : null,
+        provinciaId: provincia ? (provincia.id || provincia.Id) : null,
+        provinciaNombre: provincia ? (provincia.Nombre || provincia.nombre || null) : null,
+        idiomaId,
+        monedaId
+      }
+    });
+  } catch (error) {
+    console.error('❌ [CP RESOLVE] Error:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Error resolviendo código postal' });
+  }
+});
+
 // API: Clientes paginados para "cargar más" en /dashboard/clientes (scroll/botón)
 // Nota: debe ir ANTES de GET /api/clientes (legacy) para no entrar en conflictos futuros.
 app.get('/api/clientes/paged', requireAuth, async (req, res) => {
