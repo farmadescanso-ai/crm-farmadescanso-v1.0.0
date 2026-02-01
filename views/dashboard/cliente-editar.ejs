@@ -477,7 +477,45 @@
         };
 
         let t = null;
-        const resolve = async () => {
+        const focusNextEmptyAfter = (fromEl) => {
+          try {
+            const form = (fromEl && fromEl.form) ? fromEl.form : document.querySelector('form');
+            if (!form) return;
+
+            const fields = Array.from(form.querySelectorAll('input, select, textarea'))
+              .filter(el => el && el !== fromEl)
+              .filter(el => !el.disabled)
+              .filter(el => {
+                const tag = String(el.tagName || '').toLowerCase();
+                if (tag === 'input') {
+                  const type = String(el.getAttribute('type') || '').toLowerCase();
+                  if (type === 'hidden') return false;
+                }
+                // no forzar focus en readonly (p.ej. CodPais legacy)
+                if (el.hasAttribute('readonly')) return false;
+                // evitar botones
+                if (tag === 'button') return false;
+                return true;
+              });
+
+            // Desde "fromEl" hacia delante
+            const idx = fields.indexOf(fromEl);
+            const start = idx >= 0 ? idx + 1 : 0;
+            for (let i = start; i < fields.length; i++) {
+              const el = fields[i];
+              const tag = String(el.tagName || '').toLowerCase();
+              const val = String(el.value ?? '').trim();
+              // Para selects: vacío = '' (opción placeholder)
+              const isEmpty = val === '';
+              if (isEmpty) {
+                el.focus();
+                return;
+              }
+            }
+          } catch (_) {}
+        };
+
+        const resolve = async (opts = {}) => {
           const cp = String(cpInput.value || '').replace(/[^0-9]/g, '');
           if (cp.length < 4) return;
 
@@ -498,6 +536,11 @@
             if (codPaisInput && d.paisIso && !codPaisInput.value) {
               codPaisInput.value = String(d.paisIso);
             }
+
+            if (opts && opts.focusNextEmpty) {
+              // Tras autocompletar, saltar al siguiente campo SIN datos
+              focusNextEmptyAfter(cpInput);
+            }
           } catch (_) {
             // silencioso (no bloquear el formulario)
           }
@@ -505,19 +548,28 @@
 
         cpInput.addEventListener('input', () => {
           clearTimeout(t);
-          t = setTimeout(resolve, 350);
+          t = setTimeout(() => resolve({ focusNextEmpty: false }), 350);
         }, { passive: true });
 
         cpInput.addEventListener('blur', () => {
           clearTimeout(t);
-          resolve();
+          resolve({ focusNextEmpty: true });
         }, { passive: true });
+
+        // Enter en CP: autocompletar y saltar al siguiente campo vacío
+        cpInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            clearTimeout(t);
+            resolve({ focusNextEmpty: true });
+          }
+        });
 
         // Defaults iniciales: España -> Español, Euro (si están vacíos)
         setDefaultsIfEmpty();
         // Si ya hay CP, resolver al cargar
         if (String(cpInput.value || '').trim()) {
-          setTimeout(resolve, 50);
+          setTimeout(() => resolve({ focusNextEmpty: false }), 50);
         }
       })();
     </script>
