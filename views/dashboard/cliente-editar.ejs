@@ -202,44 +202,6 @@
                 </div>
             </div>
 
-            <!-- Sección: Canales de comunicación -->
-            <div class="form-section">
-                <h5><i class="fas fa-comments me-2"></i>Canales de comunicación:</h5>
-                <div class="row g-3">
-                    <div class="col-md-6">
-                        <label class="form-label">Email</label>
-                        <input type="email" name="Email" class="form-control" value="<%= cliente ? (cliente.Email || '') : '' %>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Teléfono</label>
-                        <input type="text" name="Telefono" class="form-control" value="<%= cliente ? (cliente.Telefono || cliente['Teléfono'] || '') : '' %>">
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Móvil</label>
-                        <input type="text" name="Movil" class="form-control" value="<%= cliente ? (cliente.Movil || cliente['Móvil'] || '') : '' %>">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">Contacto por defecto</label>
-                        <% if (typeof isNew !== 'undefined' && isNew) { %>
-                          <select name="Id_Contacto_Default" class="form-select">
-                            <option value="">— (sin contacto) —</option>
-                            <% if (typeof contactosDisponibles !== 'undefined' && Array.isArray(contactosDisponibles) && contactosDisponibles.length > 0) { %>
-                              <% contactosDisponibles.forEach(c => { %>
-                                <% const cid = c.Id || c.id; %>
-                                <% const nombre = ((c.Apellidos || '') + ' ' + (c.Nombre || '')).trim() || (c.Nombre || 'Contacto'); %>
-                                <option value="<%= cid %>"><%= nombre %></option>
-                              <% }) %>
-                            <% } %>
-                          </select>
-                          <small class="text-muted">Opcional. Si lo eliges, quedará vinculado como contacto principal del cliente.</small>
-                        <% } else { %>
-                          <input type="text" name="NomContacto" class="form-control" value="<%= cliente ? (cliente.NomContacto || '') : '' %>" placeholder="(legacy)">
-                          <small class="text-muted">Para gestionar contactos, usa el botón “Contactos” en el detalle del cliente.</small>
-                        <% } %>
-                    </div>
-                </div>
-            </div>
-
             <!-- Sección: Dirección -->
             <div class="form-section">
                 <h5><i class="fas fa-map-marker-alt me-2"></i>Dirección</h5>
@@ -300,6 +262,44 @@
                         <label class="form-label">Código País (legacy)</label>
                         <input type="text" name="CodPais" class="form-control" maxlength="3" value="<%= cliente ? (cliente.CodPais || '') : '' %>" readonly>
                         <small class="text-muted">Campo legacy, se actualiza automáticamente</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección: Canales de comunicación -->
+            <div class="form-section">
+                <h5><i class="fas fa-comments me-2"></i>Canales de comunicación:</h5>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Email</label>
+                        <input type="email" name="Email" class="form-control" value="<%= cliente ? (cliente.Email || '') : '' %>">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Teléfono</label>
+                        <input type="text" name="Telefono" class="form-control" value="<%= cliente ? (cliente.Telefono || cliente['Teléfono'] || '') : '' %>">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Móvil</label>
+                        <input type="text" name="Movil" class="form-control" value="<%= cliente ? (cliente.Movil || cliente['Móvil'] || '') : '' %>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Contacto por defecto</label>
+                        <% if (typeof isNew !== 'undefined' && isNew) { %>
+                          <select name="Id_Contacto_Default" class="form-select">
+                            <option value="">— (sin contacto) —</option>
+                            <% if (typeof contactosDisponibles !== 'undefined' && Array.isArray(contactosDisponibles) && contactosDisponibles.length > 0) { %>
+                              <% contactosDisponibles.forEach(c => { %>
+                                <% const cid = c.Id || c.id; %>
+                                <% const nombre = ((c.Apellidos || '') + ' ' + (c.Nombre || '')).trim() || (c.Nombre || 'Contacto'); %>
+                                <option value="<%= cid %>"><%= nombre %></option>
+                              <% }) %>
+                            <% } %>
+                          </select>
+                          <small class="text-muted">Opcional. Si lo eliges, quedará vinculado como contacto principal del cliente.</small>
+                        <% } else { %>
+                          <input type="text" name="NomContacto" class="form-control" value="<%= cliente ? (cliente.NomContacto || '') : '' %>" placeholder="(legacy)">
+                          <small class="text-muted">Para gestionar contactos, usa el botón “Contactos” en el detalle del cliente.</small>
+                        <% } %>
                     </div>
                 </div>
             </div>
