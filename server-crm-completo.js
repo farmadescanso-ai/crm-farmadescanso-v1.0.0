@@ -10481,7 +10481,8 @@ app.get('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
 app.post('/dashboard/especialidades', requireAuth, async (req, res) => {
   try {
     const payload = {
-      Especialidad: req.body.Especialidad
+      Especialidad: req.body.Especialidad,
+      Observaciones: (req.body.Observaciones || '').trim() || null
     };
     
     if (!payload.Especialidad) {
@@ -10517,7 +10518,8 @@ app.post('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
   try {
     const id = req.params.id;
     const payload = {
-      Especialidad: req.body.Especialidad
+      Especialidad: req.body.Especialidad,
+      Observaciones: (req.body.Observaciones || '').trim() || null
     };
     
     await crm.updateEspecialidad(id, payload);
@@ -10627,7 +10629,8 @@ app.get('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
 app.post('/dashboard/especialidades', requireAuth, async (req, res) => {
   try {
     const payload = {
-      Especialidad: req.body.Especialidad || null
+      Especialidad: req.body.Especialidad || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null
     };
     
     if (!payload.Especialidad) {
@@ -10663,7 +10666,8 @@ app.post('/dashboard/especialidades/:id', requireAuth, async (req, res) => {
   try {
     const id = req.params.id;
     const payload = {
-      Especialidad: req.body.Especialidad || null
+      Especialidad: req.body.Especialidad || null,
+      Observaciones: (req.body.Observaciones || '').trim() || null
     };
     
     await crm.updateEspecialidad(id, payload);
