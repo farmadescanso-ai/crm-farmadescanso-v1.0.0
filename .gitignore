@@ -145,6 +145,7 @@ scripts/configurar-usuario-mysql-remoto.sql
 !scripts/migrar-contactos-desde-clientes.sql
 !scripts/alter-contactos-add-empresa.sql
 !scripts/normalizar-nombres-paises-utf8.sql
+!scripts/normalizar-nombres-paises-titlecase.sql
 !scripts/crear-contactos-y-clientes_contactos.sql
 !scripts/alter-clientes-soft-delete.sql
 !scripts/migrar-contactos-desde-clientes.sql
