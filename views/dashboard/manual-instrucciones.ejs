@@ -61,30 +61,30 @@
             pointer-events: auto !important;
         }
 
-        /* Banderas de Idioma con Emojis */
-        .flag-emoji {
-            font-size: 2rem !important;
-            line-height: 1 !important;
+        /* Banderas de Idioma con Imágenes */
+        .flag-image {
+            width: 40px !important;
+            height: 28px !important;
             cursor: pointer !important;
             transition: all 0.3s ease !important;
-            padding: 6px 8px !important;
-            border-radius: 8px !important;
+            border-radius: 6px !important;
             border: 3px solid transparent !important;
             display: inline-block !important;
+            object-fit: cover !important;
             user-select: none !important;
             -webkit-user-select: none !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2) !important;
         }
 
-        .flag-emoji:hover {
-            transform: scale(1.25) !important;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        .flag-image:hover {
+            transform: scale(1.2) !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.4) !important;
         }
 
-        .flag-emoji.active {
+        .flag-image.active {
             border-color: #0b891b !important;
-            background-color: rgba(11, 137, 27, 0.15) !important;
-            box-shadow: 0 0 0 4px rgba(11, 137, 27, 0.4) !important;
-            transform: scale(1.15) !important;
+            box-shadow: 0 0 0 4px rgba(11, 137, 27, 0.4), 0 4px 10px rgba(0,0,0,0.3) !important;
+            transform: scale(1.1) !important;
         }
 
         .hero-section::before {
@@ -552,9 +552,9 @@
                 gap: 10px !important;
             }
 
-            .flag-emoji {
-                font-size: 1.6rem !important;
-                padding: 5px 6px !important;
+            .flag-image {
+                width: 35px !important;
+                height: 24px !important;
             }
         }
     </style>
@@ -568,8 +568,8 @@
 
     <!-- Selector de Idioma con Banderas - FUERA del contenedor para máxima visibilidad -->
     <div id="languageSwitchContainer">
-        <span class="flag-emoji active" id="flagSpain" title="Español" data-lang="es">🇪🇸</span>
-        <span class="flag-emoji" id="flagItaly" title="Italiano" data-lang="it">🇮🇹</span>
+        <img src="/images/bandera-es.jpg" alt="Español" class="flag-image active" id="flagSpain" title="Español" data-lang="es">
+        <img src="/images/bandera-it.jpg" alt="Italiano" class="flag-image" id="flagItaly" title="Italiano" data-lang="it">
     </div>
 
     <div class="container manual-container">
@@ -1391,7 +1391,7 @@
                     const body = document.body;
                     switchContainer = document.createElement('div');
                     switchContainer.id = 'languageSwitchContainer';
-                    switchContainer.innerHTML = '<span class="flag-emoji active" id="flagSpain" title="Español" data-lang="es">🇪🇸</span><span class="flag-emoji" id="flagItaly" title="Italiano" data-lang="it">🇮🇹</span>';
+                    switchContainer.innerHTML = '<img src="/images/bandera-es.jpg" alt="Español" class="flag-image active" id="flagSpain" title="Español" data-lang="es"><img src="/images/bandera-it.jpg" alt="Italiano" class="flag-image" id="flagItaly" title="Italiano" data-lang="it">';
                     body.appendChild(switchContainer);
                 }
                 
