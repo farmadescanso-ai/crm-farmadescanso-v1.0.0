@@ -37,8 +37,54 @@
             margin-bottom: 3rem;
             box-shadow: 0 10px 40px rgba(11, 137, 27, 0.3);
             position: relative;
-            overflow: hidden;
+            overflow: visible !important;
             animation: fadeInDown 1s ease-out;
+        }
+
+        /* Contenedor de Banderas de Idioma - FUERA del banner */
+        #languageSwitchContainer {
+            position: fixed !important;
+            top: 70px !important;
+            right: 30px !important;
+            z-index: 999999 !important;
+            background: #ffffff !important;
+            padding: 10px 14px !important;
+            border-radius: 25px !important;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important;
+            border: 3px solid #0b891b !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 12px !important;
+            justify-content: center !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+
+        /* Banderas de Idioma con Emojis */
+        .flag-emoji {
+            font-size: 2rem !important;
+            line-height: 1 !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+            padding: 6px 8px !important;
+            border-radius: 8px !important;
+            border: 3px solid transparent !important;
+            display: inline-block !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+
+        .flag-emoji:hover {
+            transform: scale(1.25) !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        }
+
+        .flag-emoji.active {
+            border-color: #0b891b !important;
+            background-color: rgba(11, 137, 27, 0.15) !important;
+            box-shadow: 0 0 0 4px rgba(11, 137, 27, 0.4) !important;
+            transform: scale(1.15) !important;
         }
 
         .hero-section::before {
@@ -50,6 +96,7 @@
             height: 200%;
             background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
             animation: rotate 20s linear infinite;
+            z-index: 1;
         }
 
         @keyframes rotate {
@@ -363,6 +410,153 @@
                 font-size: 1.2rem;
             }
         }
+
+        /* Switch de Idioma - Estilos base */
+        .language-switch-container {
+            position: absolute !important;
+            top: 20px !important;
+            right: 20px !important;
+            z-index: 1000 !important;
+            background: white !important;
+            padding: 0.75rem 1.25rem !important;
+            border-radius: 20px !important;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4) !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 0.75rem !important;
+            border: 3px solid var(--primary-color) !important;
+            min-width: 140px !important;
+            justify-content: center !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .language-switch {
+            position: relative;
+            display: inline-block;
+            width: 80px;
+            height: 40px;
+        }
+
+        .language-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .language-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 40px;
+        }
+
+        .language-slider:before {
+            position: absolute;
+            content: "";
+            height: 32px;
+            width: 32px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .language-switch input:checked + .language-slider {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .language-switch input:checked + .language-slider {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
+        }
+
+        .language-switch input:checked + .language-slider span {
+            transform: translateX(30px) !important;
+        }
+
+        #languageToggle:checked + #languageSlider {
+            background: linear-gradient(135deg, #0b891b, #28a745) !important;
+        }
+
+        #languageToggle:checked + #languageSlider #sliderButton {
+            transform: translateX(30px) !important;
+        }
+
+        /* Asegurar que el switch sea visible en todos los casos */
+        #languageSwitchContainer {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        .language-label {
+            font-weight: 700;
+            font-size: 1rem;
+            color: var(--dark-color);
+            white-space: nowrap;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .language-label.active {
+            color: var(--primary-color);
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(11, 137, 27, 0.2);
+        }
+
+        .language-switch-container:hover {
+            box-shadow: 0 10px 35px rgba(11, 137, 27, 0.5);
+            transform: translateY(-3px);
+            transition: all 0.3s ease;
+        }
+
+        /* Removido el ::before que puede causar problemas */
+
+        /* Badges de Permisos */
+        .role-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 0.5rem;
+        }
+
+        .role-badge.admin {
+            background: linear-gradient(135deg, #dc3545, #c82333);
+            color: white;
+        }
+
+        .role-badge.comercial {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+        }
+
+        .role-badge.all {
+            background: linear-gradient(135deg, #28a745, #218838);
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            #languageSwitchContainer {
+                top: 60px !important;
+                right: 15px !important;
+                padding: 8px 10px !important;
+                gap: 10px !important;
+            }
+
+            .flag-emoji {
+                font-size: 1.6rem !important;
+                padding: 5px 6px !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -372,41 +566,52 @@
         <div class="scroll-progress" id="scrollProgress"></div>
     </div>
 
+    <!-- Selector de Idioma con Banderas - FUERA del contenedor para máxima visibilidad -->
+    <div id="languageSwitchContainer">
+        <span class="flag-emoji active" id="flagSpain" title="Español" data-lang="es">🇪🇸</span>
+        <span class="flag-emoji" id="flagItaly" title="Italiano" data-lang="it">🇮🇹</span>
+    </div>
+
     <div class="container manual-container">
         <!-- Hero Section -->
         <div class="hero-section">
             <div class="hero-content text-center">
                 <img src="/images/logo.png" alt="Farmadescanso" class="hero-logo">
-                <h1 class="display-4 fw-bold mb-3">Manual de Instrucciones</h1>
-                <p class="lead mb-4">Guía completa para el uso del CRM Farmadescanso</p>
-                <p class="mb-0">Aprende a utilizar todas las funcionalidades de la aplicación de forma eficiente</p>
+                <h1 class="display-4 fw-bold mb-3" data-lang="es">Manual de Instrucciones</h1>
+                <h1 class="display-4 fw-bold mb-3" data-lang="it" style="display: none;">Manuale di Istruzioni</h1>
+                <p class="lead mb-4" data-lang="es">Guía completa para el uso del CRM Farmadescanso</p>
+                <p class="lead mb-4" data-lang="it" style="display: none;">Guida completa per l'uso del CRM Farmadescanso</p>
+                <p class="mb-0" data-lang="es">Aprende a utilizar todas las funcionalidades de la aplicación de forma eficiente</p>
+                <p class="mb-0" data-lang="it" style="display: none;">Impara a utilizzare tutte le funzionalità dell'applicazione in modo efficiente</p>
             </div>
         </div>
 
         <!-- Índice de Contenidos -->
         <div class="section-card">
             <h2 class="fw-bold mb-4">
-                <i class="fas fa-list-ul text-primary me-2"></i>Índice de Contenidos
+                <i class="fas fa-list-ul text-primary me-2"></i>
+                <span data-lang="es">Índice de Contenidos</span>
+                <span data-lang="it" style="display: none;">Indice dei Contenuti</span>
             </h2>
             <div class="row">
                 <div class="col-md-6">
                     <ul class="feature-list">
-                        <li><i class="fas fa-chevron-right"></i><a href="#dashboard" class="text-decoration-none text-dark">Dashboard Principal</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#pedidos" class="text-decoration-none text-dark">Gestión de Pedidos</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#clientes" class="text-decoration-none text-dark">Gestión de Clientes</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#visitas" class="text-decoration-none text-dark">Programación de Visitas</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#articulos" class="text-decoration-none text-dark">Catálogo de Artículos</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#comisiones" class="text-decoration-none text-dark">Comisiones</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#manual" class="text-decoration-none text-dark">Manual de Instrucciones</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#dashboard" class="text-decoration-none text-dark"><span data-lang="es">Dashboard Principal</span><span data-lang="it" style="display: none;">Dashboard Principale</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#pedidos" class="text-decoration-none text-dark"><span data-lang="es">Gestión de Pedidos</span><span data-lang="it" style="display: none;">Gestione Ordini</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#clientes" class="text-decoration-none text-dark"><span data-lang="es">Gestión de Clientes</span><span data-lang="it" style="display: none;">Gestione Clienti</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#visitas" class="text-decoration-none text-dark"><span data-lang="es">Programación de Visitas</span><span data-lang="it" style="display: none;">Pianificazione Visite</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#articulos" class="text-decoration-none text-dark"><span data-lang="es">Catálogo de Artículos</span><span data-lang="it" style="display: none;">Catalogo Articoli</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#comisiones" class="text-decoration-none text-dark"><span data-lang="es">Comisiones</span><span data-lang="it" style="display: none;">Commissioni</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#manual" class="text-decoration-none text-dark"><span data-lang="es">Manual de Instrucciones</span><span data-lang="it" style="display: none;">Manuale di Istruzioni</span></a></li>
                     </ul>
                 </div>
                 <div class="col-md-6">
                     <ul class="feature-list">
-                        <li><i class="fas fa-chevron-right"></i><a href="#cooperativas" class="text-decoration-none text-dark">Cooperativas</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#comerciales" class="text-decoration-none text-dark">Comerciales</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#reportes" class="text-decoration-none text-dark">Reportes y Estadísticas</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#configuracion" class="text-decoration-none text-dark">Configuración</a></li>
-                        <li><i class="fas fa-chevron-right"></i><a href="#consejos" class="text-decoration-none text-dark">Consejos y Mejores Prácticas</a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#cooperativas" class="text-decoration-none text-dark"><span data-lang="es">Cooperativas</span><span data-lang="it" style="display: none;">Cooperative</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#comerciales" class="text-decoration-none text-dark"><span data-lang="es">Comerciales</span><span data-lang="it" style="display: none;">Commerciali</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#reportes" class="text-decoration-none text-dark"><span data-lang="es">Reportes y Estadísticas</span><span data-lang="it" style="display: none;">Report e Statistiche</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#configuracion" class="text-decoration-none text-dark"><span data-lang="es">Configuración</span><span data-lang="it" style="display: none;">Configurazione</span></a></li>
+                        <li><i class="fas fa-chevron-right"></i><a href="#consejos" class="text-decoration-none text-dark"><span data-lang="es">Consejos y Mejores Prácticas</span><span data-lang="it" style="display: none;">Consigli e Best Practice</span></a></li>
                     </ul>
                 </div>
             </div>
@@ -417,8 +622,16 @@
             <div class="section-icon">
                 <i class="fas fa-tachometer-alt"></i>
             </div>
-            <h2 class="fw-bold mb-4">Dashboard Principal</h2>
-            <p class="lead mb-4">El Dashboard es tu punto de partida. Aquí puedes ver un resumen general de todas tus actividades y estadísticas importantes.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Dashboard Principal</span>
+                <span data-lang="it" style="display: none;">Dashboard Principale</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">El Dashboard es tu punto de partida. Aquí puedes ver un resumen general de todas tus actividades y estadísticas importantes.</span>
+                <span data-lang="it" style="display: none;">La Dashboard è il tuo punto di partenza. Qui puoi vedere un riepilogo generale di tutte le tue attività e statistiche importanti.</span>
+            </p>
             
             <div class="highlight-box">
                 <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>¿Qué encontrarás en el Dashboard?</h5>
@@ -463,8 +676,16 @@
             <div class="section-icon">
                 <i class="fas fa-shopping-cart"></i>
             </div>
-            <h2 class="fw-bold mb-4">Gestión de Pedidos</h2>
-            <p class="lead mb-4">Los pedidos son el corazón de tu actividad comercial. Aprende a crear, gestionar y hacer seguimiento de todos tus pedidos.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Gestión de Pedidos</span>
+                <span data-lang="it" style="display: none;">Gestione Ordini</span>
+                <span class="role-badge comercial" data-lang="es">Comerciales</span>
+                <span class="role-badge comercial" data-lang="it" style="display: none;">Commerciali</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Los pedidos son el corazón de tu actividad comercial. Aprende a crear, gestionar y hacer seguimiento de todos tus pedidos.</span>
+                <span data-lang="it" style="display: none;">Gli ordini sono il cuore della tua attività commerciale. Impara a creare, gestire e monitorare tutti i tuoi ordini.</span>
+            </p>
 
             <h5 class="fw-bold mt-4 mb-3">Crear un Nuevo Pedido:</h5>
             <div class="step-card">
@@ -523,8 +744,16 @@
             <div class="section-icon">
                 <i class="fas fa-users"></i>
             </div>
-            <h2 class="fw-bold mb-4">Gestión de Clientes</h2>
-            <p class="lead mb-4">Gestiona tu base de datos de clientes de forma eficiente. Mantén toda la información actualizada para un mejor seguimiento comercial.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Gestión de Clientes</span>
+                <span data-lang="it" style="display: none;">Gestione Clienti</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Gestiona tu base de datos de clientes de forma eficiente. Mantén toda la información actualizada para un mejor seguimiento comercial.</span>
+                <span data-lang="it" style="display: none;">Gestisci il tuo database clienti in modo efficiente. Mantieni tutte le informazioni aggiornate per un migliore monitoraggio commerciale.</span>
+            </p>
             
             <div class="highlight-box">
                 <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Filtros Avanzados:</h5>
@@ -618,8 +847,16 @@
             <div class="section-icon">
                 <i class="fas fa-calendar-check"></i>
             </div>
-            <h2 class="fw-bold mb-4">Programación de Visitas</h2>
-            <p class="lead mb-4">Organiza y gestiona tus visitas a clientes. Mantén un calendario actualizado y nunca pierdas una cita.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Programación de Visitas</span>
+                <span data-lang="it" style="display: none;">Pianificazione Visite</span>
+                <span class="role-badge comercial" data-lang="es">Comerciales</span>
+                <span class="role-badge comercial" data-lang="it" style="display: none;">Commerciali</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Organiza y gestiona tus visitas a clientes. Mantén un calendario actualizado y nunca pierdas una cita.</span>
+                <span data-lang="it" style="display: none;">Organizza e gestisci le tue visite ai clienti. Mantieni un calendario aggiornato e non perdere mai un appuntamento.</span>
+            </p>
 
             <div class="step-card">
                 <span class="step-number">1</span>
@@ -653,8 +890,16 @@
             <div class="section-icon">
                 <i class="fas fa-boxes"></i>
             </div>
-            <h2 class="fw-bold mb-4">Catálogo de Artículos</h2>
-            <p class="lead mb-4">Explora el catálogo completo de productos disponibles. Conoce precios, SKUs y disponibilidad.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Catálogo de Artículos</span>
+                <span data-lang="it" style="display: none;">Catalogo Articoli</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Explora el catálogo completo de productos disponibles. Conoce precios, SKUs y disponibilidad.</span>
+                <span data-lang="it" style="display: none;">Esplora il catalogo completo dei prodotti disponibili. Conosci prezzi, SKU e disponibilità.</span>
+            </p>
 
             <h5 class="fw-bold mb-3">Información de los Artículos:</h5>
             <ul class="feature-list">
@@ -694,8 +939,16 @@
             <div class="section-icon">
                 <i class="fas fa-money-bill-wave"></i>
             </div>
-            <h2 class="fw-bold mb-4">Sistema de Comisiones</h2>
-            <p class="lead mb-4">Consulta tus comisiones calculadas automáticamente según las ventas y objetivos establecidos.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Sistema de Comisiones</span>
+                <span data-lang="it" style="display: none;">Sistema di Commissioni</span>
+                <span class="role-badge comercial" data-lang="es">Comerciales</span>
+                <span class="role-badge comercial" data-lang="it" style="display: none;">Commerciali</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Consulta tus comisiones calculadas automáticamente según las ventas y objetivos establecidos.</span>
+                <span data-lang="it" style="display: none;">Consulta le tue commissioni calcolate automaticamente in base alle vendite e agli obiettivi stabiliti.</span>
+            </p>
 
             <div class="step-card">
                 <span class="step-number">1</span>
@@ -736,8 +989,16 @@
             <div class="section-icon">
                 <i class="fas fa-handshake"></i>
             </div>
-            <h2 class="fw-bold mb-4">Gestión de Cooperativas</h2>
-            <p class="lead mb-4">Administra las cooperativas farmacéuticas y sus relaciones con clientes.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Gestión de Cooperativas</span>
+                <span data-lang="it" style="display: none;">Gestione Cooperative</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Administra las cooperativas farmacéuticas y sus relaciones con clientes.</span>
+                <span data-lang="it" style="display: none;">Gestisci le cooperative farmaceutiche e le loro relazioni con i clienti.</span>
+            </p>
 
             <ul class="feature-list">
                 <li><i class="fas fa-building"></i><strong>Registrar Cooperativas:</strong> Agrega nuevas cooperativas al sistema con toda su información</li>
@@ -756,8 +1017,16 @@
             <div class="section-icon">
                 <i class="fas fa-user-tie"></i>
             </div>
-            <h2 class="fw-bold mb-4">Gestión de Comerciales</h2>
-            <p class="lead mb-4">Visualiza y gestiona la información de todos los comerciales del equipo.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Gestión de Comerciales</span>
+                <span data-lang="it" style="display: none;">Gestione Commerciali</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Visualiza y gestiona la información de todos los comerciales del equipo.</span>
+                <span data-lang="it" style="display: none;">Visualizza e gestisci le informazioni di tutti i commerciali del team.</span>
+            </p>
 
             <ul class="feature-list">
                 <li><i class="fas fa-user-circle"></i><strong>Ver Perfil:</strong> Consulta la información de contacto y datos de cada comercial</li>
@@ -772,8 +1041,16 @@
             <div class="section-icon">
                 <i class="fas fa-chart-bar"></i>
             </div>
-            <h2 class="fw-bold mb-4">Reportes y Estadísticas</h2>
-            <p class="lead mb-4">Analiza tu rendimiento con reportes detallados y estadísticas visuales.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Reportes y Estadísticas</span>
+                <span data-lang="it" style="display: none;">Report e Statistiche</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Analiza tu rendimiento con reportes detallados y estadísticas visuales.</span>
+                <span data-lang="it" style="display: none;">Analizza le tue prestazioni con report dettagliati e statistiche visive.</span>
+            </p>
 
             <div class="grid-features">
                 <div class="feature-box">
@@ -810,20 +1087,45 @@
                 <p class="mb-0 mt-3"><strong>Acceso:</strong> Desde el menú lateral del Dashboard, selecciona "Presupuestos vs Ventas".</p>
             </div>
 
-            <h5 class="fw-bold mt-4 mb-3">Análisis de Rentabilidad (Solo Administradores):</h5>
+            <h5 class="fw-bold mt-4 mb-3">
+                <span data-lang="es">Análisis de Rentabilidad (Solo Administradores):</span>
+                <span data-lang="it" style="display: none;">Analisi della Redditività (Solo Amministratori):</span>
+            </h5>
             <div class="step-card">
                 <span class="step-number">📊</span>
-                <strong>Rentabilidad por Pedido</strong>
-                <p class="mt-2 mb-0">Analiza la rentabilidad de cada pedido individual, incluyendo margen, porcentaje de rentabilidad, y comparación con PCP (Precio de Coste al Proveedor). Puedes filtrar por comercial, marca, tipo de pedido y rango de fechas. Esta herramienta es esencial para identificar qué pedidos generan mayor rentabilidad.</p>
+                <strong>
+                    <span data-lang="es">Rentabilidad por Pedido</span>
+                    <span data-lang="it" style="display: none;">Redditività per Ordine</span>
+                </strong>
+                <p class="mt-2 mb-0">
+                    <span data-lang="es">Analiza la rentabilidad de cada pedido individual, incluyendo margen, porcentaje de rentabilidad, y comparación con PCP (Precio de Coste al Proveedor). Puedes filtrar por comercial, marca, tipo de pedido y rango de fechas. Esta herramienta es esencial para identificar qué pedidos generan mayor rentabilidad.</span>
+                    <span data-lang="it" style="display: none;">Analizza la redditività di ogni singolo ordine, inclusi margine, percentuale di redditività e confronto con PCP (Prezzo di Costo al Fornitore). Puoi filtrare per commerciale, marca, tipo di ordine e intervallo di date. Questo strumento è essenziale per identificare quali ordini generano maggiore redditività.</span>
+                </p>
             </div>
             <div class="step-card">
                 <span class="step-number">📈</span>
-                <strong>Rentabilidad por Artículo</strong>
-                <p class="mt-2 mb-0">Visualiza la rentabilidad de cada artículo del catálogo, incluyendo margen promedio, rentabilidad porcentual, y estadísticas de ventas por producto. Útil para identificar los productos más rentables y optimizar el catálogo.</p>
+                <strong>
+                    <span data-lang="es">Rentabilidad por Artículo</span>
+                    <span data-lang="it" style="display: none;">Redditività per Articolo</span>
+                </strong>
+                <p class="mt-2 mb-0">
+                    <span data-lang="es">Visualiza la rentabilidad de cada artículo del catálogo, incluyendo margen promedio, rentabilidad porcentual, y estadísticas de ventas por producto. Útil para identificar los productos más rentables y optimizar el catálogo.</span>
+                    <span data-lang="it" style="display: none;">Visualizza la redditività di ogni articolo del catalogo, incluso margine medio, redditività percentuale e statistiche di vendita per prodotto. Utile per identificare i prodotti più redditizi e ottimizzare il catalogo.</span>
+                </p>
             </div>
             <div class="highlight-box mt-3">
-                <p><strong>Acceso:</strong> Menú Usuario → Rentabilidad → "Rentabilidad por Pedido" o "Rentabilidad Artículos" (solo administradores).</p>
-                <p class="mb-0"><strong>Requisito:</strong> Para que los análisis de rentabilidad sean precisos, es necesario que los artículos tengan configurado su PCP (Precio de Coste al Proveedor) desde "Ajustes → Gestión PCP".</p>
+                <p>
+                    <strong data-lang="es">Acceso:</strong>
+                    <strong data-lang="it" style="display: none;">Accesso:</strong>
+                    <span data-lang="es"> Menú Usuario → Rentabilidad → "Rentabilidad por Pedido" o "Rentabilidad Artículos" (solo administradores).</span>
+                    <span data-lang="it" style="display: none;"> Menu Utente → Redditività → "Redditività per Ordine" o "Redditività Articoli" (solo amministratori).</span>
+                </p>
+                <p class="mb-0">
+                    <strong data-lang="es">Requisito:</strong>
+                    <strong data-lang="it" style="display: none;">Requisito:</strong>
+                    <span data-lang="es"> Para que los análisis de rentabilidad sean precisos, es necesario que los artículos tengan configurado su PCP (Precio de Coste al Proveedor) desde "Ajustes → Gestión PCP".</span>
+                    <span data-lang="it" style="display: none;"> Affinché le analisi di redditività siano precise, è necessario che gli articoli abbiano configurato il loro PCP (Prezzo di Costo al Fornitore) da "Impostazioni → Gestione PCP".</span>
+                </p>
             </div>
         </div>
 
@@ -832,10 +1134,21 @@
             <div class="section-icon">
                 <i class="fas fa-cog"></i>
             </div>
-            <h2 class="fw-bold mb-4">Configuración y Ajustes</h2>
-            <p class="lead mb-4">Personaliza la aplicación según tus necesidades y configura integraciones.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Configuración y Ajustes</span>
+                <span data-lang="it" style="display: none;">Configurazione e Impostazioni</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Personaliza la aplicación según tus necesidades y configura integraciones.</span>
+                <span data-lang="it" style="display: none;">Personalizza l'applicazione secondo le tue esigenze e configura le integrazioni.</span>
+            </p>
 
-            <h5 class="fw-bold mb-3">Configuraciones Disponibles para Todos:</h5>
+            <h5 class="fw-bold mb-3">
+                <span data-lang="es">Configuraciones Disponibles para Todos:</span>
+                <span data-lang="it" style="display: none;">Configurazioni Disponibili per Tutti:</span>
+            </h5>
             <div class="table-modern table-responsive mt-3">
                 <table class="table table-hover mb-0">
                     <thead>
@@ -861,9 +1174,17 @@
                 </table>
             </div>
 
-            <h5 class="fw-bold mt-4 mb-3">Configuraciones Administrativas (Solo Administradores):</h5>
+            <h5 class="fw-bold mt-4 mb-3">
+                <span data-lang="es">Configuraciones Administrativas (Solo Administradores):</span>
+                <span data-lang="it" style="display: none;">Configurazioni Amministrative (Solo Amministratori):</span>
+                <span class="role-badge admin" data-lang="es">Solo Admin</span>
+                <span class="role-badge admin" data-lang="it" style="display: none;">Solo Admin</span>
+            </h5>
             <div class="highlight-box">
-                <p class="mb-3">Los administradores tienen acceso a configuraciones avanzadas organizadas en submenús:</p>
+                <p class="mb-3">
+                    <span data-lang="es">Los administradores tienen acceso a configuraciones avanzadas organizadas en submenús:</span>
+                    <span data-lang="it" style="display: none;">Gli amministratori hanno accesso a configurazioni avanzate organizzate in sottomenu:</span>
+                </p>
                 
                 <h6 class="fw-bold mt-3 mb-2"><i class="fas fa-plug me-2"></i>Integraciones:</h6>
                 <ul class="feature-list">
@@ -918,8 +1239,16 @@
             <div class="section-icon">
                 <i class="fas fa-lightbulb"></i>
             </div>
-            <h2 class="fw-bold mb-4">Consejos y Mejores Prácticas</h2>
-            <p class="lead mb-4">Optimiza tu uso del CRM con estos consejos prácticos.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Consejos y Mejores Prácticas</span>
+                <span data-lang="it" style="display: none;">Consigli e Best Practice</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Optimiza tu uso del CRM con estos consejos prácticos.</span>
+                <span data-lang="it" style="display: none;">Ottimizza il tuo utilizzo del CRM con questi consigli pratici.</span>
+            </p>
 
             <div class="row">
                 <div class="col-md-6">
@@ -979,8 +1308,16 @@
             <div class="section-icon">
                 <i class="fas fa-book"></i>
             </div>
-            <h2 class="fw-bold mb-4">Manual de Instrucciones</h2>
-            <p class="lead mb-4">Esta guía completa está disponible en todo momento desde tu perfil de usuario.</p>
+            <h2 class="fw-bold mb-4">
+                <span data-lang="es">Manual de Instrucciones</span>
+                <span data-lang="it" style="display: none;">Manuale di Istruzioni</span>
+                <span class="role-badge all" data-lang="es">Todos</span>
+                <span class="role-badge all" data-lang="it" style="display: none;">Tutti</span>
+            </h2>
+            <p class="lead mb-4">
+                <span data-lang="es">Esta guía completa está disponible en todo momento desde tu perfil de usuario.</span>
+                <span data-lang="it" style="display: none;">Questa guida completa è disponibile in qualsiasi momento dal tuo profilo utente.</span>
+            </p>
 
             <div class="highlight-box">
                 <h5 class="fw-bold mb-3"><i class="fas fa-info-circle me-2"></i>Acceso Rápido:</h5>
@@ -1002,13 +1339,23 @@
 
         <!-- Footer de la Guía -->
         <div class="section-card text-center">
-            <h3 class="fw-bold mb-3">¿Necesitas Ayuda?</h3>
-            <p class="lead mb-4">Si tienes preguntas o necesitas soporte adicional, contacta con tu administrador del sistema.</p>
+            <h3 class="fw-bold mb-3">
+                <span data-lang="es">¿Necesitas Ayuda?</span>
+                <span data-lang="it" style="display: none;">Hai Bisogno di Aiuto?</span>
+            </h3>
+            <p class="lead mb-4">
+                <span data-lang="es">Si tienes preguntas o necesitas soporte adicional, contacta con tu administrador del sistema.</span>
+                <span data-lang="it" style="display: none;">Se hai domande o hai bisogno di supporto aggiuntivo, contatta il tuo amministratore di sistema.</span>
+            </p>
             <a href="/dashboard" class="btn btn-manual btn-lg me-2">
-                <i class="fas fa-arrow-left me-2"></i>Volver al Dashboard
+                <i class="fas fa-arrow-left me-2"></i>
+                <span data-lang="es">Volver al Dashboard</span>
+                <span data-lang="it" style="display: none;">Torna alla Dashboard</span>
             </a>
             <a href="/dashboard/perfil" class="btn btn-outline-primary btn-lg">
-                <i class="fas fa-user-circle me-2"></i>Mi Perfil
+                <i class="fas fa-user-circle me-2"></i>
+                <span data-lang="es">Mi Perfil</span>
+                <span data-lang="it" style="display: none;">Il Mio Profilo</span>
             </a>
         </div>
     </div>
@@ -1017,10 +1364,179 @@
     <button id="scrollToTop" class="scroll-to-top" aria-label="Subir arriba">
         <i class="fas fa-arrow-up"></i>
     </button>
+    <script>
+        // Actualizar aria-label del botón según idioma
+        function updateScrollButtonLabel() {
+            const btn = document.getElementById('scrollToTop');
+            if (currentLang === 'es') {
+                btn.setAttribute('aria-label', 'Subir arriba');
+            } else {
+                btn.setAttribute('aria-label', 'Torna su');
+            }
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <%- include('../partials/navbar-scripts') %>
     <script>
+        // Sistema de cambio de idioma con banderas
+        document.addEventListener('DOMContentLoaded', function() {
+            // Esperar un poco para asegurar que todo esté cargado
+            setTimeout(function() {
+                let switchContainer = document.getElementById('languageSwitchContainer');
+                
+                // Si no existe, crearlo
+                if (!switchContainer) {
+                    console.log('🔧 [IDIOMA] Creando contenedor de banderas...');
+                    const body = document.body;
+                    switchContainer = document.createElement('div');
+                    switchContainer.id = 'languageSwitchContainer';
+                    switchContainer.innerHTML = '<span class="flag-emoji active" id="flagSpain" title="Español" data-lang="es">🇪🇸</span><span class="flag-emoji" id="flagItaly" title="Italiano" data-lang="it">🇮🇹</span>';
+                    body.appendChild(switchContainer);
+                }
+                
+                // Forzar visibilidad del contenedor - MUY ARRIBA para estar sobre el banner
+                switchContainer.style.cssText = 'position: fixed !important; top: 70px !important; right: 30px !important; z-index: 999999 !important; background: #ffffff !important; padding: 10px 14px !important; border-radius: 25px !important; box-shadow: 0 8px 25px rgba(0,0,0,0.5) !important; border: 3px solid #0b891b !important; display: flex !important; align-items: center !important; gap: 12px !important; justify-content: center !important; visibility: visible !important; opacity: 1 !important; pointer-events: auto !important;';
+                
+                console.log('✅ [IDIOMA] Contenedor de banderas configurado');
+                console.log('🔍 [IDIOMA] Z-index:', window.getComputedStyle(switchContainer).zIndex);
+                console.log('🔍 [IDIOMA] Position:', window.getComputedStyle(switchContainer).position);
+                console.log('🔍 [IDIOMA] Top:', window.getComputedStyle(switchContainer).top);
+                console.log('🔍 [IDIOMA] Display:', window.getComputedStyle(switchContainer).display);
+                console.log('🔍 [IDIOMA] Visibility:', window.getComputedStyle(switchContainer).visibility);
+
+                // Event listeners para las banderas
+                const spainFlag = document.getElementById('flagSpain');
+                const italyFlag = document.getElementById('flagItaly');
+                
+                if (spainFlag && italyFlag) {
+                    spainFlag.addEventListener('click', function() {
+                        console.log('🇪🇸 [IDIOMA] Cambiando a Español');
+                        changeLanguage('es');
+                    });
+                    
+                    italyFlag.addEventListener('click', function() {
+                        console.log('🇮🇹 [IDIOMA] Cambiando a Italiano');
+                        changeLanguage('it');
+                    });
+                    console.log('✅ [IDIOMA] Event listeners configurados');
+                } else {
+                    console.error('❌ [IDIOMA] Banderas no encontradas');
+                }
+            }, 100);
+        });
+
+        // ============================================
+        // SISTEMA DE CAMBIO DE IDIOMA
+        // ============================================
+        const translations = {
+            es: {
+                // Hero
+                heroTitle: "Manual de Instrucciones",
+                heroSubtitle: "Guía completa para el uso del CRM Farmadescanso",
+                heroDescription: "Aprende a utilizar todas las funcionalidades de la aplicación de forma eficiente",
+                
+                // Índice
+                indexTitle: "Índice de Contenidos",
+                dashboard: "Dashboard Principal",
+                pedidos: "Gestión de Pedidos",
+                clientes: "Gestión de Clientes",
+                visitas: "Programación de Visitas",
+                articulos: "Catálogo de Artículos",
+                comisiones: "Comisiones",
+                cooperativas: "Cooperativas",
+                comerciales: "Comerciales",
+                reportes: "Reportes y Estadísticas",
+                configuracion: "Configuración",
+                consejos: "Consejos y Mejores Prácticas",
+                manual: "Manual de Instrucciones",
+                
+                // Permisos
+                permisoAdmin: "Solo Administradores",
+                permisoComercial: "Comerciales",
+                permisoTodos: "Todos los Usuarios",
+                
+                // Footer
+                ayudaTitulo: "¿Necesitas Ayuda?",
+                ayudaTexto: "Si tienes preguntas o necesitas soporte adicional, contacta con tu administrador del sistema.",
+                volverDashboard: "Volver al Dashboard",
+                miPerfil: "Mi Perfil",
+                subirArriba: "Subir arriba"
+            },
+            it: {
+                // Hero
+                heroTitle: "Manuale di Istruzioni",
+                heroSubtitle: "Guida completa per l'uso del CRM Farmadescanso",
+                heroDescription: "Impara a utilizzare tutte le funzionalità dell'applicazione in modo efficiente",
+                
+                // Índice
+                indexTitle: "Indice dei Contenuti",
+                dashboard: "Dashboard Principale",
+                pedidos: "Gestione Ordini",
+                clientes: "Gestione Clienti",
+                visitas: "Pianificazione Visite",
+                articulos: "Catalogo Articoli",
+                comisiones: "Commissioni",
+                cooperativas: "Cooperative",
+                comerciales: "Commerciali",
+                reportes: "Report e Statistiche",
+                configuracion: "Configurazione",
+                consejos: "Consigli e Best Practice",
+                manual: "Manuale di Istruzioni",
+                
+                // Permisos
+                permisoAdmin: "Solo Amministratori",
+                permisoComercial: "Commerciali",
+                permisoTodos: "Tutti gli Utenti",
+                
+                // Footer
+                ayudaTitulo: "Hai Bisogno di Aiuto?",
+                ayudaTexto: "Se hai domande o hai bisogno di supporto aggiuntivo, contatta il tuo amministratore di sistema.",
+                volverDashboard: "Torna alla Dashboard",
+                miPerfil: "Il Mio Profilo",
+                subirArriba: "Torna su"
+            }
+        };
+
+        // Estado del idioma
+        let currentLang = localStorage.getItem('manualLang') || 'es';
+        
+        // Función para cambiar idioma
+        function changeLanguage(lang) {
+            currentLang = lang;
+            localStorage.setItem('manualLang', lang);
+            
+            // Actualizar estado activo de las banderas
+            const flagSpain = document.getElementById('flagSpain');
+            const flagItaly = document.getElementById('flagItaly');
+            if (flagSpain && flagItaly) {
+                if (lang === 'es') {
+                    flagSpain.classList.add('active');
+                    flagItaly.classList.remove('active');
+                } else {
+                    flagSpain.classList.remove('active');
+                    flagItaly.classList.add('active');
+                }
+            }
+            
+            // Ocultar/mostrar elementos según idioma
+            document.querySelectorAll('[data-lang="es"]').forEach(el => {
+                el.style.display = (lang === 'es') ? '' : 'none';
+            });
+            document.querySelectorAll('[data-lang="it"]').forEach(el => {
+                el.style.display = (lang === 'it') ? '' : 'none';
+            });
+            
+            // Actualizar atributo lang del HTML
+            document.documentElement.lang = lang;
+            
+            // Actualizar aria-label del botón scroll
+            updateScrollButtonLabel();
+        }
+        
+        // Inicializar idioma (por defecto español)
+        changeLanguage(currentLang);
+
         // Indicador de progreso de scroll y botón subir arriba
         const scrollToTopBtn = document.getElementById('scrollToTop');
         
