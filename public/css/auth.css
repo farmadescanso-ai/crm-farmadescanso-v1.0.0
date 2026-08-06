@@ -564,7 +564,39 @@
     margin: 0;
 }
 
-/* Link de contacto */
+/* Link de contacto / pie fuera de la tarjeta (fondo verde) */
+.auth-footer-text {
+    color: rgba(255, 255, 255, 0.9) !important;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.auth-footer-link {
+    color: #ffffff !important;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    font-weight: 600;
+}
+
+.auth-footer-link:hover {
+    color: #ffffff !important;
+    opacity: 0.85;
+}
+
+/* ¿Olvidaste tu contraseña? — dentro de la tarjeta blanca */
+.auth-forgot-link {
+    color: var(--auth-primary) !important;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.auth-forgot-link:hover {
+    color: var(--auth-primary-dark) !important;
+    text-decoration: underline;
+}
+
+/* Link de contacto (legacy) */
 .auth-form-container .text-muted a {
     color: #ffffff !important;
     text-decoration: none;
@@ -579,14 +611,21 @@
     opacity: 0.9;
 }
 
-/* Enlaces con text-primary dentro del contenedor auth */
-.auth-form-container .text-primary {
+/* Enlaces con text-primary fuera de la tarjeta (fondo verde) */
+.auth-form-container > .text-center .text-primary,
+.auth-form-container > .text-center a.text-primary {
     color: #ffffff !important;
 }
 
-.auth-form-container .text-primary:hover {
+.auth-form-container > .text-center .text-primary:hover,
+.auth-form-container > .text-center a.text-primary:hover {
     color: #ffffff !important;
     opacity: 0.9;
+}
+
+/* Dentro de la tarjeta blanca, text-primary debe ser verde */
+.auth-form .text-primary {
+    color: var(--auth-primary) !important;
 }
 
 /* Alertas */

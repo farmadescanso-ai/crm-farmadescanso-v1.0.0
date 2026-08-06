@@ -102,7 +102,7 @@
                                    placeholder="tu@email.com">
                         </div>
                         
-                        <div class="mb-4">
+                        <div class="mb-3">
                             <label for="password" class="form-label">
                                 <i class="fas fa-lock me-2"></i>Contraseña
                             </label>
@@ -119,6 +119,11 @@
                                         id="togglePassword">
                                     <i class="fas fa-eye"></i>
                                 </button>
+                            </div>
+                            <div class="text-end mt-2">
+                                <a href="/auth/forgot-password" class="auth-forgot-link">
+                                    ¿Olvidaste tu contraseña?
+                                </a>
                             </div>
                         </div>
                         
@@ -139,14 +144,9 @@
                     </form>
                     
                     <div class="text-center mt-4">
-                        <p class="mb-3">
-                            <a href="/auth/forgot-password" class="text-primary text-decoration-none fw-semibold" style="font-size: 0.95rem;">
-                                <i class="fas fa-key me-1"></i>¿Olvidaste tu contraseña?
-                            </a>
-                        </p>
-                        <p class="text-muted">
-                            ¿No tienes cuenta? 
-                            <a href="/contact" class="text-primary text-decoration-none">
+                        <p class="auth-footer-text mb-0">
+                            ¿No tienes cuenta?
+                            <a href="/contact" class="auth-footer-link">
                                 Contacta con administración
                             </a>
                         </p>

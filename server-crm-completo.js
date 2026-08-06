@@ -30,10 +30,86 @@ const crypto = require('crypto');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configuración JWT
-const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || 'farmadescaso_jwt_secret_change_in_production';
+// ============================================
+// Seguridad: secretos y helpers de blindaje
+// ============================================
+const isProdRuntime = () =>
+  process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
+
+const WEAK_SECRET_DEFAULTS = new Set([
+  'farmadescaso_jwt_secret_change_in_production',
+  'farmadescaso_secret',
+  'tu_secreto_super_seguro_aqui_cambiar_en_produccion'
+]);
+
+function resolveSecret(envKeys, weakFallbackForDev) {
+  for (const key of envKeys) {
+    const value = process.env[key];
+    if (value && String(value).trim()) return String(value).trim();
+  }
+  if (isProdRuntime()) {
+    console.error(
+      `❌ [SEGURIDAD] Falta secreto obligatorio (${envKeys.join(' o ')}). ` +
+      'Configúralo en variables de entorno. Abortando arranque.'
+    );
+    process.exit(1);
+  }
+  console.warn(
+    `⚠️ [SEGURIDAD] Usando secreto de desarrollo inseguro para ${envKeys[0]}. ` +
+    'Nunca uses esto en producción.'
+  );
+  return weakFallbackForDev;
+}
+
+// Configuración JWT (fail-fast en producción si falta secreto fuerte)
+const JWT_SECRET = resolveSecret(
+  ['JWT_SECRET', 'SESSION_SECRET'],
+  'farmadescaso_jwt_secret_dev_only'
+);
+if (WEAK_SECRET_DEFAULTS.has(JWT_SECRET) && isProdRuntime()) {
+  console.error('❌ [SEGURIDAD] JWT_SECRET/SESSION_SECRET usa un valor débil conocido. Abortando.');
+  process.exit(1);
+}
 const JWT_EXPIRES_IN = '30d'; // 30 días
 const COOKIE_NAME = 'farmadescaso_token';
+
+/** Bloquea rutas de diagnóstico/test en producción (404). */
+function blockInProduction(req, res, next) {
+  if (isProdRuntime()) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  next();
+}
+
+/** Elimina campos de contraseña de objetos comercial antes de exponerlos por API. */
+function sanitizeComercialForApi(comercial) {
+  if (!comercial || typeof comercial !== 'object') return comercial;
+  const out = { ...comercial };
+  for (const key of Object.keys(out)) {
+    if (/password|contraseña|passwd|secret/i.test(key)) {
+      delete out[key];
+    }
+  }
+  return out;
+}
+
+/** Redacta campos sensibles de un body para logs. */
+function redactSensitive(value) {
+  if (value == null) return value;
+  if (Array.isArray(value)) return value.map(redactSensitive);
+  if (typeof value !== 'object') return value;
+  const out = {};
+  for (const [k, v] of Object.entries(value)) {
+    if (/password|contraseña|passwd|token|secret|authorization|cookie/i.test(k)) {
+      out[k] = '[REDACTED]';
+    } else if (v && typeof v === 'object') {
+      out[k] = redactSensitive(v);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
 
 // Funciones JWT
 function generateToken(comercial) {
@@ -460,7 +536,7 @@ const calculadorComisiones = require('./utils/calcular-comisiones');
 // ============================================
 // HEALTHCHECK DB (para diagnosticar ETIMEDOUT en Vercel)
 // ============================================
-// No expone credenciales; solo host/puerto/db y el error code/message.
+// No expone host/puerto/nombre de BD en producción (solo ok + latencia).
 app.get('/api/health/db', async (req, res) => {
   const startedAt = Date.now();
   try {
@@ -468,29 +544,34 @@ app.get('/api/health/db', async (req, res) => {
       await crm.connect();
     }
     await crm.query('SELECT 1 as ok');
-    res.json({
+    const payload = {
       ok: true,
-      ms: Date.now() - startedAt,
-      dbHost: process.env.DB_HOST || '(no definido)',
-      dbPort: process.env.DB_PORT || '(no definido)',
-      dbName: process.env.DB_NAME || '(no definido)'
-    });
+      ms: Date.now() - startedAt
+    };
+    if (!isProdRuntime()) {
+      payload.dbHost = process.env.DB_HOST || '(no definido)';
+      payload.dbPort = process.env.DB_PORT || '(no definido)';
+      payload.dbName = process.env.DB_NAME || '(no definido)';
+    }
+    res.json(payload);
   } catch (error) {
-    res.status(503).json({
+    const payload = {
       ok: false,
       ms: Date.now() - startedAt,
-      dbHost: process.env.DB_HOST || '(no definido)',
-      dbPort: process.env.DB_PORT || '(no definido)',
-      dbName: process.env.DB_NAME || '(no definido)',
       code: error.code || null,
-      message: error.message
-    });
+      message: isProdRuntime() ? 'Database unavailable' : error.message
+    };
+    if (!isProdRuntime()) {
+      payload.dbHost = process.env.DB_HOST || '(no definido)';
+      payload.dbPort = process.env.DB_PORT || '(no definido)';
+      payload.dbName = process.env.DB_NAME || '(no definido)';
+    }
+    res.status(503).json(payload);
   }
 });
 
-// Alias simple para debugging desde navegador (algunas builds prueban /db y mostraban 404).
-// Mantiene el mismo payload que /api/health/db.
-app.get('/db', async (req, res) => {
+// Alias simple — mismo payload reducido; diagnóstico detallado solo fuera de prod.
+app.get('/db', blockInProduction, async (req, res) => {
   const startedAt = Date.now();
   try {
     if (!crm.connected) {
@@ -518,11 +599,9 @@ app.get('/db', async (req, res) => {
 });
 
 // ============================================
-// DIAGNÓSTICO DE DATOS/TABLAS (para ver por qué el dashboard sale vacío)
+// DIAGNÓSTICO DE DATOS/TABLAS (solo desarrollo)
 // ============================================
-// Devuelve: tablas visibles por el usuario actual + COUNT(*) de tablas clave (probando minúsculas y mayúsculas).
-// NOTA: No expone contraseñas; solo datos técnicos mínimos para depurar.
-app.get('/api/health/db/diag', async (req, res) => {
+app.get('/api/health/db/diag', blockInProduction, async (req, res) => {
   const startedAt = Date.now();
   const result = {
     ok: false,
@@ -625,7 +704,7 @@ app.get('/api/health/db/diag', async (req, res) => {
 // RUTA DE PRUEBA TEMPORAL PARA VERIFICAR MARCAS
 // ============================================
 // Esta ruta se registra muy temprano para asegurar que funcione
-app.get('/test-marcas-simple', async (req, res) => {
+app.get('/test-marcas-simple', blockInProduction, async (req, res) => {
   try {
     console.log('🔍 [TEST-MARCAS-SIMPLE] Probando acceso a tabla Marcas...');
     
@@ -728,7 +807,7 @@ app.use(cookieParser());
 // Mantener sesiones para compatibilidad, pero usaremos JWT como método principal
 // Las sesiones solo se usarán como fallback o para datos temporales
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'farmadescaso_secret',
+  secret: resolveSecret(['SESSION_SECRET', 'JWT_SECRET'], 'farmadescaso_secret_dev_only'),
   resave: false,
   saveUninitialized: false,
   cookie: {
@@ -848,7 +927,9 @@ app.use((req, res, next) => {
     console.log('📥 [MIDDLEWARE] Accept:', req.headers.accept);
     console.log('📥 [MIDDLEWARE] X-Requested-With:', req.headers['x-requested-with']);
     console.log('📥 [MIDDLEWARE] Body keys:', Object.keys(req.body || {}));
-    console.log('📥 [MIDDLEWARE] Body completo:', JSON.stringify(req.body, null, 2));
+    if (!isProdRuntime()) {
+      console.log('📥 [MIDDLEWARE] Body (redactado):', JSON.stringify(redactSensitive(req.body || {}), null, 2));
+    }
     console.log('📥 [MIDDLEWARE] ===== FIN MIDDLEWARE =====');
     console.log('═══════════════════════════════════════════════════════════');
   }
@@ -867,16 +948,20 @@ app.use((req, res, next) => {
   next();
 });
 
+if (!process.env.MAIL_PASS) {
+  console.warn('⚠️ [MAIL] MAIL_PASS no está configurada. El envío de correos fallará hasta definirla en el entorno.');
+}
 const mailTransport = nodemailer.createTransport({
   host: process.env.MAIL_HOST || 'com1008.raiolanetworks.es',
   port: Number(process.env.MAIL_PORT || 465),
   secure: true,
   auth: {
     user: process.env.MAIL_USER || 'pedidos@farmadescanso.com',
-    pass: process.env.MAIL_PASS || 'FarmaPedidos-1964'
+    pass: process.env.MAIL_PASS || ''
   },
   tls: {
-    rejectUnauthorized: false
+    // Por defecto validar certificado TLS. Solo desactivar si MAIL_TLS_INSECURE=1
+    rejectUnauthorized: process.env.MAIL_TLS_INSECURE === '1' ? false : true
   }
 });
 
@@ -890,13 +975,13 @@ app.use((req, res, next) => {
 // ============================================
 // RUTA DE PRUEBA ULTRA SIMPLE - AL INICIO
 // ============================================
-app.get('/test-rentabilidad-ultra-simple', (req, res) => {
+app.get('/test-rentabilidad-ultra-simple', blockInProduction, (req, res) => {
   console.log('✅ [TEST-ULTRA] Ruta de prueba accedida');
   res.send('<h1>✅ Ruta de prueba ULTRA SIMPLE funcionando</h1><p>Si ves esto, el servidor está funcionando.</p>');
 });
 
 // Ruta de diagnóstico para rentabilidad-pedidos - AL INICIO, FUERA DE CUALQUIER BLOQUE
-app.get('/dashboard/ajustes/rentabilidad-pedidos-diag', (req, res) => {
+app.get('/dashboard/ajustes/rentabilidad-pedidos-diag', blockInProduction, (req, res) => {
   try {
     console.log('🔍 [DIAG] Ruta de diagnóstico accedida');
     console.log('🔍 [DIAG] req.user:', req.user ? JSON.stringify(req.user) : 'no existe');
@@ -1531,7 +1616,7 @@ const obtenerEstadisticasPorRol = async (crm, req, selectedYear = null) => {
 
 // Archivos estáticos (ANTES de rutas principales para evitar conflictos)
 // Ruta de prueba para marcas - registrada después de middlewares básicos
-app.get('/test-marcas', async (req, res) => {
+app.get('/test-marcas', blockInProduction, async (req, res) => {
   try {
     console.log('🔍 [TEST-MARCAS] Ruta accedida - Probando acceso a tabla Marcas...');
     
@@ -1793,13 +1878,13 @@ app.post('/auth/login', async (req, res) => {
         comercialId: comercial.Id || comercial.id,
         mensaje: 'El comercial no tiene ningún campo de contraseña configurado',
         camposDisponibles: Object.keys(comercial),
-        valoresPassword: passwordFields
+        camposPasswordPresentes: Object.keys(passwordFields).filter((k) => passwordFields[k])
       };
       
       if (isDevelopment) {
         console.log(`❌ [LOGIN] Contraseña no disponible para comercial ID: ${comercial.Id || comercial.id}`);
         console.log(`❌ [LOGIN] Campos disponibles:`, Object.keys(comercial));
-        console.log(`❌ [LOGIN] Valores de passwordFields:`, passwordFields);
+        console.log(`❌ [LOGIN] Campos password presentes:`, errorDetails.camposPasswordPresentes);
       }
       
       return res.render('auth/login', {
@@ -2275,15 +2360,17 @@ app.post('/auth/forgot-password', async (req, res) => {
       // Crear token en la base de datos (expira en 24 horas)
       await crm.createPasswordResetToken(comercialId, comercialEmail, token, 24);
       
-      // Crear enlace de recuperación
-      const resetUrl = `${req.protocol}://${req.get('host')}/auth/reset-password/${token}`;
+      // Crear enlace de recuperación (preferir APP_BASE_URL en Vercel)
+      const baseUrl = (process.env.APP_BASE_URL || '').replace(/\/$/, '')
+        || `${req.protocol}://${req.get('host')}`;
+      const resetUrl = `${baseUrl}/auth/reset-password/${token}`;
       
       // Enviar email
       try {
         console.log(`📧 [RECUPERACION] Intentando enviar email a: ${comercialEmail}`);
         console.log(`📧 [RECUPERACION] Desde: ${process.env.MAIL_USER || 'pedidos@farmadescanso.com'}`);
         console.log(`📧 [RECUPERACION] Host: ${process.env.MAIL_HOST || 'com1008.raiolanetworks.es'}`);
-        console.log(`📧 [RECUPERACION] URL de reset: ${resetUrl}`);
+        console.log(`📧 [RECUPERACION] Enlace de reset generado (token no registrado en logs)`);
         
         const emailResult = await mailTransport.sendMail({
           from: process.env.MAIL_USER || 'pedidos@farmadescanso.com',
@@ -2571,167 +2658,19 @@ app.post('/auth/change-password', requireAuth, async (req, res) => {
   }
 });
 
-// Endpoint de diagnóstico específico para login (solo en desarrollo)
-app.post('/api/debug/login', async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    
-    const debugInfo = {
-      timestamp: new Date().toISOString(),
-      email: email,
-      passwordLength: password ? password.length : 0,
-      paso: 'INICIO',
-      errores: []
-    };
-    
-    // PASO 1: Validar entrada
-    if (!email || !password) {
-      debugInfo.paso = 'VALIDACION_ENTRADA';
-      debugInfo.errores.push({
-        paso: 1,
-        error: 'Email o contraseña vacíos',
-        emailPresente: !!email,
-        passwordPresente: !!password
-      });
-      return res.json(debugInfo);
-    }
-    
-    // PASO 2: Normalizar email
-    const emailNormalizado = String(email).toLowerCase().trim();
-    debugInfo.emailNormalizado = emailNormalizado;
-    
-    // PASO 3: Buscar comercial
-    try {
-      if (!crm.connected) {
-        await crm.connect();
-      }
-      
-      const todosComerciales = await crm.getComerciales();
-      debugInfo.totalComerciales = todosComerciales.length;
-      debugInfo.emailsEnBD = todosComerciales.slice(0, 10).map(c => ({
-        email: c.email || c.Email || 'SIN EMAIL',
-        id: c.Id || c.id
-      }));
-      
-      const comercial = todosComerciales.find(c => {
-        const emailComercial = (c.email || c.Email || '').toString().toLowerCase().trim();
-        return emailComercial === emailNormalizado;
-      });
-      
-      if (!comercial) {
-        debugInfo.paso = 'COMERCIAL_NO_ENCONTRADO';
-        debugInfo.errores.push({
-          paso: 3,
-          error: 'Comercial no encontrado',
-          emailBuscado: emailNormalizado,
-          totalComerciales: todosComerciales.length
-        });
-        return res.json(debugInfo);
-      }
-      
-      debugInfo.comercial = {
-        id: comercial.Id || comercial.id,
-        nombre: comercial.Nombre || comercial.nombre,
-        email: comercial.Email || comercial.email,
-        camposDisponibles: Object.keys(comercial)
-      };
-      
-      // PASO 4: Verificar contraseña
-      const passwordFields = {
-        password: comercial.password,
-        Password: comercial.Password,
-        contraseña: comercial.contraseña,
-        Contraseña: comercial.Contraseña,
-        DNI: comercial.DNI,
-        dni: comercial.dni,
-        Dni: comercial.Dni
-      };
-      
-      debugInfo.camposPassword = Object.entries(passwordFields)
-        .filter(([k, v]) => v !== undefined && v !== null && v !== '')
-        .map(([k, v]) => ({ campo: k, tieneValor: true, longitud: String(v).length }));
-      
-      const passwordField = passwordFields.password || 
-                           passwordFields.Password || 
-                           passwordFields.contraseña || 
-                           passwordFields.Contraseña || 
-                           passwordFields.DNI || 
-                           passwordFields.dni ||
-                           passwordFields.Dni ||
-                           null;
-      
-      if (!passwordField) {
-        debugInfo.paso = 'CONTRASEÑA_NO_DISPONIBLE';
-        debugInfo.errores.push({
-          paso: 4,
-          error: 'No hay campo de contraseña configurado',
-          camposDisponibles: Object.keys(comercial)
-        });
-        return res.json(debugInfo);
-      }
-      
-      const passwordNormalizada = String(password).trim();
-      const passwordFieldNormalizada = String(passwordField).trim();
-      
-      debugInfo.comparacionPassword = {
-        passwordRecibidoLength: passwordNormalizada.length,
-        passwordBDLength: passwordFieldNormalizada.length,
-        coincidenExacto: passwordNormalizada === passwordFieldNormalizada,
-        coincidenCaseInsensitive: passwordNormalizada.toLowerCase() === passwordFieldNormalizada.toLowerCase()
-      };
-      
-      if (passwordNormalizada !== passwordFieldNormalizada) {
-        debugInfo.paso = 'CONTRASEÑA_INCORRECTA';
-        debugInfo.errores.push({
-          paso: 4,
-          error: 'Contraseña incorrecta',
-          comparacion: debugInfo.comparacionPassword
-        });
-        return res.json(debugInfo);
-      }
-      
-      // PASO 5: Generar token
-      try {
-        const token = generateToken(comercial);
-        debugInfo.token = {
-          generado: true,
-          longitud: token.length,
-          primerosChars: token.substring(0, 50)
-        };
-        debugInfo.paso = 'LOGIN_EXITOSO';
-      } catch (error) {
-        debugInfo.paso = 'ERROR_GENERANDO_TOKEN';
-        debugInfo.errores.push({
-          paso: 5,
-          error: error.message,
-          stack: error.stack
-        });
-        return res.json(debugInfo);
-      }
-      
-    } catch (error) {
-      debugInfo.paso = 'ERROR_CONEXION';
-      debugInfo.errores.push({
-        paso: 3,
-        error: error.message,
-        stack: error.stack,
-        name: error.name
-      });
-      return res.json(debugInfo);
-    }
-    
-    res.json(debugInfo);
-  } catch (error) {
-    res.status(500).json({
-      error: 'Error en debug endpoint',
-      message: error.message,
-      stack: error.stack
-    });
+// Endpoint de diagnóstico de login: DESHABILITADO (oráculo de credenciales).
+// Solo se puede reactivar temporalmente con ALLOW_DEBUG_LOGIN=1 fuera de producción.
+app.post('/api/debug/login', (req, res) => {
+  if (isProdRuntime() || process.env.ALLOW_DEBUG_LOGIN !== '1') {
+    return res.status(404).json({ error: 'Not found' });
   }
+  return res.status(403).json({
+    error: 'Debug login deshabilitado. Usa logs locales o /api/debug/session como admin.'
+  });
 });
 
-// Endpoint de diagnóstico para verificar JWT y sesiones
-app.get('/api/debug/session', (req, res) => {
+// Endpoint de diagnóstico para verificar JWT y sesiones (solo admin autenticado)
+app.get('/api/debug/session', requireAuth, requireAdmin, (req, res) => {
   const token = req.cookies[COOKIE_NAME];
   const decoded = token ? verifyToken(token) : null;
   
@@ -2739,43 +2678,33 @@ app.get('/api/debug/session', (req, res) => {
     jwt: {
       tokenPresent: !!token,
       tokenValid: !!decoded,
-      user: decoded || null
+      user: decoded
+        ? {
+            id: decoded.id,
+            email: decoded.email,
+            roll: decoded.roll || decoded.Roll
+          }
+        : null
     },
     session: {
       sessionID: req.sessionID,
-      comercialId: req.session?.comercialId || null,
-      comercial: req.session?.comercial || null
+      comercialId: req.session?.comercialId || null
     },
     cookies: {
-      all: req.cookies,
       jwtToken: token ? 'Presente' : 'Ausente',
       sessionCookie: req.cookies['connect.sid'] ? 'Presente' : 'Ausente'
-    },
-    headers: {
-      host: req.headers.host,
-      'x-forwarded-proto': req.headers['x-forwarded-proto'],
-      'user-agent': req.headers['user-agent']?.substring(0, 50)
     },
     env: {
       NODE_ENV: process.env.NODE_ENV,
       VERCEL: process.env.VERCEL,
-      isProduction: process.env.NODE_ENV === 'production' || process.env.VERCEL === '1'
+      isProduction: isProdRuntime()
     },
     auth: {
-      reqUser: req.user || null,
-      reqComercialId: req.comercialId || null,
-      reqComercial: req.comercial || null
+      reqComercialId: req.comercialId || null
     }
   };
   
-  console.log('🔍 [DEBUG] Información de autenticación:', JSON.stringify(debugInfo, null, 2));
-  
-  // Solo mostrar en desarrollo o si se pasa un parámetro especial
-  if (process.env.NODE_ENV !== 'production' || req.query.key === 'debug') {
-    res.json(debugInfo);
-  } else {
-    res.status(403).json({ error: 'Debug endpoint no disponible en producción sin clave' });
-  }
+  res.json(debugInfo);
 });
 
 // Debug: confirmar a qué BD está conectado el servidor (útil para Vercel)
@@ -3337,7 +3266,7 @@ try {
   }
   
   // Ruta de prueba SIN middlewares para diagnosticar
-  app.get('/dashboard/ajustes/rentabilidad-pedidos/test', async (req, res) => {
+  app.get('/dashboard/ajustes/rentabilidad-pedidos/test', requireAuth, requireAdmin, async (req, res) => {
     try {
       res.send(`
         <!DOCTYPE html>
@@ -3359,7 +3288,7 @@ try {
   });
 
   // Ruta SIN middlewares para diagnosticar el problema - VERSIÓN ULTRA SIMPLE
-  app.get('/dashboard/ajustes/rentabilidad-pedidos/debug', async (req, res) => {
+  app.get('/dashboard/ajustes/rentabilidad-pedidos/debug', requireAuth, requireAdmin, async (req, res) => {
     console.log('🎯 [DEBUG] Ruta debug accedida');
     try {
       console.log('🎯 [DEBUG] HITO 1: Inicio');
@@ -3405,7 +3334,7 @@ try {
   });
   
   // Ruta principal - Rentabilidad por Pedido (lista) - VERSIÓN SIN MIDDLEWARES PARA DIAGNÓSTICO
-  app.get('/dashboard/ajustes/rentabilidad-pedidos-sin-middlewares', (req, res) => {
+  app.get('/dashboard/ajustes/rentabilidad-pedidos-sin-middlewares', blockInProduction, (req, res) => {
     console.log('✅ [RENTABILIDAD-PEDIDOS] Ruta SIN middlewares accedida');
     res.send(`
       <!DOCTYPE html>
@@ -3546,7 +3475,7 @@ if (existingRoute) {
 // ============================================
 // Esta ruta DEBE estar ANTES de la ruta principal para que funcione
 // ============================================
-app.get('/dashboard/ajustes/rentabilidad-pedidos/test-marcas', async (req, res) => {
+app.get('/dashboard/ajustes/rentabilidad-pedidos/test-marcas', requireAuth, requireAdmin, async (req, res) => {
   try {
     console.log('🔍 [TEST-MARCAS] Iniciando prueba de acceso a tabla Marcas...');
     
@@ -3653,7 +3582,7 @@ app.get('/dashboard/ajustes/rentabilidad-pedidos/test-marcas', async (req, res) 
 console.log('✅ [RUTAS] Ruta de prueba /test-marcas registrada');
 
 // Ruta alternativa más simple para probar marcas
-app.get('/test-marcas-simple', async (req, res) => {
+app.get('/test-marcas-simple', blockInProduction, async (req, res) => {
   try {
     console.log('🔍 [TEST-MARCAS-SIMPLE] Probando acceso a tabla Marcas...');
     const marcas = await crm.query('SELECT * FROM `Marcas` ORDER BY Nombre ASC').catch(() => 
@@ -4659,7 +4588,7 @@ console.log('✅ [RUTAS] Ruta principal de rentabilidad-pedidos registrada FUERA
 console.log('✅ [RUTAS] ===========================================');
 
 // Ruta de prueba para verificar que el código nuevo se ejecuta
-app.get('/test-rentabilidad-version', (req, res) => {
+app.get('/test-rentabilidad-version', blockInProduction, (req, res) => {
   res.send(`
     <h1>Versión del Código</h1>
     <p>Si ves este mensaje, el código nuevo se está ejecutando.</p>
@@ -4675,7 +4604,7 @@ app.get('/test-rentabilidad-version', (req, res) => {
 // IMPORTANTE: Estas rutas deben estar ANTES de otras rutas de ajustes para evitar conflictos
 
 // Ruta de prueba temporal (sin autenticación para debugging)
-app.get('/test-pcp', (req, res) => {
+app.get('/test-pcp', blockInProduction, (req, res) => {
   console.log('✅ [TEST-PCP] Ruta de prueba accedida');
   res.send('Ruta de prueba PCP funcionando correctamente');
 });
@@ -4734,7 +4663,7 @@ app.post('/dashboard/ajustes/pcp/:id', requireAuth, requireAdmin, async (req, re
     'content-type': req.headers['content-type'],
     'x-requested-with': req.headers['x-requested-with']
   });
-  console.log('✅ [PCP] Body completo:', req.body);
+  console.log('✅ [PCP] Body (redactado):', redactSensitive(req.body || {}));
   console.log('✅ [PCP] PCP recibido:', req.body.PCP);
   console.log('✅ [PCP] Tipo de PCP:', typeof req.body.PCP);
   console.log('✅ [PCP] Usuario autenticado:', req.comercial ? req.comercial.nombre : 'No comercial');
@@ -5267,7 +5196,7 @@ app.post('/dashboard/ajustes/prestashop', requireAuth, requireAdmin, async (req,
 console.log('✅ [RUTAS] Registrando rutas de códigos postales...');
 
 // Ruta de prueba sin autenticación (temporal para diagnóstico)
-app.get('/test-codigos-postales', async (req, res) => {
+app.get('/test-codigos-postales', blockInProduction, async (req, res) => {
   console.log('✅ [TEST-CODIGOS-POSTALES] Ruta de prueba accedida');
   try {
     const codigosPostales = await crm.getCodigosPostales({});
@@ -18759,17 +18688,18 @@ app.post('/api/visitas/generar-teams', requireAuth, async (req, res) => {
   }
 });
 
-// API REST completa
-app.get('/api/comerciales', async (req, res) => {
+// API REST — requiere autenticación; nunca devolver passwords
+app.get('/api/comerciales', requireAuth, async (req, res) => {
   try {
     const comerciales = await crm.getComerciales();
-    res.json({ success: true, data: comerciales, count: comerciales.length });
+    const data = (comerciales || []).map(sanitizeComercialForApi);
+    res.json({ success: true, data, count: data.length });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-app.get('/api/articulos', async (req, res) => {
+app.get('/api/articulos', requireAuth, async (req, res) => {
   try {
     const articulos = await crm.getArticulos();
     res.json({ success: true, data: articulos, count: articulos.length });
@@ -18782,8 +18712,8 @@ app.get('/api/articulos', async (req, res) => {
 // API REST con Swagger Documentation
 // ============================================
 
-// Configurar Swagger UI
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// Configurar Swagger UI (solo admin autenticado)
+app.use('/api-docs', requireAuth, requireAdmin, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'Farmadescaso CRM API Documentation'
 }));
@@ -19308,12 +19238,12 @@ app.use((err, req, res, next) => {
 
 // Registrar rutas de rentabilidad-pedidos ANTES del debug para asegurar que se registren
 // Ruta de prueba ULTRA SIMPLE
-app.get('/test-rentabilidad-simple', (req, res) => {
+app.get('/test-rentabilidad-simple', blockInProduction, (req, res) => {
   res.send('<h1>✅ Ruta de prueba funcionando</h1><p>Si ves esto, el servidor está funcionando.</p>');
 });
 
 // Ruta temporal SIN middlewares para diagnosticar - VERSIÓN HTML SIMPLE
-app.get('/dashboard/ajustes/rentabilidad-pedidos-sin-auth', async (req, res) => {
+app.get('/dashboard/ajustes/rentabilidad-pedidos-sin-auth', blockInProduction, async (req, res) => {
   try {
     console.log('✅ [RENTABILIDAD-PEDIDOS-SIN-AUTH] Ruta accedida');
     
@@ -19381,7 +19311,7 @@ app.get('/dashboard/ajustes/rentabilidad-pedidos-sin-auth', async (req, res) => 
 });
 
 // Endpoint de diagnóstico temporal - mostrar todas las rutas registradas
-app.get('/debug/rutas', (req, res) => {
+app.get('/debug/rutas', requireAuth, requireAdmin, (req, res) => {
   const rutas = [];
   app._router.stack.forEach((middleware) => {
     if (middleware.route) {
