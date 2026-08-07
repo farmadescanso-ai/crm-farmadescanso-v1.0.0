@@ -27,9 +27,6 @@ const serverLogs = require('./utils/server-logs');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
 // ============================================
 // Seguridad: secretos y helpers de blindaje
 // ============================================
@@ -42,17 +39,20 @@ const WEAK_SECRET_DEFAULTS = new Set([
   'tu_secreto_super_seguro_aqui_cambiar_en_produccion'
 ]);
 
+/** Si no es null, la app responde 503 con instrucciones (no usa process.exit en Vercel). */
+let bootSecurityError = null;
+
 function resolveSecret(envKeys, weakFallbackForDev) {
   for (const key of envKeys) {
     const value = process.env[key];
     if (value && String(value).trim()) return String(value).trim();
   }
   if (isProdRuntime()) {
-    console.error(
-      `❌ [SEGURIDAD] Falta secreto obligatorio (${envKeys.join(' o ')}). ` +
-      'Configúralo en variables de entorno. Abortando arranque.'
-    );
-    process.exit(1);
+    bootSecurityError =
+      `Falta secreto obligatorio (${envKeys.join(' o ')}). ` +
+      'En Vercel → Project → Settings → Environment Variables, créalo para el entorno Production y redespliega.';
+    console.error('❌ [SEGURIDAD]', bootSecurityError);
+    return 'BOOT_SECURITY_ERROR_PLACEHOLDER';
   }
   console.warn(
     `⚠️ [SEGURIDAD] Usando secreto de desarrollo inseguro para ${envKeys[0]}. ` +
@@ -61,17 +61,55 @@ function resolveSecret(envKeys, weakFallbackForDev) {
   return weakFallbackForDev;
 }
 
-// Configuración JWT (fail-fast en producción si falta secreto fuerte)
+// Configuración JWT (en producción exige secreto; si falta, 503 con mensaje claro)
+console.log('🔐 [SEGURIDAD] JWT_SECRET definido:', Boolean(process.env.JWT_SECRET));
+console.log('🔐 [SEGURIDAD] SESSION_SECRET definido:', Boolean(process.env.SESSION_SECRET));
 const JWT_SECRET = resolveSecret(
   ['JWT_SECRET', 'SESSION_SECRET'],
   'farmadescaso_jwt_secret_dev_only'
 );
-if (WEAK_SECRET_DEFAULTS.has(JWT_SECRET) && isProdRuntime()) {
-  console.error('❌ [SEGURIDAD] JWT_SECRET/SESSION_SECRET usa un valor débil conocido. Abortando.');
-  process.exit(1);
+if (!bootSecurityError && WEAK_SECRET_DEFAULTS.has(JWT_SECRET) && isProdRuntime()) {
+  bootSecurityError =
+    'JWT_SECRET/SESSION_SECRET usa un valor débil conocido. Genera un secreto aleatorio largo y actualízalo en Vercel (Production).';
+  console.error('❌ [SEGURIDAD]', bootSecurityError);
 }
 const JWT_EXPIRES_IN = '30d'; // 30 días
 const COOKIE_NAME = 'farmadescaso_token';
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+// Bloqueo temprano si faltan secretos en producción (evita crash opaco FUNCTION_INVOCATION_FAILED)
+app.use((req, res, next) => {
+  if (!bootSecurityError) return next();
+  if (req.path === '/api/health/db' || req.path === '/db') {
+    return res.status(503).json({
+      ok: false,
+      error: 'boot_security_error',
+      message: bootSecurityError,
+      hints: {
+        jwtSecretSet: Boolean(process.env.JWT_SECRET),
+        sessionSecretSet: Boolean(process.env.SESSION_SECRET),
+        nodeEnv: process.env.NODE_ENV || null,
+        vercel: process.env.VERCEL || null
+      }
+    });
+  }
+  res.status(503).type('html').send(`<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Configuración incompleta</title>
+<style>body{font-family:system-ui,sans-serif;max-width:640px;margin:3rem auto;padding:0 1rem;line-height:1.5}
+code{background:#f3f4f6;padding:0.1em 0.35em;border-radius:4px}</style>
+</head><body>
+<h1>Configuración incompleta (503)</h1>
+<p>${bootSecurityError.replace(/</g, '&lt;')}</p>
+<p>Variables detectadas:</p>
+<ul>
+<li><code>JWT_SECRET</code>: ${process.env.JWT_SECRET ? 'definida' : 'NO definida'}</li>
+<li><code>SESSION_SECRET</code>: ${process.env.SESSION_SECRET ? 'definida' : 'NO definida'}</li>
+</ul>
+<p>Tras guardarlas en <strong>Production</strong>, haz Redeploy en Vercel.</p>
+</body></html>`);
+});
 
 /** Bloquea rutas de diagnóstico/test en producción (404). */
 function blockInProduction(req, res, next) {
