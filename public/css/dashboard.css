@@ -1,35 +1,23 @@
-/* Eliminar subrayado de enlaces de navegación en todas las vistas */
+/* Farmadescaso CRM — UI limpia / corporativa */
+
 .nav-link,
 .nav-link:hover,
-.nav-link:visited,
-.nav-link:active,
 .nav-link:focus,
-a.nav-link,
-a.nav-link:hover,
-a.nav-link:visited,
-a.nav-link:active,
-a.nav-link:focus {
-    text-decoration: none !important;
-}
-
 .dropdown-item,
 .dropdown-item:hover,
-.dropdown-item:visited,
-.dropdown-item:active,
-.dropdown-item:focus,
-a.dropdown-item,
-a.dropdown-item:hover,
-a.dropdown-item:visited,
-a.dropdown-item:active,
-a.dropdown-item:focus {
+.dropdown-item:focus {
     text-decoration: none !important;
 }
 
-/* Estilos específicos para el dashboard */
+/* Layout */
+.main-content-wrapper {
+    background: var(--farmadescaso-bg-page);
+}
+
 .sidebar {
     min-height: calc(100vh - 56px);
-    background: #f8f9fa;
-    border-right: 1px solid #dee2e6;
+    background: var(--farmadescaso-bg-white);
+    border-right: 1px solid var(--farmadescaso-border);
     position: sticky;
     top: 56px;
 }
@@ -39,210 +27,276 @@ a.dropdown-item:focus {
 }
 
 .user-info {
-    background: #fff;
-    border-bottom: 1px solid #dee2e6;
+    background: var(--farmadescaso-bg-white);
+    border-bottom: 1px solid var(--farmadescaso-border) !important;
 }
 
 .user-avatar i {
-    font-size: 2.5rem;
+    font-size: 2rem;
+    color: var(--farmadescaso-primary);
 }
 
 .sidebar-nav .nav-link {
-    color: #495057;
-    padding: 0.75rem 1rem;
-    border-radius: 8px;
-    margin-bottom: 0.25rem;
-    transition: all 0.3s ease;
+    color: var(--farmadescaso-text-secondary);
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--farmadescaso-radius-sm);
+    margin-bottom: 0.15rem;
+    transition: background 0.15s ease, color 0.15s ease;
     font-weight: 500;
+    font-size: 0.92rem;
 }
 
 .sidebar-nav .nav-link:hover {
-    background: #e9ecef;
+    background: var(--farmadescaso-bg-light);
     color: var(--farmadescaso-primary);
-    transform: translateX(5px);
+    transform: none;
 }
 
 .sidebar-nav .nav-link.active {
-    background: var(--farmadescaso-gradient);
-    color: #fff;
+    background: var(--farmadescaso-bg-light);
+    color: var(--farmadescaso-primary-dark);
+    box-shadow: inset 3px 0 0 var(--farmadescaso-primary);
 }
 
 .sidebar-nav .nav-link i {
-    width: 20px;
+    width: 1.15rem;
     text-align: center;
+    opacity: 0.85;
 }
 
 .main-content {
-    background: #fff;
+    background: transparent;
     min-height: calc(100vh - 56px);
 }
 
-/* Stat Cards */
-.stat-card {
-    border-radius: 12px;
-    padding: 1.5rem;
-    display: flex;
-    align-items: center;
-    transition: all 0.3s ease;
-    position: relative;
-    overflow: hidden;
+.main-content > .p-4 {
+    padding: 1.5rem 1.75rem !important;
 }
 
+/* Page title */
+.main-content h2 {
+    font-weight: 650;
+    letter-spacing: -0.02em;
+    color: var(--farmadescaso-text-primary);
+}
+
+/* KPI cards — sin bloques de color saturados */
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-bottom: 1.5rem;
+}
+
+@media (max-width: 1199.98px) {
+    .kpi-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 767.98px) {
+    .kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+    .kpi-grid { grid-template-columns: 1fr; }
+}
+
+.kpi-card,
+.stat-card {
+    background: var(--farmadescaso-bg-white);
+    border: 1px solid var(--farmadescaso-border);
+    border-radius: var(--farmadescaso-radius);
+    padding: 1.1rem 1.15rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    box-shadow: var(--farmadescaso-shadow);
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    position: relative;
+    overflow: hidden;
+    color: var(--farmadescaso-text-primary);
+}
+
+.kpi-card::before,
 .stat-card::before {
     content: '';
     position: absolute;
+    left: 0;
     top: 0;
-    right: 0;
-    width: 100px;
-    height: 100px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 50%;
-    transform: translate(30px, -30px);
+    bottom: 0;
+    width: 3px;
+    background: var(--farmadescaso-primary);
+    border-radius: 3px 0 0 3px;
 }
 
+.kpi-card:hover,
 .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    transform: none;
+    border-color: var(--farmadescaso-border-strong);
+    box-shadow: var(--farmadescaso-shadow-hover);
 }
 
-/* Stat card con enlace - mantener mismo tamaño */
+/* Neutralizar fondos Bootstrap antiguos en KPIs */
+.stat-card.bg-primary,
+.stat-card.bg-success,
+.stat-card.bg-info,
+.stat-card.bg-warning,
+.stat-card.text-white {
+    background: var(--farmadescaso-bg-white) !important;
+    color: var(--farmadescaso-text-primary) !important;
+}
+
 a.stat-card-link {
     display: block;
     text-decoration: none;
     color: inherit;
     height: 100%;
 }
-
-a.stat-card-link:hover {
+a.stat-card-link:hover,
+a.stat-card-link:visited {
     text-decoration: none;
     color: inherit;
 }
 
-a.stat-card-link .stat-card {
-    height: 100%;
-    width: 100%;
-}
-
-a.stat-card-link .stat-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
-/* Quitar subrayado de enlaces visitados */
-a.stat-card-link:visited {
-    text-decoration: none;
-}
-
-a.stat-card-link:visited .stat-card {
-    text-decoration: none;
-}
-
-a.stat-card-link:visited .stat-value,
-a.stat-card-link:visited .stat-label {
-    text-decoration: none;
-}
-
 .stat-icon {
-    margin-right: 1rem;
-    font-size: 2.5rem;
-    opacity: 0.8;
+    margin-right: 0;
+    width: 2.4rem;
+    height: 2.4rem;
+    border-radius: 8px;
+    background: var(--farmadescaso-bg-light);
+    color: var(--farmadescaso-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    opacity: 1;
+    flex-shrink: 0;
 }
 
-.stat-content h3 {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 0.25rem;
+.stat-content h3,
+.stat-value {
+    font-size: 1.35rem;
+    font-weight: 650;
+    margin-bottom: 0.15rem;
+    letter-spacing: -0.02em;
+    color: var(--farmadescaso-text-primary) !important;
 }
 
-.stat-content p {
+.stat-content p,
+.stat-label {
     margin-bottom: 0;
-    opacity: 0.9;
-    font-size: 0.9rem;
+    opacity: 1;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--farmadescaso-text-secondary) !important;
 }
 
-/* Chart Containers */
+/* Cards */
 .card {
-    border: none;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
+    border: 1px solid var(--farmadescaso-border);
+    border-radius: var(--farmadescaso-radius);
+    box-shadow: var(--farmadescaso-shadow);
+    background: var(--farmadescaso-bg-white);
+    transition: box-shadow 0.15s ease;
 }
 
 .card:hover {
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
+    box-shadow: var(--farmadescaso-shadow-hover);
 }
 
 .card-header {
-    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-    border-bottom: 1px solid #dee2e6;
-    border-radius: 12px 12px 0 0 !important;
-    padding: 1rem 1.5rem;
+    background: var(--farmadescaso-bg-white);
+    border-bottom: 1px solid var(--farmadescaso-border);
+    border-radius: var(--farmadescaso-radius) var(--farmadescaso-radius) 0 0 !important;
+    padding: 0.9rem 1.15rem;
 }
 
 .card-title {
     font-weight: 600;
-    color: #495057;
+    color: var(--farmadescaso-text-primary);
     margin-bottom: 0;
+    font-size: 0.98rem;
 }
 
 .card-body {
-    padding: 1.5rem;
+    padding: 1.15rem;
 }
 
 /* Tables */
 .table {
     margin-bottom: 0;
+    font-size: 0.92rem;
 }
 
 .table th {
     border-top: none;
     font-weight: 600;
-    color: #495057;
-    background: #f8f9fa;
-    padding: 1rem 0.75rem;
+    color: var(--farmadescaso-text-secondary);
+    background: #f8faf9;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.78rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-/* Estilos para table-dark - fondo verde y texto claro */
 .table-dark th {
-    background-color: #198754 !important;
+    background-color: var(--farmadescaso-primary) !important;
     color: #fff !important;
-    border-bottom: 2px solid #156f43;
+    border-bottom: 1px solid var(--farmadescaso-primary-dark);
 }
 
 .table td {
-    padding: 0.75rem;
+    padding: 0.7rem 0.9rem;
     vertical-align: middle;
-    border-top: 1px solid #dee2e6;
+    border-top: 1px solid var(--farmadescaso-border);
+    color: var(--farmadescaso-text-primary);
 }
 
 .table-hover tbody tr:hover {
-    background-color: rgba(11, 137, 27, 0.05);
+    background-color: rgba(11, 137, 27, 0.04);
 }
 
-/* Buttons */
+.badge {
+    font-weight: 550;
+    letter-spacing: 0.01em;
+}
+
+/* Buttons — menos “lift” */
 .btn {
-    border-radius: 8px;
-    font-weight: 500;
-    transition: all 0.3s ease;
-    border: none;
+    border-radius: var(--farmadescaso-radius-sm);
+    font-weight: 550;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+    font-family: var(--farmadescaso-font);
 }
 
 .btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    transform: none;
+    box-shadow: var(--farmadescaso-shadow);
 }
 
 .btn-primary {
-    background: var(--farmadescaso-gradient);
+    background: var(--farmadescaso-primary);
+    border: 1px solid var(--farmadescaso-primary);
+    color: #fff;
 }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--farmadescaso-primary-dark) 0%, var(--farmadescaso-primary) 100%);
+    background: var(--farmadescaso-primary-dark);
+    border-color: var(--farmadescaso-primary-dark);
+    color: #fff;
+}
+
+.btn-success {
+    background: var(--farmadescaso-primary);
+    border-color: var(--farmadescaso-primary);
+}
+
+.btn-success:hover {
+    background: var(--farmadescaso-primary-dark);
+    border-color: var(--farmadescaso-primary-dark);
 }
 
 .btn-outline-primary {
-    border: 2px solid var(--farmadescaso-primary);
+    border: 1px solid var(--farmadescaso-primary);
     color: var(--farmadescaso-primary);
+    background: transparent;
 }
 
 .btn-outline-primary:hover {
@@ -251,29 +305,66 @@ a.stat-card-link:visited .stat-label {
     color: #fff;
 }
 
-/* Fix: los outline pierden borde por el `.btn { border: none; }` */
 .btn-outline-success,
 .btn-outline-warning,
 .btn-outline-info,
 .btn-outline-secondary,
-.btn-outline-danger {
-    border: 2px solid currentColor;
+.btn-outline-danger,
+.btn-outline-dark {
+    border-width: 1px;
 }
 
-/* Acciones Rápidas */
+/* Acciones rápidas — lista limpia */
+.quick-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
 .quick-actions .btn {
-    margin-bottom: 0.5rem;
-    padding: 0.75rem 1rem;
+    margin-bottom: 0;
+    padding: 0.65rem 0.85rem;
     text-align: left;
     display: flex;
     align-items: center;
     justify-content: flex-start;
+    border-radius: var(--farmadescaso-radius-sm);
+    font-weight: 500;
 }
 
 .quick-actions .btn i {
-    margin-right: 0.75rem;
-    width: 20px;
+    margin-right: 0.65rem;
+    width: 1.1rem;
     text-align: center;
+    opacity: 0.85;
+}
+
+.quick-actions .btn-outline-success,
+.quick-actions .btn-outline-warning,
+.quick-actions .btn-outline-info,
+.quick-actions .btn-outline-primary,
+.quick-actions .btn-outline-secondary,
+.quick-actions .btn-outline-dark {
+    background: var(--farmadescaso-bg-white);
+    border-color: var(--farmadescaso-border);
+    color: var(--farmadescaso-text-primary);
+}
+
+.quick-actions .btn-outline-success:hover,
+.quick-actions .btn-outline-warning:hover,
+.quick-actions .btn-outline-info:hover,
+.quick-actions .btn-outline-primary:hover,
+.quick-actions .btn-outline-secondary:hover,
+.quick-actions .btn-outline-dark:hover {
+    background: var(--farmadescaso-bg-light);
+    border-color: var(--farmadescaso-primary);
+    color: var(--farmadescaso-primary-dark);
+}
+
+.dashboard-panel-title {
+    font-size: 0.98rem;
+    font-weight: 600;
+    color: var(--farmadescaso-text-primary);
 }
 
 /* Responsive */
@@ -281,85 +372,31 @@ a.stat-card-link:visited .stat-label {
     .sidebar {
         position: fixed;
         top: 56px;
-        left: -250px;
-        width: 250px;
+        left: -260px;
+        width: 260px;
         height: calc(100vh - 56px);
         z-index: 1000;
-        transition: left 0.3s ease;
+        transition: left 0.25s ease;
+        background: #fff;
     }
-    
-    .sidebar.show {
-        left: 0;
-    }
-    
-    .main-content {
-        margin-left: 0;
-    }
-    
-    .stat-card {
-        margin-bottom: 1rem;
-    }
-    
-    .stat-content h3 {
-        font-size: 1.5rem;
-    }
+    .sidebar.show { left: 0; }
+    .main-content { margin-left: 0; }
 }
 
 @media (max-width: 768px) {
-    .main-content {
-        padding: 1rem !important;
-    }
-    
-    .stat-card {
-        padding: 1rem;
-    }
-    
-    .stat-icon {
-        font-size: 2rem;
-    }
-    
-    .stat-content h3 {
-        font-size: 1.25rem;
-    }
-    
-    .card-body {
-        padding: 1rem;
-    }
-    
-    .table-responsive {
-        font-size: 0.875rem;
-    }
+    .main-content > .p-4 { padding: 1rem !important; }
+    .stat-content h3, .stat-value { font-size: 1.15rem; }
 }
 
 @media (max-width: 576px) {
-    .stat-card {
-        flex-direction: column;
-        text-align: center;
-    }
-    
-    .stat-icon {
-        margin-right: 0;
-        margin-bottom: 0.5rem;
-    }
-    
-    .d-flex.gap-2 {
-        flex-direction: column;
-        gap: 0.5rem !important;
-    }
-    
-    .btn {
-        width: 100%;
-    }
+    .kpi-card, .stat-card { flex-direction: row; text-align: left; }
 }
 
-/* Loading States */
+/* Loading */
 .loading-overlay {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.8);
+    inset: 0;
+    background: rgba(255, 255, 255, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -367,71 +404,31 @@ a.stat-card-link:visited .stat-label {
 }
 
 .spinner {
-    width: 40px;
-    height: 40px;
-    border: 4px solid #f3f3f3;
-    border-top: 4px solid var(--farmadescaso-primary);
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e8eee9;
+    border-top: 3px solid var(--farmadescaso-primary);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    to { transform: rotate(360deg); }
 }
 
-/* Chart Responsive */
-canvas {
-    max-width: 100%;
-    height: auto !important;
-}
+canvas { max-width: 100%; height: auto !important; }
 
-/* Custom Scrollbar */
-.sidebar::-webkit-scrollbar {
-    width: 6px;
-}
-
-.sidebar::-webkit-scrollbar-track {
-    background: #f1f1f1;
-}
-
+.sidebar::-webkit-scrollbar { width: 5px; }
+.sidebar::-webkit-scrollbar-track { background: transparent; }
 .sidebar::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 3px;
+    background: #c9d4cc;
+    border-radius: 4px;
 }
 
-.sidebar::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
-}
-
-/* Animation Classes */
-.fade-in {
-    animation: fadeIn 0.5s ease-in;
-}
-
+.fade-in { animation: fadeIn 0.35s ease; }
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-.slide-in-left {
-    animation: slideInLeft 0.5s ease-out;
-}
-
-@keyframes slideInLeft {
-    from { opacity: 0; transform: translateX(-30px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-.slide-in-right {
-    animation: slideInRight 0.5s ease-out;
-}
-
-@keyframes slideInRight {
-    from { opacity: 0; transform: translateX(30px); }
-    to { opacity: 1; transform: translateX(0); }
-}
-
-/* Go to Top Button: estilos inyectados por /js/go-to-top.js (ScrollToTopButton) */
-
-
+/* Go to Top: estilos en /js/go-to-top.js */

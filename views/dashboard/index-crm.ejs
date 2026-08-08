@@ -78,7 +78,7 @@
                     <!-- Page Header -->
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         <div>
-                            <h2 class="fw-bold mb-1 text-primary">Dashboard CRM</h2>
+                            <h2 class="fw-bold mb-1">Dashboard CRM</h2>
                             <p class="text-muted mb-0">Bienvenido, <%= user.nombre || user.Nombre || user.name || 'Usuario' %></p>
                         </div>
                         <div class="d-flex gap-2 align-items-center">
@@ -112,77 +112,55 @@
                     <% } %>
                     
                     <!-- Stats Cards -->
-                    <div class="row mb-4">
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="stat-card bg-primary text-white">
-                                <div class="stat-icon">
-                                    <i class="fas fa-euro-sign"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <h3 class="stat-value">€ <%= formatearMonedaES(estadisticas.totalVentas || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
-                                    <p class="stat-label">Total Ventas</p>
-                                </div>
+                    <div class="kpi-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-euro-sign"></i></div>
+                            <div class="stat-content">
+                                <h3 class="stat-value">€ <%= formatearMonedaES(estadisticas.totalVentas || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
+                                <p class="stat-label">Total Ventas</p>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="stat-card bg-success text-white" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%) !important;">
-                                <div class="stat-icon">
-                                    <i class="fas fa-euro-sign"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <h3 class="stat-value">€ <%= formatearMonedaES(estadisticas.totalVentasEsteMes || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
-                                    <p class="stat-label">Importe Este Mes</p>
-                                </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+                            <div class="stat-content">
+                                <h3 class="stat-value">€ <%= formatearMonedaES(estadisticas.totalVentasEsteMes || 0, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></h3>
+                                <p class="stat-label">Importe Este Mes</p>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <div class="stat-card bg-info text-white">
-                                <div class="stat-icon">
-                                    <i class="fas fa-shopping-cart"></i>
-                                </div>
-                                <div class="stat-content">
-                                    <h3 class="stat-value"><%= formatearNumeroES(estadisticas.ventasEsteMes || 0) %></h3>
-                                    <p class="stat-label" id="labelPedidosMes"><%= typeof selectedYear !== 'undefined' && selectedYear && selectedYear !== 'todos' ? 'Pedidos ' + selectedYear : 'Pedidos Este Mes' %></p>
-                                </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fas fa-shopping-cart"></i></div>
+                            <div class="stat-content">
+                                <h3 class="stat-value"><%= formatearNumeroES(estadisticas.ventasEsteMes || 0) %></h3>
+                                <p class="stat-label" id="labelPedidosMes"><%= typeof selectedYear !== 'undefined' && selectedYear && selectedYear !== 'todos' ? 'Pedidos ' + selectedYear : 'Pedidos Este Mes' %></p>
                             </div>
                         </div>
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <a href="/dashboard/clientes" class="stat-card-link">
-                                <div class="stat-card bg-warning text-white">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-users"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <h3 class="stat-value" id="totalClientesValue">
-                                            <% 
-                                            const totalClientesValue = typeof totalClientes !== 'undefined' && totalClientes !== null 
-                                                ? totalClientes 
-                                                : (estadisticas && estadisticas.totalClientes !== undefined && estadisticas.totalClientes !== null 
-                                                    ? estadisticas.totalClientes 
-                                                    : 0);
-                                            %>
-                                            <%= formatearNumeroES(totalClientesValue) %>
-                                        </h3>
-                                        <p class="stat-label">Clientes</p>
-                                    </div>
+                        <a href="/dashboard/clientes" class="stat-card-link">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-users"></i></div>
+                                <div class="stat-content">
+                                    <h3 class="stat-value" id="totalClientesValue">
+                                        <% 
+                                        const totalClientesValue = typeof totalClientes !== 'undefined' && totalClientes !== null 
+                                            ? totalClientes 
+                                            : (estadisticas && estadisticas.totalClientes !== undefined && estadisticas.totalClientes !== null 
+                                                ? estadisticas.totalClientes 
+                                                : 0);
+                                        %>
+                                        <%= formatearNumeroES(totalClientesValue) %>
+                                    </h3>
+                                    <p class="stat-label">Clientes</p>
                                 </div>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="row mb-4">
-                        <div class="col-lg-3 col-md-6 mb-3">
-                            <a href="/dashboard/agenda" class="stat-card-link">
-                                <div class="stat-card bg-info text-white">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-calendar-check"></i>
-                                    </div>
-                                    <div class="stat-content">
-                                        <h3 class="stat-value"><%= formatearNumeroES(estadisticas.totalVisitas || 0) %></h3>
-                                        <p class="stat-label">Citas</p>
-                                    </div>
+                            </div>
+                        </a>
+                        <a href="/dashboard/agenda" class="stat-card-link">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                                <div class="stat-content">
+                                    <h3 class="stat-value"><%= formatearNumeroES(estadisticas.totalVisitas || 0) %></h3>
+                                    <p class="stat-label">Citas</p>
                                 </div>
-                            </a>
-                        </div>
+                            </div>
+                        </a>
                     </div>
                     
                     <!-- Recent Data -->
