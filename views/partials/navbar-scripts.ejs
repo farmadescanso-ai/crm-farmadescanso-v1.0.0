@@ -65,4 +65,36 @@
     });
 </script>
 <script src="/js/notifications.js"></script>
+<script>
+  // Botón ARRIBA en todas las pantallas que incluyen este partial
+  (function () {
+    function mountScrollToTop() {
+      function doInit() {
+        if (!window.ScrollToTopButton) return;
+        if (document.querySelector('[data-stt-mounted]')) return;
+        window.ScrollToTopButton.init({ text: 'ARRIBA' });
+      }
+      if (window.ScrollToTopButton) {
+        doInit();
+        return;
+      }
+      var existing = document.querySelector('script[src="/js/go-to-top.js"]');
+      if (existing) {
+        existing.addEventListener('load', doInit);
+        // Si ya estaba cargado
+        if (window.ScrollToTopButton) doInit();
+        return;
+      }
+      var s = document.createElement('script');
+      s.src = '/js/go-to-top.js';
+      s.onload = doInit;
+      document.body.appendChild(s);
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', mountScrollToTop);
+    } else {
+      mountScrollToTop();
+    }
+  })();
+</script>
 
