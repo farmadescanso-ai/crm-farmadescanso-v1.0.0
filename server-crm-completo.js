@@ -76,8 +76,69 @@ if (!bootSecurityError && WEAK_SECRET_DEFAULTS.has(JWT_SECRET) && isProdRuntime(
 const JWT_EXPIRES_IN = '30d'; // 30 días
 const COOKIE_NAME = 'farmadescaso_token';
 
+// URL canónica de producción (única permitida en Vercel; las preview redirigen aquí)
+const CANONICAL_PRODUCTION_ORIGIN = 'https://crm-farmadescanso-v1-0-0.vercel.app';
+
+function getCanonicalOrigin() {
+  const fromEnv = (process.env.APP_BASE_URL || '').trim().replace(/\/$/, '');
+  if (fromEnv) return fromEnv;
+  return CANONICAL_PRODUCTION_ORIGIN;
+}
+
+function getRequestHostname(req) {
+  const raw = (req.get('x-forwarded-host') || req.get('host') || '').split(',')[0].trim();
+  return raw.split(':')[0].toLowerCase();
+}
+
+function isCanonicalHost(hostname) {
+  if (!hostname) return false;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') return true;
+  try {
+    return hostname === new URL(getCanonicalOrigin()).hostname.toLowerCase();
+  } catch (_) {
+    return hostname === 'crm-farmadescanso-v1-0-0.vercel.app';
+  }
+}
+
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Solo dominio canónico en runtime de Vercel (anula URLs preview / deployment hash)
+app.use((req, res, next) => {
+  if (!isProdRuntime()) return next();
+  const hostname = getRequestHostname(req);
+  if (isCanonicalHost(hostname)) return next();
+
+  const targetBase = getCanonicalOrigin();
+  const targetUrl = `${targetBase}${req.originalUrl || '/'}`;
+  const safeTarget = targetUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  const safeHost = String(hostname || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
+
+  res.status(307).type('html').send(`<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="refresh" content="3;url=${safeTarget}">
+  <title>URL no válida — redirigiendo</title>
+  <style>
+    body{font-family:system-ui,sans-serif;max-width:560px;margin:3rem auto;padding:0 1.25rem;line-height:1.5;color:#111}
+    a{color:#0b891b;font-weight:600}
+    .box{border:1px solid #e5e7eb;border-radius:12px;padding:1.25rem 1.5rem;background:#fafafa}
+    code{font-size:0.9em;word-break:break-all}
+  </style>
+</head>
+<body>
+  <div class="box">
+    <h1>Esta URL ya no está en uso</h1>
+    <p>Has entrado por una dirección temporal de Vercel (<code>${safeHost}</code>), que puede corresponder a una versión antigua.</p>
+    <p>La única dirección válida del CRM es:</p>
+    <p><a href="${safeTarget}">${safeTarget}</a></p>
+    <p>Serás redirigido automáticamente en unos segundos…</p>
+  </div>
+  <script>setTimeout(function(){ location.replace(${JSON.stringify(targetUrl)}); }, 2500);</script>
+</body>
+</html>`);
+});
 
 // Bloqueo temprano si faltan secretos en producción (evita crash opaco FUNCTION_INVOCATION_FAILED)
 app.use((req, res, next) => {
@@ -2398,10 +2459,8 @@ app.post('/auth/forgot-password', async (req, res) => {
       // Crear token en la base de datos (expira en 24 horas)
       await crm.createPasswordResetToken(comercialId, comercialEmail, token, 24);
       
-      // Crear enlace de recuperación (preferir APP_BASE_URL en Vercel)
-      const baseUrl = (process.env.APP_BASE_URL || '').replace(/\/$/, '')
-        || `${req.protocol}://${req.get('host')}`;
-      const resetUrl = `${baseUrl}/auth/reset-password/${token}`;
+      // Crear enlace de recuperación (siempre dominio canónico de producción)
+      const resetUrl = `${getCanonicalOrigin()}/auth/reset-password/${token}`;
       
       // Enviar email
       try {
@@ -7236,9 +7295,7 @@ app.post('/dashboard/clientes/:id/mandato-sepa/send', requireAuth, async (req, r
       const page = await browser.newPage();
       
       // Generar URL completa para renderizar la vista (con pdf=true para ocultar controles)
-      const protocol = req.protocol;
-      const host = req.get('host');
-      const mandatoUrl = `${protocol}://${host}/dashboard/clientes/${req.params.id}/mandato-sepa?` +
+      const mandatoUrl = `${getCanonicalOrigin()}/dashboard/clientes/${req.params.id}/mandato-sepa?` +
         `pdf=true` +
         `&debtorName=${encodeURIComponent(debtorName || '')}` +
         `&debtorAddress=${encodeURIComponent(debtorAddress || '')}` +
@@ -13433,7 +13490,7 @@ app.get('/dashboard/pedidos/:id/transporte/pdf', requireAuth, async (req, res) =
       pais: 'España'
     };
 
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = `${getCanonicalOrigin()}`;
     
     // Convertir logo a base64 para incluirlo directamente en el PDF
     let logoBase64 = null;
@@ -13528,7 +13585,7 @@ app.get('/dashboard/pedidos/:id/transporte/pdf', requireAuth, async (req, res) =
 
       try {
         // Convertir URLs relativas a absolutas para Puppeteer
-        const baseUrl = `${req.protocol}://${req.get('host')}`;
+        const baseUrl = `${getCanonicalOrigin()}`;
         console.log(`📄 [PDF] Base URL para imágenes: ${baseUrl}`);
         // El template ya debería tener baseUrl renderizado, pero por si acaso convertimos todas las URLs relativas
         const htmlWithAbsoluteUrls = html
@@ -13766,7 +13823,7 @@ app.post('/dashboard/pedidos/:id/transporte/enviar', requireAuth, async (req, re
     };
 
     // Generar HTML
-    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    const baseUrl = `${getCanonicalOrigin()}`;
     
     // Convertir logo a base64 para incluirlo directamente en el PDF
     let logoBase64 = null;
@@ -17794,7 +17851,7 @@ app.post('/dashboard/agenda/nuevo', requireAuth, async (req, res) => {
     }
     
     // URL del callback para que N8N nos notifique cuando termine
-    const callbackUrl = `${req.protocol}://${req.get('host')}/api/webhook/visita/callback?procesoId=${procesoId}`;
+    const callbackUrl = `${getCanonicalOrigin()}/api/webhook/visita/callback?procesoId=${procesoId}`;
     
     // Preparar datos para enviar al webhook de N8N
     const webhookPayload = {
