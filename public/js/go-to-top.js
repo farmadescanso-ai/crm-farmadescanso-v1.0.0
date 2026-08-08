@@ -11,11 +11,11 @@
 (function (global) {
   'use strict';
 
-  if (global.ScrollToTopButton && global.ScrollToTopButton.__farmav2) {
+  if (global.ScrollToTopButton && global.ScrollToTopButton.__farmav3) {
     return;
   }
 
-  var STYLE_ID = 'scroll-to-top-button-styles';
+  var STYLE_ID = 'scroll-to-top-button-styles-v3';
   var INSTANCE_ATTR = 'data-stt-mounted';
   var DEFAULTS = {
     text: 'ARRIBA',
@@ -34,8 +34,8 @@
     '  right: 1.5rem !important;',
     '  z-index: 2147483000 !important;',
     '  display: flex !important;',
-    '  height: 3.5rem !important;',
-    '  width: 3.5rem !important;',
+    '  height: 4.5rem !important;',
+    '  width: 4.5rem !important;',
     '  align-items: center !important;',
     '  justify-content: center !important;',
     '  border-radius: 9999px !important;',
@@ -66,25 +66,26 @@
     '}',
     'button.stt-button .stt-ring {',
     '  position: absolute;',
-    '  inset: .25rem;',
-    '  color: rgba(20, 184, 166, .75);',
-    '  animation: stt-spin 12s linear infinite;',
+    '  inset: 0;',
+    '  color: rgba(15, 118, 110, .9);',
+    '  animation: stt-spin 14s linear infinite;',
     '  pointer-events: none;',
     '}',
     'button.stt-button .stt-ring svg { display: block; width: 100%; height: 100%; }',
     'button.stt-button .stt-ring-text {',
     '  fill: currentColor;',
     '  font-family: system-ui, sans-serif;',
-    '  font-size: 11px;',
-    '  font-weight: 700;',
-    '  letter-spacing: 0.18em;',
+    '  font-size: 16px;',
+    '  font-weight: 800;',
+    '  letter-spacing: 0.12em;',
     '  text-transform: uppercase;',
     '}',
     'button.stt-button .stt-arrow {',
-    '  position: relative; z-index: 10; width: 14px; height: 18px; fill: currentColor;',
+    '  position: relative; z-index: 10; width: 12px; height: 15px; fill: currentColor;',
     '}',
     '@media (max-width: 768px) {',
-    '  button.stt-button { bottom: 1.25rem !important; right: 1.25rem !important; height: 3rem !important; width: 3rem !important; }',
+    '  button.stt-button { bottom: 1.25rem !important; right: 1.25rem !important; height: 4rem !important; width: 4rem !important; }',
+    '  button.stt-button .stt-ring-text { font-size: 14px; }',
     '}'
   ].join('\n');
 
@@ -98,12 +99,14 @@
 
   function ringMarkup(text, pathId) {
     var safe = String(text || 'ARRIBA').trim().toUpperCase() || 'ARRIBA';
-    var loop = safe + ' · ' + safe + ' · ';
+    // Dos vueltas para cubrir bien el perímetro con tipografía grande
+    var loop = safe + ' · ' + safe + ' · ' + safe + ' · ';
     return (
       '<span class="stt-ring" aria-hidden="true">' +
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
-      '<defs><path id="' + pathId + '" d="M50,50 m-37,0 a37,37 0 1,1 74,0 a37,37 0 1,1 -74,0" fill="none"/></defs>' +
-      '<text class="stt-ring-text"><textPath href="#' + pathId + '" startOffset="0%">' + loop + '</textPath></text>' +
+      '<defs><path id="' + pathId + '" d="M50,50 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" fill="none"/></defs>' +
+      '<text class="stt-ring-text" font-size="15" font-weight="800">' +
+      '<textPath href="#' + pathId + '" startOffset="0%">' + loop + '</textPath></text>' +
       '</svg></span>'
     );
   }
@@ -217,7 +220,7 @@
     init: init,
     destroy: destroy,
     defaults: DEFAULTS,
-    __farmav2: true
+    __farmav3: true
   };
 
   global.ScrollToTopButton = api;
