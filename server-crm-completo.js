@@ -109,12 +109,30 @@ app.use((req, res, next) => {
   const hostname = getRequestHostname(req);
   if (isCanonicalHost(hostname)) return next();
 
+  // Permitir el hostname interno del propio deploy (VERCEL_URL) para health/capturas de Vercel,
+  // pero redirigir inmediatamente al dominio canónico sin página intermedia.
+  const vercelUrlHost = String(process.env.VERCEL_URL || '')
+    .replace(/^https?:\/\//i, '')
+    .split('/')[0]
+    .toLowerCase();
+
   const targetBase = getCanonicalOrigin();
   const targetUrl = `${targetBase}${req.originalUrl || '/'}`;
+
+  // Crawlers / capturas de Vercel / APIs: redirect limpio 302 (evita miniatura engañosa)
+  const accept = String(req.get('accept') || '');
+  const ua = String(req.get('user-agent') || '');
+  const wantsHtml = accept.includes('text/html');
+  const looksLikeBrowser = /Mozilla|Chrome|Safari|Firefox|Edg/i.test(ua) && !/bot|crawler|spider|vercel/i.test(ua);
+
+  if (!wantsHtml || !looksLikeBrowser || (vercelUrlHost && hostname === vercelUrlHost)) {
+    return res.redirect(302, targetUrl);
+  }
+
   const safeTarget = targetUrl.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;');
   const safeHost = String(hostname || '').replace(/&/g, '&amp;').replace(/</g, '&lt;');
 
-  res.status(307).type('html').send(`<!DOCTYPE html>
+  res.status(200).type('html').send(`<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8">
