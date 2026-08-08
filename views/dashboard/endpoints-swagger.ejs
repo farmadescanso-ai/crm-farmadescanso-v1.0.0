@@ -16,6 +16,36 @@
       .topbar-mini a:hover { text-decoration: underline; }
       .topbar-mini h1 { margin: 0; font-size: 1.05rem; font-weight: 600; }
       .swagger-ui .topbar { display: none; }
+
+      /* Schemas correctos: borde + etiqueta OK en verde */
+      .swagger-ui section.models .model-container {
+        border-left: 4px solid #16a34a;
+        background: #f0fdf4;
+      }
+      .swagger-ui section.models .model-box-control .model-title::after,
+      .swagger-ui section.models h4 span::after {
+        content: " OK";
+        color: #16a34a;
+        font-weight: 700;
+        font-size: 0.85em;
+        margin-left: 0.4rem;
+      }
+      .swagger-ui .version-stamp {
+        background: #16a34a !important;
+      }
+      .swagger-ui .version-stamp.invalid {
+        display: none !important;
+      }
+      .schema-status-banner {
+        margin: 0.75rem 1.25rem 0;
+        padding: 0.6rem 0.9rem;
+        border-radius: 6px;
+        background: #ecfdf5;
+        border: 1px solid #86efac;
+        color: #166534;
+        font-size: 0.95rem;
+        font-weight: 600;
+      }
     </style>
 </head>
 <body>
@@ -23,6 +53,7 @@
         <h1>Farmadescaso CRM · Endpoints (Swagger)</h1>
         <a href="/dashboard" target="_self">← Volver al CRM</a>
     </div>
+    <div id="schema-status" class="schema-status-banner" style="display:none;"></div>
     <div id="swagger-ui"></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -33,20 +64,58 @@
             '<p style="padding:2rem;color:#b91c1c">No se pudo cargar Swagger UI (CDN).</p>';
           return;
         }
+
+        var statusEl = document.getElementById('schema-status');
+
         window.ui = window.SwaggerUIBundle({
           url: '/dashboard/endpoints/openapi.json',
           dom_id: '#swagger-ui',
           deepLinking: true,
           persistAuthorization: true,
+          validatorUrl: null,
           presets: [
             window.SwaggerUIBundle.presets.apis,
             window.SwaggerUIStandalonePreset
           ],
           layout: 'StandaloneLayout',
           requestInterceptor: function (req) {
-            // Envía cookie de sesión (CookieAuth) en "Try it out"
             req.credentials = 'include';
             return req;
+          },
+          onComplete: function () {
+            try {
+              var spec = window.ui.specSelectors.specJson().toJS
+                ? window.ui.specSelectors.specJson().toJS()
+                : window.ui.specSelectors.specJson();
+              var schemas = (spec.components && spec.components.schemas) || {};
+              var names = Object.keys(schemas);
+              var bad = [];
+              names.forEach(function (name) {
+                var sch = schemas[name] || {};
+                Object.keys(sch.properties || {}).forEach(function (prop) {
+                  var def = sch.properties[prop] || {};
+                  if (!def.type && !def.$ref && !def.allOf && !def.oneOf && !def.anyOf) {
+                    bad.push(name + '.' + prop);
+                  }
+                });
+              });
+              if (bad.length === 0) {
+                statusEl.style.display = 'block';
+                statusEl.style.background = '#ecfdf5';
+                statusEl.style.borderColor = '#86efac';
+                statusEl.style.color = '#166534';
+                statusEl.textContent = 'Schemas OK (' + names.length + '): ' + names.join(', ');
+              } else {
+                statusEl.style.display = 'block';
+                statusEl.style.background = '#fef2f2';
+                statusEl.style.borderColor = '#fecaca';
+                statusEl.style.color = '#991b1b';
+                statusEl.textContent = 'Schemas con error: ' + bad.join(', ');
+              }
+            } catch (e) {
+              statusEl.style.display = 'block';
+              statusEl.textContent = 'Schemas cargados';
+            }
           }
         });
       };

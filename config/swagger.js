@@ -172,8 +172,8 @@ const swaggerSpec = {
           EnalaceReunion: { type: 'string', nullable: true, description: 'Typo histórico en BD (Enalace)' },
           plataforma_reunion: { type: 'string', nullable: true, example: 'meet' },
           emails_invitados: { type: 'string', nullable: true },
-          FarmaciaCliente: { nullable: true, description: 'Id o valor según origen' },
-          CentroSalud: { nullable: true },
+          FarmaciaCliente: { type: 'string', nullable: true, description: 'Id o valor según origen (puede venir numérico serializado)' },
+          CentroSalud: { type: 'string', nullable: true, description: 'Id o valor según origen' },
           Id_Cial: { type: 'integer', nullable: true },
           ImpactosFarmacia: { type: 'integer', nullable: true },
           ImpactosCentroSalud: { type: 'integer', nullable: true }
