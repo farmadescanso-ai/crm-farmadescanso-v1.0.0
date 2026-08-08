@@ -651,39 +651,41 @@ const crm = require('./config/mysql-crm');
 const calculadorComisiones = require('./utils/calcular-comisiones');
 
 // ============================================
-// HEALTHCHECK DB (para diagnosticar ETIMEDOUT en Vercel)
-// ============================================
-// No expone host/puerto/nombre de BD en producción (solo ok + latencia).
+// HEALTHCHECK DB — en error muestra diagnóstico seguro (sin password)
 app.get('/api/health/db', async (req, res) => {
   const startedAt = Date.now();
+  const safeDiag = {
+    dbHost: process.env.DB_HOST || '(no definido)',
+    dbPort: process.env.DB_PORT || '(no definido)',
+    dbName: process.env.DB_NAME || (process.env.VERCEL ? 'crm_farmadescanso' : 'farmadescanso'),
+    dbUser: process.env.DB_USER || '(no definido / default root)',
+    dbPasswordSet: Boolean(process.env.DB_PASSWORD && String(process.env.DB_PASSWORD).length > 0),
+    dbPasswordLength: process.env.DB_PASSWORD ? String(process.env.DB_PASSWORD).length : 0
+  };
   try {
     if (!crm.connected) {
       await crm.connect();
     }
     await crm.query('SELECT 1 as ok');
-    const payload = {
+    res.json({
       ok: true,
-      ms: Date.now() - startedAt
-    };
-    if (!isProdRuntime()) {
-      payload.dbHost = process.env.DB_HOST || '(no definido)';
-      payload.dbPort = process.env.DB_PORT || '(no definido)';
-      payload.dbName = process.env.DB_NAME || '(no definido)';
-    }
-    res.json(payload);
+      ms: Date.now() - startedAt,
+      ...safeDiag
+    });
   } catch (error) {
-    const payload = {
+    res.status(503).json({
       ok: false,
       ms: Date.now() - startedAt,
       code: error.code || null,
-      message: isProdRuntime() ? 'Database unavailable' : error.message
-    };
-    if (!isProdRuntime()) {
-      payload.dbHost = process.env.DB_HOST || '(no definido)';
-      payload.dbPort = process.env.DB_PORT || '(no definido)';
-      payload.dbName = process.env.DB_NAME || '(no definido)';
-    }
-    res.status(503).json(payload);
+      errno: error.errno || null,
+      sqlState: error.sqlState || null,
+      message: error.message || 'Database unavailable',
+      ...safeDiag,
+      hint:
+        error.code === 'ER_ACCESS_DENIED_ERROR'
+          ? 'Usuario/password no coinciden con MySQL, o el plugin de auth no es compatible. En Vercel DB_PASSWORD debe ser exactamente la de ALTER USER. Prueba también: ALTER USER ... IDENTIFIED WITH mysql_native_password BY ...'
+          : null
+    });
   }
 });
 
