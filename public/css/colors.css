@@ -80,6 +80,11 @@ body {
     background-color: var(--farmadescaso-primary) !important;
 }
 
+/* Top bar claro (preferido) */
+.navbar.navbar-crm {
+    background-color: var(--farmadescaso-bg-white) !important;
+}
+
 a { color: var(--farmadescaso-primary); }
 a:hover { color: var(--farmadescaso-primary-dark); }
 
