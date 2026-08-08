@@ -1,5 +1,5 @@
 <script>
-    // Manejo del sidebar en móviles
+    // Manejo del sidebar en móviles + grupos colapsables
     document.addEventListener('DOMContentLoaded', function() {
         const sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
@@ -14,6 +14,65 @@
                 });
             }
         } catch (_) {}
+
+        // Persistencia de grupos del menú lateral
+        (function initNavGroups() {
+            const nav = document.getElementById('sidebarNav');
+            if (!nav || typeof bootstrap === 'undefined' || !bootstrap.Collapse) return;
+
+            const STORAGE_KEY = 'farmadescaso.sidebarNavGroups';
+            const currentGroups = String(nav.getAttribute('data-current-groups') || '')
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean);
+
+            let saved = {};
+            try {
+                saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
+            } catch (_) {
+                saved = {};
+            }
+
+            nav.querySelectorAll('.nav-group').forEach((group) => {
+                const key = group.getAttribute('data-nav-group');
+                const panel = group.querySelector('.collapse');
+                const toggle = group.querySelector('.nav-group-toggle');
+                if (!key || !panel || !toggle) return;
+
+                const mustOpen = currentGroups.includes(key);
+                const hasSaved = Object.prototype.hasOwnProperty.call(saved, key);
+                const defaultOpen = currentGroups.length === 0 && (key === 'ventas' || key === 'cartera');
+                const preferOpen = mustOpen || (hasSaved ? saved[key] === true : defaultOpen);
+                const preferClosed = !mustOpen && hasSaved && saved[key] === false;
+
+                if (preferOpen && !panel.classList.contains('show')) {
+                    panel.classList.add('show');
+                    toggle.setAttribute('aria-expanded', 'true');
+                } else if (preferClosed && panel.classList.contains('show')) {
+                    panel.classList.remove('show');
+                    toggle.setAttribute('aria-expanded', 'false');
+                }
+
+                panel.addEventListener('shown.bs.collapse', function() {
+                    toggle.setAttribute('aria-expanded', 'true');
+                    try {
+                        const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
+                        state[key] = true;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                    } catch (_) {}
+                });
+                panel.addEventListener('hidden.bs.collapse', function() {
+                    // No cerrar el grupo de la página actual de forma permanente:
+                    // el usuario puede contraerlo, pero al volver a la sección se reabre.
+                    toggle.setAttribute('aria-expanded', 'false');
+                    try {
+                        const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {};
+                        state[key] = false;
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                    } catch (_) {}
+                });
+            });
+        })();
         
         const sidebarOverlay = document.createElement('div');
         sidebarOverlay.className = 'sidebar-overlay';

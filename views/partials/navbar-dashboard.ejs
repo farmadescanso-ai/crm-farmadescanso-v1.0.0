@@ -11,19 +11,13 @@
             <span class="navbar-toggler-icon"></span>
         </button>
         <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
+            <!-- Atajos rápidos; el menú completo vive en el sidebar -->
+            <ul class="navbar-nav me-auto navbar-shortcuts">
                 <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'dashboard' ? 'active' : '' %>"
+                    <a class="nav-link <%= typeof currentPage !== 'undefined' && (currentPage === 'dashboard' || !currentPage) ? 'active' : '' %>"
                        href="/dashboard"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Dashboard" title="Dashboard">
                         <i class="fas fa-tachometer-alt me-1"></i><span class="nav-label">Dashboard</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'articulos' ? 'active' : '' %>"
-                       href="/dashboard/articulos"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Artículos" title="Artículos">
-                        <i class="fas fa-boxes me-1"></i><span class="nav-label">Artículos</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -31,13 +25,6 @@
                        href="/dashboard/clientes"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes" title="Clientes">
                         <i class="fas fa-users me-1"></i><span class="nav-label">Clientes</span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'contactos' ? 'active' : '' %>"
-                       href="/dashboard/contactos"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Contactos" title="Contactos">
-                        <i class="fas fa-address-book me-1"></i><span class="nav-label">Contactos</span>
                     </a>
                 </li>
                 <li class="nav-item">
@@ -52,50 +39,6 @@
                        href="/dashboard/agenda"
                        data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Agenda" title="Agenda">
                         <i class="fas fa-calendar-check me-1"></i><span class="nav-label">Agenda</span>
-                    </a>
-                </li>
-                <li class="nav-item d-none d-lg-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'cooperativas' ? 'active' : '' %>"
-                       href="/dashboard/cooperativas"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Cooperativas" title="Cooperativas">
-                        <i class="fas fa-handshake me-1"></i><span class="nav-label">Cooperativas</span>
-                    </a>
-                </li>
-                <li class="nav-item d-none d-lg-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'grupos-compras' ? 'active' : '' %>"
-                       href="/dashboard/grupos-compras"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Grupos de compras" title="Grupos de compras">
-                        <i class="fas fa-users me-1"></i><span class="nav-label">Grupos Compra</span>
-                    </a>
-                </li>
-                <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-cooperativas' ? 'active' : '' %>"
-                       href="/dashboard/clientes-cooperativas"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes-Cooperativas" title="Clientes-Cooperativas">
-                        <i class="fas fa-link me-1"></i><span class="nav-label">Clientes-Cooperativas</span>
-                    </a>
-                </li>
-                <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'clientes-grupos-compras' ? 'active' : '' %>"
-                       href="/dashboard/clientes-grupos-compras"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Clientes-Grupos compras" title="Clientes-Grupos compras">
-                        <i class="fas fa-link me-1"></i><span class="nav-label">Clientes-Grupos</span>
-                    </a>
-                </li>
-                <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
-                <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'formas-pago' ? 'active' : '' %>"
-                       href="/dashboard/formas-pago"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Formas de Pago" title="Formas de Pago">
-                        <i class="fas fa-credit-card me-1"></i><span class="nav-label">Formas de Pago</span>
-                    </a>
-                </li>
-                <% } %>
-                <li class="nav-item d-none d-xl-block">
-                    <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'especialidades' ? 'active' : '' %>"
-                       href="/dashboard/especialidades"
-                       data-bs-toggle="tooltip" data-bs-placement="bottom" data-bs-title="Especialidades" title="Especialidades">
-                        <i class="fas fa-stethoscope me-1"></i><span class="nav-label">Especialidades</span>
                     </a>
                 </li>
                 <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>

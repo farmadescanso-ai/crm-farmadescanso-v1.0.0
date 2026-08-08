@@ -36,14 +36,74 @@
     color: var(--farmadescaso-primary);
 }
 
+.sidebar-nav .nav-group {
+    list-style: none;
+    margin: 0.35rem 0 0.15rem;
+}
+
+.sidebar-nav .nav-group-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin: 0.15rem 0;
+    padding: 0.45rem 0.85rem;
+    border: 0;
+    border-radius: var(--farmadescaso-radius-sm);
+    background: transparent;
+    color: var(--farmadescaso-text-muted);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 650;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    list-style: none;
+}
+
+.sidebar-nav details > summary.nav-group-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-nav .nav-group-toggle:hover {
+    background: var(--farmadescaso-bg-light);
+    color: var(--farmadescaso-primary-dark);
+}
+
+.sidebar-nav .nav-group-toggle.is-current,
+.sidebar-nav .nav-group-toggle[aria-expanded="true"] {
+    color: var(--farmadescaso-primary-dark);
+}
+
+.sidebar-nav .nav-group-chevron {
+    font-size: 0.65rem;
+    opacity: 0.7;
+    transition: transform 0.2s ease;
+}
+
+.sidebar-nav .nav-group-toggle[aria-expanded="true"] .nav-group-chevron {
+    transform: rotate(180deg);
+}
+
+.sidebar-nav .nav-group-links {
+    padding: 0.1rem 0 0.25rem;
+}
+
+.sidebar-nav .nav-group-links .nav-item {
+    margin-bottom: 0.05rem;
+}
+
 .sidebar-nav .nav-link {
     color: var(--farmadescaso-text-secondary);
-    padding: 0.55rem 0.85rem;
+    padding: 0.5rem 0.85rem;
     border-radius: var(--farmadescaso-radius-sm);
-    margin-bottom: 0.15rem;
+    margin-bottom: 0.1rem;
     transition: background 0.15s ease, color 0.15s ease;
     font-weight: 500;
-    font-size: 0.92rem;
+    font-size: 0.9rem;
 }
 
 .sidebar-nav .nav-link:hover {
