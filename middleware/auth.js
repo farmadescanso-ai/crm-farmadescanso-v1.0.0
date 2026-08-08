@@ -145,6 +145,10 @@ function createAuth(options) {
 
   const requireAuth = (req, res, next) => {
     try {
+      if (req.apiKeyAuth) {
+        return next();
+      }
+
       if (req.user && req.comercialId) {
         return next();
       }
@@ -159,7 +163,6 @@ function createAuth(options) {
       const acceptsJson = acceptHeader.includes('application/json');
       const prefersHtml = acceptHeader.includes('text/html');
       const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
-      // /api-docs y páginas HTML no deben devolver JSON 401 solo por Accept: */*
       const isApiJsonRoute =
         pathOnly.startsWith('/api/') &&
         !pathOnly.startsWith('/api-docs');

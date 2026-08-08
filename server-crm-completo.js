@@ -934,6 +934,10 @@ const {
 
 app.use(attachJwtFromCookie);
 
+// API Key opcional (X-API-Key) — complementa CookieAuth en /api/*
+const { attachApiKeyAuth } = require('./middleware/api-auth');
+app.use(attachApiKeyAuth);
+
 // Middleware de logging MUY TEMPRANO - antes de bodyParser para capturar TODAS las peticiones
 app.use((req, res, next) => {
   if (req.method === 'POST' && (req.path === '/dashboard/pedidos' || req.path.includes('/pedidos'))) {
@@ -4068,6 +4072,45 @@ app.get('/api/keys', requireAuth, requireAdmin, async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+app.post('/api/keys', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const nombre = String(req.body?.nombre || '').trim();
+    const descripcion = req.body?.descripcion != null ? String(req.body.descripcion) : null;
+    if (!nombre) {
+      return res.status(400).json({ success: false, error: 'nombre es obligatorio' });
+    }
+    const creadoPor = req.comercialId || req.session?.comercialId || null;
+    const result = await crm.createApiKey(nombre, descripcion, creadoPor);
+    res.status(201).json({
+      success: true,
+      data: result,
+      message: 'API key creada. Guarda el valor: solo se muestra ahora.'
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.put('/api/keys/:id/toggle', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const activa = req.body?.activa === true || req.body?.activa === 1 || req.body?.activa === '1';
+    await crm.toggleApiKey(id, activa ? 1 : 0);
+    res.json({ success: true, message: activa ? 'API key activada' : 'API key desactivada' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+app.delete('/api/keys/:id', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await crm.deleteApiKey(Number(req.params.id));
+    res.json({ success: true, message: 'API key eliminada' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
   }
 });
 
