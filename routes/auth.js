@@ -574,10 +574,20 @@ router.post('/auth/forgot-password', async (req, res) => {
     }
     
     const emailNormalizado = String(email).toLowerCase().trim();
+
+    if (!process.env.MAIL_PASS) {
+      console.error('❌ [RECUPERACION] MAIL_PASS no está configurada en el entorno');
+      return res.render('auth/forgot-password', {
+        title: 'Recuperar Contraseña - Farmadescaso',
+        error: 'El envío de correo no está configurado (MAIL_PASS). Contacta con administración.',
+        success: null,
+        email: emailNormalizado
+      });
+    }
     
-    // Verificar rate limiting (máximo 3 intentos por hora por email)
+    // Rate limiting (máximo 5 intentos por hora por email)
     const recentAttempts = await deps.crm.countRecentPasswordResetAttempts(emailNormalizado, 1);
-    if (recentAttempts >= 3) {
+    if (recentAttempts >= 5) {
       console.log(`⚠️ [RECUPERACION] Demasiados intentos para ${emailNormalizado}`);
       return res.render('auth/forgot-password', {
         title: 'Recuperar Contraseña - Farmadescaso',
@@ -610,10 +620,10 @@ router.post('/auth/forgot-password', async (req, res) => {
         console.log(`📧 [RECUPERACION] Intentando enviar email a: ${comercialEmail}`);
         console.log(`📧 [RECUPERACION] Desde: ${process.env.MAIL_USER || 'pedidos@farmadescanso.com'}`);
         console.log(`📧 [RECUPERACION] Host: ${process.env.MAIL_HOST || 'com1008.raiolanetworks.es'}`);
-        console.log(`📧 [RECUPERACION] Enlace de reset generado (token no registrado en logs)`);
+        console.log(`📧 [RECUPERACION] TLS insecure: ${process.env.MAIL_TLS_INSECURE === '1' ? 'sí' : 'no'}`);
         
         const emailResult = await deps.mailTransport.sendMail({
-          from: process.env.MAIL_USER || 'pedidos@farmadescanso.com',
+          from: process.env.MAIL_FROM || process.env.MAIL_USER || 'pedidos@farmadescanso.com',
           to: comercialEmail,
           subject: 'Recuperación de Contraseña - Farmadescaso',
           html: `
@@ -646,9 +656,8 @@ router.post('/auth/forgot-password', async (req, res) => {
                   <p>O copia y pega este enlace en tu navegador:</p>
                   <p style="word-break: break-all; color: #007bff;">${resetUrl}</p>
                   <div class="warning">
-                    <strong>⚠️ Importante:</strong> Este enlace expirará en 24 horas. Si no solicitaste este cambio, puedes ignorar este email.
+                    <strong>Importante:</strong> Este enlace expirará en 24 horas. Si no solicitaste este cambio, puedes ignorar este email.
                   </div>
-                  <p>Si no solicitaste este cambio, puedes ignorar este email de forma segura.</p>
                 </div>
                 <div class="footer">
                   <p>Este es un email automático, por favor no respondas.</p>
@@ -660,33 +669,30 @@ router.post('/auth/forgot-password', async (req, res) => {
           `
         });
         
-        console.log(`✅ [RECUPERACION] Email de recuperación enviado a ${comercialEmail}`);
-        console.log(`✅ [RECUPERACION] MessageId: ${emailResult.messageId}`);
-        console.log(`✅ [RECUPERACION] Response: ${emailResult.response || 'N/A'}`);
-        
-        // En desarrollo, mostrar el enlace en consola para facilitar pruebas
-        if (process.env.NODE_ENV === 'development' || req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
-          console.log(`\n🔗 [RECUPERACION] ENLACE DE RESET (solo desarrollo): ${resetUrl}\n`);
-        }
+        console.log(`✅ [RECUPERACION] Email enviado a ${comercialEmail} messageId=${emailResult.messageId || 'N/A'}`);
       } catch (emailError) {
         console.error('❌ [RECUPERACION] Error enviando email:', emailError.message);
         console.error('❌ [RECUPERACION] Código:', emailError.code);
-        console.error('❌ [RECUPERACION] Command:', emailError.command);
         console.error('❌ [RECUPERACION] Stack:', emailError.stack);
-        
-        // En desarrollo, mostrar el enlace aunque falle el email
-        if (process.env.NODE_ENV === 'development' || req.hostname === 'localhost' || req.hostname === '127.0.0.1') {
-          console.log(`\n⚠️ [RECUPERACION] Email falló, pero aquí está el enlace de reset: ${resetUrl}\n`);
+        try {
+          await deps.crm.markPasswordResetTokenAsUsed(token);
+        } catch (_) {
+          // ignore
         }
-        // Continuar de todas formas para no revelar si el email existe
+        return res.render('auth/forgot-password', {
+          title: 'Recuperar Contraseña - Farmadescaso',
+          error: 'No se pudo enviar el email de recuperación. Revisa la configuración SMTP (MAIL_PASS / MAIL_HOST) o inténtalo más tarde.',
+          success: null,
+          email: emailNormalizado
+        });
       }
     }
     
-    // Mostrar mensaje de éxito (sin revelar si el email existe)
+    // Mensaje genérico (no revela si el email existe)
     return res.render('auth/forgot-password', {
       title: 'Recuperar Contraseña - Farmadescaso',
       error: null,
-      success: 'Si el email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.',
+      success: 'Si el email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña. Revisa también la carpeta de spam.',
       email: ''
     });
     

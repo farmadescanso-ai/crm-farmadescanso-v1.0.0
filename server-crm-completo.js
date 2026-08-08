@@ -1005,14 +1005,44 @@ if (!process.env.MAIL_PASS) {
 const mailTransport = nodemailer.createTransport({
   host: process.env.MAIL_HOST || 'com1008.raiolanetworks.es',
   port: Number(process.env.MAIL_PORT || 465),
-  secure: true,
+  secure: Number(process.env.MAIL_PORT || 465) === 465,
   auth: {
     user: process.env.MAIL_USER || 'pedidos@farmadescanso.com',
     pass: process.env.MAIL_PASS || ''
   },
+  connectionTimeout: 15000,
+  greetingTimeout: 15000,
+  socketTimeout: 20000,
   tls: {
     // Por defecto validar certificado TLS. Solo desactivar si MAIL_TLS_INSECURE=1
     rejectUnauthorized: process.env.MAIL_TLS_INSECURE === '1' ? false : true
+  }
+});
+
+// Diagnóstico SMTP (solo admin autenticado)
+app.get('/api/debug/mail', requireAuth, requireAdmin, async (req, res) => {
+  const diag = {
+    mailHost: process.env.MAIL_HOST || 'com1008.raiolanetworks.es',
+    mailPort: Number(process.env.MAIL_PORT || 465),
+    mailUser: process.env.MAIL_USER || 'pedidos@farmadescanso.com',
+    mailPassSet: Boolean(process.env.MAIL_PASS),
+    mailPassLength: process.env.MAIL_PASS ? String(process.env.MAIL_PASS).length : 0,
+    tlsInsecure: process.env.MAIL_TLS_INSECURE === '1',
+    verify: null,
+    error: null
+  };
+  try {
+    await mailTransport.verify();
+    diag.verify = 'ok';
+    res.json({ ok: true, ...diag });
+  } catch (error) {
+    diag.verify = 'fail';
+    diag.error = {
+      message: error.message,
+      code: error.code || null,
+      command: error.command || null
+    };
+    res.status(503).json({ ok: false, ...diag });
   }
 });
 
