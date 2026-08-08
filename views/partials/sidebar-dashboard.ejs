@@ -1,0 +1,97 @@
+<%#
+  Menú lateral del dashboard — solo opciones según rol.
+  Requiere res.locals.esAdmin (attachLocals) y opcionalmente currentPage.
+%>
+<% const page = typeof currentPage !== 'undefined' ? currentPage : ''; %>
+<% const admin = typeof esAdmin !== 'undefined' && esAdmin; %>
+<nav class="sidebar-nav p-3">
+    <ul class="nav flex-column">
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= !page || page === 'dashboard' ? 'active' : '' %>" href="/dashboard">
+                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'articulos' ? 'active' : '' %>" href="/dashboard/articulos">
+                <i class="fas fa-boxes me-2"></i>Artículos
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'clientes' ? 'active' : '' %>" href="/dashboard/clientes">
+                <i class="fas fa-users me-2"></i>Clientes
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'contactos' ? 'active' : '' %>" href="/dashboard/contactos">
+                <i class="fas fa-address-book me-2"></i>Contactos
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'pedidos' ? 'active' : '' %>" href="/dashboard/pedidos">
+                <i class="fas fa-shopping-cart me-2"></i>Pedidos
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'presupuestos-vs-ventas' ? 'active' : '' %>" href="/dashboard/presupuestos-vs-ventas">
+                <i class="fas fa-chart-line me-2"></i>Presupuestos vs Ventas
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
+                <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'agenda' ? 'active' : '' %>" href="/dashboard/agenda">
+                <i class="fas fa-calendar-check me-2"></i>Agenda
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'cooperativas' ? 'active' : '' %>" href="/dashboard/cooperativas">
+                <i class="fas fa-handshake me-2"></i>Cooperativas
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'grupos-compras' ? 'active' : '' %>" href="/dashboard/grupos-compras">
+                <i class="fas fa-users me-2"></i>Grupos Compra
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'clientes-cooperativas' ? 'active' : '' %>" href="/dashboard/clientes-cooperativas">
+                <i class="fas fa-link me-2"></i>Clientes-Cooperativas
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'clientes-grupos-compras' ? 'active' : '' %>" href="/dashboard/clientes-grupos-compras">
+                <i class="fas fa-link me-2"></i>Clientes-Grupos
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'especialidades' ? 'active' : '' %>" href="/dashboard/especialidades">
+                <i class="fas fa-stethoscope me-2"></i>Especialidades
+            </a>
+        </li>
+
+        <% if (admin) { %>
+        <li class="nav-item mt-3 mb-2">
+            <small class="text-muted text-uppercase fw-semibold px-2">Administración</small>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'comerciales' ? 'active' : '' %>" href="/dashboard/comerciales">
+                <i class="fas fa-user-tie me-2"></i>Comerciales
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link <%= page === 'formas-pago' ? 'active' : '' %>" href="/dashboard/formas-pago">
+                <i class="fas fa-credit-card me-2"></i>Formas de Pago
+            </a>
+        </li>
+        <li class="nav-item mb-2">
+            <a class="nav-link" href="/api-docs" target="_blank" rel="noopener noreferrer">
+                <i class="fas fa-file-code me-2"></i>Endpoints (Swagger)
+                <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
+            </a>
+        </li>
+        <% } %>
+    </ul>
+</nav>

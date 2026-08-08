@@ -62,74 +62,7 @@
                         </div>
                     </div>
                     
-                    <nav class="sidebar-nav p-3">
-                        <ul class="nav flex-column">
-                            <li class="nav-item mb-2">
-                                <a class="nav-link active" href="/dashboard">
-                                    <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/articulos">
-                                    <i class="fas fa-boxes me-2"></i>Artículos
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/clientes">
-                                    <i class="fas fa-users me-2"></i>Clientes
-                                </a>
-                            </li>
-                            <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/comerciales">
-                                    <i class="fas fa-user-tie me-2"></i>Comerciales
-                                </a>
-                            </li>
-                            <% } %>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/pedidos">
-                                    <i class="fas fa-shopping-cart me-2"></i>Pedidos
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'presupuestos-vs-ventas' ? 'active' : '' %>" href="/dashboard/presupuestos-vs-ventas">
-                                    <i class="fas fa-chart-line me-2"></i>Presupuestos vs Ventas
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link <%= typeof currentPage !== 'undefined' && currentPage === 'comisiones' ? 'active' : '' %>" href="/dashboard/comisiones/comisiones">
-                                    <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/agenda">
-                                    <i class="fas fa-calendar-check me-2"></i>Agenda
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/cooperativas">
-                                    <i class="fas fa-handshake me-2"></i>Cooperativas
-                                </a>
-                            </li>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/clientes-cooperativas">
-                                    <i class="fas fa-link me-2"></i>Clientes-Cooperativas
-                                </a>
-                            </li>
-                            <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/formas-pago">
-                                    <i class="fas fa-credit-card me-2"></i>Formas de Pago
-                                </a>
-                            </li>
-                            <% } %>
-                            <li class="nav-item mb-2">
-                                <a class="nav-link" href="/dashboard/especialidades">
-                                    <i class="fas fa-stethoscope me-2"></i>Especialidades
-                                </a>
-                            </li>
-                        </ul>
-                    </nav>
+                    <%- include('../partials/sidebar-dashboard') %>
                 </div>
             </div>
             
@@ -354,21 +287,32 @@
                                         <a href="/dashboard/pedidos/nuevo" class="btn btn-success">
                                             <i class="fas fa-plus me-2"></i>Nuevo Pedido
                                         </a>
-                                        <a href="/dashboard/articulos" class="btn btn-outline-primary">
-                                            <i class="fas fa-boxes me-2"></i>Ver Artículos
-                                        </a>
                                         <a href="/dashboard/clientes" class="btn btn-outline-success">
-                                            <i class="fas fa-users me-2"></i>Mis Clientes
+                                            <i class="fas fa-users me-2"></i><%= (typeof esAdmin !== 'undefined' && esAdmin) ? 'Clientes' : 'Mis Clientes' %>
                                         </a>
                                         <a href="/dashboard/pedidos" class="btn btn-outline-warning">
                                             <i class="fas fa-shopping-cart me-2"></i>Ver Pedidos
                                         </a>
                                         <a href="/dashboard/agenda" class="btn btn-outline-info">
-                                            <i class="fas fa-calendar-check me-2"></i>Mi Agenda
+                                            <i class="fas fa-calendar-check me-2"></i>Agenda
                                         </a>
-                                        <a href="/contact" class="btn btn-outline-secondary">
-                                            <i class="fas fa-headset me-2"></i>Soporte
+                                        <a href="/dashboard/comisiones/comisiones" class="btn btn-outline-primary">
+                                            <i class="fas fa-money-bill-wave me-2"></i>Mis Comisiones
                                         </a>
+                                        <a href="/dashboard/articulos" class="btn btn-outline-secondary">
+                                            <i class="fas fa-boxes me-2"></i>Artículos
+                                        </a>
+                                        <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
+                                        <a href="/dashboard/comerciales" class="btn btn-outline-dark">
+                                            <i class="fas fa-user-tie me-2"></i>Comerciales
+                                        </a>
+                                        <a href="/dashboard/formas-pago" class="btn btn-outline-dark">
+                                            <i class="fas fa-credit-card me-2"></i>Formas de Pago
+                                        </a>
+                                        <a href="/api-docs" target="_blank" rel="noopener noreferrer" class="btn btn-outline-dark">
+                                            <i class="fas fa-file-code me-2"></i>Endpoints (Swagger)
+                                        </a>
+                                        <% } %>
                                     </div>
                                 </div>
                             </div>

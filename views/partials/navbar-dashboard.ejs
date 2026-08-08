@@ -122,6 +122,12 @@
                         </a></li>
                         <% if (typeof esAdmin !== 'undefined' && esAdmin) { %>
                         <li><hr class="dropdown-divider"></li>
+
+                        <!-- Acceso directo Swagger (solo admin) -->
+                        <li><a class="dropdown-item" href="/api-docs" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-file-code me-2"></i>Endpoints (Swagger)
+                            <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
+                        </a></li>
                         
                         <!-- Integraciones - Submenu colapsable -->
                         <li class="dropdown-submenu">
@@ -150,8 +156,8 @@
                                 <li><a class="dropdown-item" href="/dashboard/ajustes/api-keys">
                                     <i class="fas fa-key me-2"></i>API Keys
                                 </a></li>
-                                <li><a class="dropdown-item" href="/api-docs" target="_blank">
-                                    <i class="fas fa-book me-2"></i>Documentación API
+                                <li><a class="dropdown-item" href="/api-docs" target="_blank" rel="noopener noreferrer">
+                                    <i class="fas fa-file-code me-2"></i>Endpoints (Swagger)
                                     <i class="fas fa-external-link-alt ms-1" style="font-size: 0.7rem;"></i>
                                 </a></li>
                             </ul>
