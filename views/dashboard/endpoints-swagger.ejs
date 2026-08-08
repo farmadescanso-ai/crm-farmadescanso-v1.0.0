@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= typeof title !== 'undefined' ? title : 'Endpoints (Swagger) - Farmadescaso' %></title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="/css/colors.css" rel="stylesheet">
+    <link href="/css/dashboard.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />    <style>
+      body { margin: 0; background: #fafafa; }
+      .swagger-wrap { max-width: 1400px; margin: 0 auto; padding: 0 0 2rem; }
+      .swagger-ui .topbar { display: none; }
+      .page-toolbar {
+        background: #fff;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 0.75rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        flex-wrap: wrap;
+      }
+    </style>
+</head>
+<body>
+    <%- include('../partials/navbar-dashboard') %>
+    <div class="page-toolbar">
+        <div>
+            <h1 class="h5 mb-0 text-primary">
+                <i class="fas fa-file-code me-2"></i>Endpoints (Swagger)
+            </h1>
+            <small class="text-muted">Documentación de la API REST · solo administradores</small>
+        </div>
+        <a href="/dashboard" class="btn btn-sm btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i>Volver al dashboard
+        </a>
+    </div>
+    <div class="swagger-wrap">
+        <div id="swagger-ui"></div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-bundle.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/swagger-ui/5.11.0/swagger-ui-standalone-preset.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script>
+      window.onload = function () {
+        if (!window.SwaggerUIBundle) {
+          document.getElementById('swagger-ui').innerHTML =
+            '<div class="alert alert-danger m-4">No se pudo cargar Swagger UI (CDN). Revisa la red o CSP.</div>';
+          return;
+        }
+        window.SwaggerUIBundle({
+          url: '/dashboard/endpoints/openapi.json',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [
+            window.SwaggerUIBundle.presets.apis,
+            window.SwaggerUIStandalonePreset
+          ],
+          layout: 'StandaloneLayout',
+          persistAuthorization: true
+        });
+      };
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <%- include('../partials/navbar-scripts') %>
+</body>
+</html>

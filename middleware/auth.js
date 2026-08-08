@@ -145,12 +145,6 @@ function createAuth(options) {
 
   const requireAuth = (req, res, next) => {
     try {
-      const isRentabilidad = req.path.includes('rentabilidad');
-
-      if (isRentabilidad) {
-        console.log(`🔐 [AUTH] Verificando autenticación para: ${req.path}`);
-      }
-
       if (req.user && req.comercialId) {
         return next();
       }
@@ -159,12 +153,18 @@ function createAuth(options) {
         return next();
       }
 
+      const originalUrl = String(req.originalUrl || req.url || '');
+      const pathOnly = originalUrl.split('?')[0];
       const acceptHeader = req.headers.accept || '';
       const acceptsJson = acceptHeader.includes('application/json');
+      const prefersHtml = acceptHeader.includes('text/html');
       const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
-      const isFetch = acceptHeader.includes('*/*') || acceptHeader.includes('application/json');
+      // /api-docs y páginas HTML no deben devolver JSON 401 solo por Accept: */*
+      const isApiJsonRoute =
+        pathOnly.startsWith('/api/') &&
+        !pathOnly.startsWith('/api-docs');
 
-      if (acceptsJson || isAjax || isFetch) {
+      if (isAjax || (isApiJsonRoute && (acceptsJson || !prefersHtml))) {
         return res.status(401).json({
           success: false,
           error: 'No autenticado',

@@ -19,12 +19,12 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000/api',
-        description: 'Servidor de desarrollo'
+        url: 'https://crm-farmadescanso-v1-0-0.vercel.app/api',
+        description: 'Producción (Vercel)'
       },
       {
-        url: 'https://api.farmadescaso.com/api',
-        description: 'Servidor de producción'
+        url: 'http://localhost:3000/api',
+        description: 'Servidor de desarrollo'
       }
     ],
     components: {

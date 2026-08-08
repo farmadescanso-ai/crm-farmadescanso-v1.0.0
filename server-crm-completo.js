@@ -22,7 +22,6 @@ console.log('🚀 [INICIO] Timestamp:', new Date().toISOString());
 const fetch = (...args) => globalThis.fetch(...args);
 const puppeteer = require('puppeteer');
 const nodemailer = require('nodemailer');
-const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 const serverLogs = require('./utils/server-logs');
 const bcrypt = require('bcryptjs');
@@ -845,17 +844,15 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
-      // Vercel puede inyectar scripts de feedback en producción/preview (vercel.live).
-      // Si no lo permitimos, el navegador mostrará warnings CSP (no rompe la app, pero ensucia la consola).
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://vercel.live"],
-      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://vercel.live"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://vercel.live"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://vercel.live"],
       scriptSrcAttr: ["'self'", "'unsafe-inline'"],
       // Vercel feedback puede usar iframes (vercel.live). Si no, el navegador mostrará warning de framing.
       frameSrc: ["'self'", "https://vercel.live"],
       fontSrc: ["'self'", "https://cdnjs.cloudflare.com", "https://cdn.jsdelivr.net", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:", "http:"],
-      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://fonts.googleapis.com", "https://vercel.live"],
+      connectSrc: ["'self'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com", "https://vercel.live"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://cdn.jsdelivr.net", "https://cdnjs.cloudflare.com", "https://fonts.googleapis.com"],
     },
   },
 }));
@@ -17339,11 +17336,26 @@ app.get('/api/articulos', requireAuth, async (req, res) => {
 // API REST con Swagger Documentation
 // ============================================
 
-// Configurar Swagger UI (solo admin autenticado)
-app.use('/api-docs', requireAuth, requireAdmin, swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'Farmadescaso CRM API Documentation'
-}));
+// Spec OpenAPI (JSON) — solo admin
+app.get('/dashboard/endpoints/openapi.json', requireAuth, requireAdmin, (req, res) => {
+  res.setHeader('Cache-Control', 'no-store');
+  res.json(swaggerSpec);
+});
+
+// UI Swagger vía CDN (fiable en Vercel; swagger-ui-express suele quedar en blanco)
+app.get('/dashboard/endpoints', requireAuth, requireAdmin, (req, res) => {
+  res.render('dashboard/endpoints-swagger', {
+    title: 'Endpoints (Swagger) - Farmadescaso',
+    user: req.comercial || req.session?.comercial || req.user,
+    esAdmin: true,
+    currentPage: 'endpoints'
+  });
+});
+
+// Compatibilidad: antigua ruta /api-docs → nueva UI
+app.get(['/api-docs', '/api-docs/'], requireAuth, requireAdmin, (req, res) => {
+  res.redirect(302, '/dashboard/endpoints');
+});
 
 // Endpoint para obtener el contador actualizado de clientes (ANTES de otras rutas API para evitar conflictos)
 app.get('/api/clientes/count', async (req, res) => {
@@ -18021,7 +18033,7 @@ if (require.main === module) {
   
   server.on('listening', () => {
     console.log(`✅ Servidor escuchando en http://127.0.0.1:${PORT}`);
-    console.log(`📚 Documentación API (Swagger) disponible en http://127.0.0.1:${PORT}/api-docs`);
+    console.log(`📚 Documentación API (Swagger) disponible en http://127.0.0.1:${PORT}/dashboard/endpoints`);
     console.log(`🔑 API REST disponible en http://127.0.0.1:${PORT}/api`);
   });
 }
