@@ -710,8 +710,8 @@ router.get('/auth/reset-password/:token', async (req, res) => {
       return res.redirect('/auth/forgot-password?error=token_invalido');
     }
     
-    // Buscar token válido
-    const tokenData = await deps.crm.findPasswordResetToken(token);
+    // Buscar token válido (normalizar por si el email rompe el enlace)
+    const tokenData = await deps.crm.findPasswordResetToken(String(token || '').trim().replace(/\s+/g, ''));
     
     if (!tokenData) {
       return res.render('auth/reset-password', {
@@ -727,7 +727,7 @@ router.get('/auth/reset-password/:token', async (req, res) => {
       title: 'Restablecer Contraseña - Farmadescaso',
       error: null,
       success: null,
-      token: token,
+      token: String(token || '').trim().replace(/\s+/g, ''),
       valid: true
     });
     
@@ -741,14 +741,15 @@ router.get('/auth/reset-password/:token', async (req, res) => {
 router.post('/auth/reset-password', async (req, res) => {
   try {
     const { token, password, confirmPassword } = req.body;
+    const cleanToken = String(token || '').trim().replace(/\s+/g, '');
     
-    if (!token || !password || !confirmPassword) {
+    if (!cleanToken || !password || !confirmPassword) {
       return res.render('auth/reset-password', {
         title: 'Restablecer Contraseña - Farmadescaso',
         error: 'Por favor, completa todos los campos',
         success: null,
-        token: token || null,
-        valid: token ? true : false
+        token: cleanToken || null,
+        valid: Boolean(cleanToken)
       });
     }
     
@@ -758,7 +759,7 @@ router.post('/auth/reset-password', async (req, res) => {
         title: 'Restablecer Contraseña - Farmadescaso',
         error: 'Las contraseñas no coinciden',
         success: null,
-        token: token,
+        token: cleanToken,
         valid: true
       });
     }
@@ -769,13 +770,13 @@ router.post('/auth/reset-password', async (req, res) => {
         title: 'Restablecer Contraseña - Farmadescaso',
         error: 'La contraseña debe tener al menos 6 caracteres',
         success: null,
-        token: token,
+        token: cleanToken,
         valid: true
       });
     }
     
     // Buscar token válido
-    const tokenData = await deps.crm.findPasswordResetToken(token);
+    const tokenData = await deps.crm.findPasswordResetToken(cleanToken);
     
     if (!tokenData) {
       return res.render('auth/reset-password', {
@@ -794,7 +795,7 @@ router.post('/auth/reset-password', async (req, res) => {
     await deps.crm.updateComercial(tokenData.comercial_id, { Password: hashedPassword });
     
     // Marcar token como usado
-    await deps.crm.markPasswordResetTokenAsUsed(token);
+    await deps.crm.markPasswordResetTokenAsUsed(cleanToken);
     
     console.log(`✅ [RESET] Contraseña restablecida para comercial ID: ${tokenData.comercial_id}`);
     

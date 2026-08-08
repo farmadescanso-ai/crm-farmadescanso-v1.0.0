@@ -5218,29 +5218,46 @@ class MySQLCRM {
   // MÉTODOS DE RECUPERACIÓN DE CONTRASEÑA
   // ============================================
 
+  async ensurePasswordResetTokensTable() {
+    if (this._passwordResetTableReady) return;
+    const sql = `CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      comercial_id INT NOT NULL,
+      token VARCHAR(128) NOT NULL,
+      email VARCHAR(255) NOT NULL,
+      expires_at DATETIME NOT NULL,
+      used TINYINT(1) NOT NULL DEFAULT 0,
+      created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE KEY uq_password_reset_token (token),
+      KEY idx_password_reset_comercial (comercial_id),
+      KEY idx_password_reset_email (email),
+      KEY idx_password_reset_expires (expires_at)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci`;
+    await this.query(sql);
+    this._passwordResetTableReady = true;
+  }
+
   /**
    * Crear un token de recuperación de contraseña
    */
   async createPasswordResetToken(comercialId, email, token, expiresInHours = 24) {
     try {
-      if (!this.connected && !this.pool) {
-        await this.connect();
-      }
+      await this.ensurePasswordResetTokensTable();
 
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + expiresInHours);
+      const hours = Math.max(1, Number(expiresInHours) || 24);
+      const cleanToken = String(token || '').trim().replace(/\s+/g, '');
 
       // Invalidar tokens anteriores no usados del mismo usuario
-      await this.pool.execute(
+      await this.query(
         'UPDATE password_reset_tokens SET used = 1 WHERE comercial_id = ? AND used = 0',
         [comercialId]
       );
 
-      // Crear nuevo token
-      const sql = `INSERT INTO password_reset_tokens (comercial_id, token, email, expires_at, used) 
-                   VALUES (?, ?, ?, ?, 0)`;
-      const [result] = await this.pool.execute(sql, [comercialId, token, email, expiresAt]);
-      return { insertId: result.insertId, expiresAt };
+      // expires_at calculado en MySQL (evita desfase TZ entre Node/Vercel y el servidor MySQL)
+      const sql = `INSERT INTO password_reset_tokens (comercial_id, token, email, expires_at, used)
+                   VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL ? HOUR), 0)`;
+      const result = await this.query(sql, [comercialId, cleanToken, email, hours]);
+      return { insertId: result?.insertId ?? result?.affectedRows, expiresInHours: hours };
     } catch (error) {
       console.error('❌ Error creando token de recuperación:', error.message);
       throw error;
@@ -5252,15 +5269,32 @@ class MySQLCRM {
    */
   async findPasswordResetToken(token) {
     try {
-      if (!this.connected && !this.pool) {
-        await this.connect();
-      }
+      await this.ensurePasswordResetTokensTable();
 
-      const sql = `SELECT * FROM password_reset_tokens 
-                   WHERE token = ? AND used = 0 AND expires_at > NOW() 
+      const cleanToken = String(token || '').trim().replace(/\s+/g, '');
+      if (!cleanToken) return null;
+
+      const sql = `SELECT * FROM password_reset_tokens
+                   WHERE token = ? AND used = 0 AND expires_at > NOW()
                    LIMIT 1`;
-      const [rows] = await this.pool.execute(sql, [token]);
-      return rows.length > 0 ? rows[0] : null;
+      const rows = await this.query(sql, [cleanToken]);
+      if (Array.isArray(rows) && rows.length > 0) return rows[0];
+
+      // Diagnóstico (sin filtrar por validez) para logs
+      const any = await this.query(
+        'SELECT id, used, expires_at, (expires_at > NOW()) AS not_expired FROM password_reset_tokens WHERE token = ? LIMIT 1',
+        [cleanToken]
+      );
+      if (Array.isArray(any) && any.length > 0) {
+        console.warn('⚠️ [RESET] Token encontrado pero no válido:', {
+          used: any[0].used,
+          expires_at: any[0].expires_at,
+          not_expired: any[0].not_expired
+        });
+      } else {
+        console.warn('⚠️ [RESET] Token no existe en BD (¿enlace corrupto o no guardado?) length=', cleanToken.length);
+      }
+      return null;
     } catch (error) {
       console.error('❌ Error buscando token de recuperación:', error.message);
       return null;
@@ -5272,13 +5306,11 @@ class MySQLCRM {
    */
   async markPasswordResetTokenAsUsed(token) {
     try {
-      if (!this.connected && !this.pool) {
-        await this.connect();
-      }
-
+      await this.ensurePasswordResetTokensTable();
+      const cleanToken = String(token || '').trim().replace(/\s+/g, '');
       const sql = 'UPDATE password_reset_tokens SET used = 1 WHERE token = ?';
-      const [result] = await this.pool.execute(sql, [token]);
-      return result.affectedRows > 0;
+      const result = await this.query(sql, [cleanToken]);
+      return (result?.affectedRows || 0) > 0;
     } catch (error) {
       console.error('❌ Error marcando token como usado:', error.message);
       return false;
@@ -5290,13 +5322,10 @@ class MySQLCRM {
    */
   async cleanupExpiredTokens() {
     try {
-      if (!this.connected && !this.pool) {
-        await this.connect();
-      }
-
+      await this.ensurePasswordResetTokensTable();
       const sql = 'DELETE FROM password_reset_tokens WHERE expires_at < NOW() OR used = 1';
-      const [result] = await this.pool.execute(sql);
-      return result.affectedRows || 0;
+      const result = await this.query(sql);
+      return result?.affectedRows || 0;
     } catch (error) {
       console.error('❌ Error limpiando tokens expirados:', error.message);
       return 0;
@@ -5308,14 +5337,12 @@ class MySQLCRM {
    */
   async countRecentPasswordResetAttempts(email, hours = 1) {
     try {
-      if (!this.connected && !this.pool) {
-        await this.connect();
-      }
-
-      const sql = `SELECT COUNT(*) as count FROM password_reset_tokens 
+      await this.ensurePasswordResetTokensTable();
+      const h = Math.max(1, Number(hours) || 1);
+      const sql = `SELECT COUNT(*) as count FROM password_reset_tokens
                    WHERE email = ? AND created_at > DATE_SUB(NOW(), INTERVAL ? HOUR)`;
-      const [rows] = await this.pool.execute(sql, [email, hours]);
-      return rows[0]?.count || 0;
+      const rows = await this.query(sql, [email, h]);
+      return Number(rows?.[0]?.count || 0);
     } catch (error) {
       console.error('❌ Error contando intentos recientes:', error.message);
       return 0;
