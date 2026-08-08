@@ -432,55 +432,6 @@ canvas {
     to { opacity: 1; transform: translateX(0); }
 }
 
-/* Go to Top Button */
-.go-to-top {
-    position: fixed;
-    bottom: 30px;
-    right: 30px;
-    width: 50px;
-    height: 50px;
-    background: var(--farmadescaso-gradient);
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    cursor: pointer;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1000;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    transition: all 0.3s ease;
-    opacity: 0;
-    transform: translateY(20px);
-}
-
-.go-to-top.show {
-    display: flex;
-    opacity: 1;
-    transform: translateY(0);
-}
-
-.go-to-top:hover {
-    background: linear-gradient(135deg, var(--farmadescaso-primary-dark) 0%, var(--farmadescaso-primary) 100%);
-    transform: translateY(-5px);
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
-}
-
-.go-to-top i {
-    font-size: 1.2rem;
-}
-
-@media (max-width: 768px) {
-    .go-to-top {
-        bottom: 20px;
-        right: 20px;
-        width: 45px;
-        height: 45px;
-    }
-    
-    .go-to-top i {
-        font-size: 1rem;
-    }
-}
+/* Go to Top Button: estilos inyectados por /js/go-to-top.js (ScrollToTopButton) */
 
 

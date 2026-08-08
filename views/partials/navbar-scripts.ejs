@@ -4,12 +4,10 @@
         const sidebar = document.querySelector('.sidebar');
         if (!sidebar) return;
 
-        // Tooltips Bootstrap (para mostrar texto al pasar el ratón cuando el navbar está en modo iconos)
         try {
             if (typeof bootstrap !== 'undefined' && bootstrap.Tooltip) {
                 const tooltipTriggers = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
                 tooltipTriggers.forEach((el) => {
-                    // Evitar duplicados si algún template re-ejecuta
                     if (!bootstrap.Tooltip.getInstance(el)) {
                         new bootstrap.Tooltip(el, { trigger: 'hover focus', boundary: 'window' });
                     }
@@ -21,7 +19,6 @@
         sidebarOverlay.className = 'sidebar-overlay';
         document.body.appendChild(sidebarOverlay);
         
-        // Función para abrir/cerrar sidebar en móviles
         function toggleSidebar() {
             if (window.innerWidth <= 767) {
                 sidebar.classList.toggle('show');
@@ -29,7 +26,6 @@
             }
         }
         
-        // Agregar evento al botón de toggle del sidebar
         const sidebarToggle = document.getElementById('sidebarToggle');
         if (sidebarToggle) {
             sidebarToggle.addEventListener('click', function(e) {
@@ -38,13 +34,11 @@
             });
         }
         
-        // Cerrar sidebar al hacer clic en el overlay
         sidebarOverlay.addEventListener('click', function() {
             sidebar.classList.remove('show');
             sidebarOverlay.classList.remove('show');
         });
         
-        // Cerrar sidebar al hacer clic en un enlace del sidebar en móviles
         const sidebarLinks = sidebar.querySelectorAll('a');
         sidebarLinks.forEach(link => {
             link.addEventListener('click', function() {
@@ -55,7 +49,6 @@
             });
         });
         
-        // Ajustar sidebar al redimensionar ventana
         window.addEventListener('resize', function() {
             if (window.innerWidth > 767) {
                 sidebar.classList.remove('show');
@@ -65,36 +58,23 @@
     });
 </script>
 <script src="/js/notifications.js"></script>
+<script src="/js/go-to-top.js"></script>
 <script>
-  // Botón ARRIBA en todas las pantallas que incluyen este partial
+  // Asegura botón ARRIBA aunque el script se cargue tarde
   (function () {
-    function mountScrollToTop() {
-      function doInit() {
-        if (!window.ScrollToTopButton) return;
-        if (document.querySelector('[data-stt-mounted]')) return;
+    function boot() {
+      if (!window.ScrollToTopButton) return;
+      if (document.querySelector('[data-stt-mounted]')) {
+        // Re-aplica estilo ARRIBA si ya existía instancia vacía
         window.ScrollToTopButton.init({ text: 'ARRIBA' });
-      }
-      if (window.ScrollToTopButton) {
-        doInit();
         return;
       }
-      var existing = document.querySelector('script[src="/js/go-to-top.js"]');
-      if (existing) {
-        existing.addEventListener('load', doInit);
-        // Si ya estaba cargado
-        if (window.ScrollToTopButton) doInit();
-        return;
-      }
-      var s = document.createElement('script');
-      s.src = '/js/go-to-top.js';
-      s.onload = doInit;
-      document.body.appendChild(s);
+      window.ScrollToTopButton.init({ text: 'ARRIBA' });
     }
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', mountScrollToTop);
+      document.addEventListener('DOMContentLoaded', boot);
     } else {
-      mountScrollToTop();
+      boot();
     }
   })();
 </script>
-
