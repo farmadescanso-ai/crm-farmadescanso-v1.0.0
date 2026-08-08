@@ -17687,7 +17687,7 @@ app.get('/api/pedidos', requireAuth, async (req, res) => {
     const estado = (req.query.estado || 'todos').toLowerCase();
     const pedidos = await crm.getPedidos();
     const filtrados = pedidos.filter(p => {
-      const estadoActual = (p.Estado || p.estado || '').toLowerCase();
+      const estadoActual = (p.EstadoPedido || p.estadoPedido || p.Estado || p.estado || '').toLowerCase();
       if (estado === 'activos') {
         return estadoActual !== 'inactivo';
       }

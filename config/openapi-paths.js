@@ -477,6 +477,7 @@ module.exports = {
         {
           name: 'estado',
           in: 'query',
+          description: 'Filtro sobre EstadoPedido (activos = distinto de inactivo)',
           schema: { type: 'string', enum: ['todos', 'activos', 'inactivos'], default: 'todos' }
         }
       ],
@@ -502,14 +503,17 @@ module.exports = {
   '/api/pedidos/{id}/estado': {
     post: {
       tags: ['Pedidos'],
-      summary: 'Cambiar estado de pedido',
+      summary: 'Cambiar estado de pedido (campo EstadoPedido)',
       parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'integer' } }],
       requestBody: {
         content: {
           'application/json': {
             schema: {
               type: 'object',
-              properties: { estado: { type: 'string' } }
+              properties: {
+                estado: { type: 'string', description: 'Nuevo valor de EstadoPedido' },
+                EstadoPedido: { type: 'string', description: 'Alias aceptado si el handler lo mapea' }
+              }
             }
           }
         }
