@@ -11,11 +11,11 @@
 (function (global) {
   'use strict';
 
-  if (global.ScrollToTopButton && global.ScrollToTopButton.__farmav3) {
+  if (global.ScrollToTopButton && global.ScrollToTopButton.__farmav4) {
     return;
   }
 
-  var STYLE_ID = 'scroll-to-top-button-styles-v3';
+  var STYLE_ID = 'scroll-to-top-button-styles-v4';
   var INSTANCE_ATTR = 'data-stt-mounted';
   var DEFAULTS = {
     text: 'ARRIBA',
@@ -66,18 +66,19 @@
     '}',
     'button.stt-button .stt-ring {',
     '  position: absolute;',
-    '  inset: 0;',
+    '  inset: 0.2rem;',
     '  color: rgba(15, 118, 110, .9);',
     '  animation: stt-spin 14s linear infinite;',
     '  pointer-events: none;',
+    '  overflow: hidden;',
     '}',
-    'button.stt-button .stt-ring svg { display: block; width: 100%; height: 100%; }',
+    'button.stt-button .stt-ring svg { display: block; width: 100%; height: 100%; overflow: visible; }',
     'button.stt-button .stt-ring-text {',
     '  fill: currentColor;',
     '  font-family: system-ui, sans-serif;',
-    '  font-size: 16px;',
+    '  font-size: 13px;',
     '  font-weight: 800;',
-    '  letter-spacing: 0.12em;',
+    '  letter-spacing: 0.1em;',
     '  text-transform: uppercase;',
     '}',
     'button.stt-button .stt-arrow {',
@@ -99,13 +100,13 @@
 
   function ringMarkup(text, pathId) {
     var safe = String(text || 'ARRIBA').trim().toUpperCase() || 'ARRIBA';
-    // Dos vueltas para cubrir bien el perímetro con tipografía grande
-    var loop = safe + ' · ' + safe + ' · ' + safe + ' · ';
+    // Dos vueltas; radio interior (~38) deja micro-padding respecto al borde del botón
+    var loop = safe + ' · ' + safe + ' · ';
     return (
       '<span class="stt-ring" aria-hidden="true">' +
       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
-      '<defs><path id="' + pathId + '" d="M50,50 m-44,0 a44,44 0 1,1 88,0 a44,44 0 1,1 -88,0" fill="none"/></defs>' +
-      '<text class="stt-ring-text" font-size="15" font-weight="800">' +
+      '<defs><path id="' + pathId + '" d="M50,50 m-38,0 a38,38 0 1,1 76,0 a38,38 0 1,1 -76,0" fill="none"/></defs>' +
+      '<text class="stt-ring-text" font-size="13" font-weight="800" dominant-baseline="middle">' +
       '<textPath href="#' + pathId + '" startOffset="0%">' + loop + '</textPath></text>' +
       '</svg></span>'
     );
@@ -220,7 +221,7 @@
     init: init,
     destroy: destroy,
     defaults: DEFAULTS,
-    __farmav3: true
+    __farmav4: true
   };
 
   global.ScrollToTopButton = api;
