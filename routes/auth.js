@@ -19,10 +19,14 @@ router.get('/auth/login', (req, res) => {
   }
   
   const success = req.query.success === 'password_reset' ? 'Tu contraseña ha sido restablecida correctamente. Ya puedes iniciar sesión.' : null;
+  let error = null;
+  if (req.query.error === 'cuenta_desactivada') {
+    error = 'Tu cuenta está desactivada. Contacta con el administrador.';
+  }
   
   res.render('auth/login', {
     title: 'Iniciar Sesión - Farmadescaso',
-    error: null,
+    error: error,
     success: success,
     email: ''
   });
@@ -108,6 +112,23 @@ router.post('/auth/login', async (req, res) => {
     if (deps.isDevelopment) {
       console.log(`✅ [LOGIN] Comercial encontrado: ${comercial.Nombre || comercial.nombre} (ID: ${comercial.Id || comercial.id})`);
       console.log(`📋 [LOGIN] Campos disponibles:`, Object.keys(comercial));
+    }
+
+    // Comercial desactivado: no puede iniciar sesión
+    const activoRaw = comercial.Activo ?? comercial.activo;
+    const estaActivo = (activoRaw === undefined || activoRaw === null)
+      ? true
+      : (Number(activoRaw) === 1 || activoRaw === true || String(activoRaw) === '1');
+    if (!estaActivo) {
+      if (deps.isDevelopment) {
+        console.log(`⛔ [LOGIN] Comercial desactivado ID=${comercial.Id || comercial.id}`);
+      }
+      return res.render('auth/login', {
+        title: 'Iniciar Sesión - Farmadescaso',
+        error: 'Tu cuenta está desactivada. Contacta con el administrador.',
+        email: email || '',
+        debugInfo: deps.isDevelopment ? { paso: 3.5, motivo: 'Activo=0' } : undefined
+      });
     }
     
     // Verificar contraseña
@@ -603,6 +624,21 @@ router.post('/auth/forgot-password', async (req, res) => {
     // Por seguridad, siempre mostrar el mismo mensaje si el email existe o no
     // Esto previene enumeración de emails
     if (comercial) {
+      const activoRaw = comercial.Activo ?? comercial.activo;
+      const estaActivo = (activoRaw === undefined || activoRaw === null)
+        ? true
+        : (Number(activoRaw) === 1 || activoRaw === true || String(activoRaw) === '1');
+
+      // Desactivado: no enviar email de recuperación (mismo mensaje genérico)
+      if (!estaActivo) {
+        return res.render('auth/forgot-password', {
+          title: 'Recuperar Contraseña - Farmadescaso',
+          error: null,
+          success: 'Si el email existe en nuestro sistema, recibirás un enlace de recuperación en breve.',
+          email: emailNormalizado
+        });
+      }
+
       const comercialId = comercial.Id || comercial.id;
       const comercialEmail = comercial.Email || comercial.email || emailNormalizado;
       

@@ -183,6 +183,40 @@ class MySQLCRM {
     }
   }
 
+  async ensureComercialesActivoColumn() {
+    if (this._activoColumnEnsured) return;
+    this._activoColumnEnsured = true;
+
+    try {
+      if (!this.pool) return;
+      const dbName = this.config.database;
+      const [rows] = await this.pool.query(
+        `
+          SELECT COLUMN_NAME
+          FROM information_schema.COLUMNS
+          WHERE TABLE_SCHEMA = ?
+            AND TABLE_NAME = 'comerciales'
+            AND COLUMN_NAME = 'Activo'
+          LIMIT 1
+        `,
+        [dbName]
+      );
+
+      if (rows && rows.length > 0) return;
+
+      await this.pool.query(
+        `ALTER TABLE \`comerciales\`
+         ADD COLUMN \`Activo\` TINYINT(1) NOT NULL DEFAULT 1
+         COMMENT '1=activo, 0=desactivado'`
+      );
+      console.log("✅ [SCHEMA] Columna 'Activo' añadida a 'comerciales'");
+    } catch (error) {
+      // Sin permisos ALTER: la app sigue; el toggle fallará hasta aplicar el SQL manual.
+      this._activoColumnEnsured = false;
+      console.warn("⚠️ [SCHEMA] No se pudo asegurar columna Activo en comerciales:", error.message);
+    }
+  }
+
   async ensureComercialesReunionesNullable() {
     // Ejecutar solo una vez por ciclo de vida (importante en serverless).
     if (this._schemaEnsured) return;
@@ -283,6 +317,7 @@ class MySQLCRM {
 
       // Asegurar compatibilidad de esquema (evita errores tipo "Column 'meet_email' cannot be null").
       await this.ensureComercialesReunionesNullable();
+      await this.ensureComercialesActivoColumn();
       return true;
     } catch (error) {
       console.error('❌ Error conectando a MySQL:', error.message);
@@ -373,8 +408,18 @@ class MySQLCRM {
   }
 
   // COMERCIALES
+  _isActivoFlag(value) {
+    if (value === undefined || value === null) return true; // compatibilidad pre-migración
+    if (typeof value === 'boolean') return value;
+    const n = Number(value);
+    if (Number.isFinite(n)) return n === 1;
+    const s = String(value).trim().toLowerCase();
+    return s === '1' || s === 'true' || s === 'si' || s === 'sí' || s === 'activo';
+  }
+
   async getComerciales() {
     try {
+      await this.ensureComercialesActivoColumn();
       const sql = 'SELECT * FROM comerciales ORDER BY id ASC';
       const rows = await this.query(sql);
       console.log(`✅ Obtenidos ${rows.length} comerciales`);
@@ -388,6 +433,7 @@ class MySQLCRM {
 
   async getComercialByEmail(email) {
     try {
+      await this.ensureComercialesActivoColumn();
       const sql = 'SELECT * FROM comerciales WHERE LOWER(Email) = LOWER(?) OR LOWER(email) = LOWER(?) LIMIT 1';
       const rows = await this.query(sql, [email, email]);
       return rows.length > 0 ? rows[0] : null;
@@ -399,6 +445,7 @@ class MySQLCRM {
 
   async getComercialById(id) {
     try {
+      await this.ensureComercialesActivoColumn();
       // Intentar con ambas variantes de nombre de columna (id e Id)
       const sql = 'SELECT * FROM comerciales WHERE id = ? OR Id = ? LIMIT 1';
       const rows = await this.query(sql, [id, id]);
@@ -406,6 +453,35 @@ class MySQLCRM {
     } catch (error) {
       console.error('❌ Error obteniendo comercial por ID:', error.message);
       return null;
+    }
+  }
+
+  async isComercialActivo(id) {
+    try {
+      const comercial = await this.getComercialById(id);
+      if (!comercial) return false;
+      return this._isActivoFlag(comercial.Activo ?? comercial.activo);
+    } catch (error) {
+      console.error('❌ Error comprobando Activo del comercial:', error.message);
+      return true; // no bloquear a todos si falla la lectura
+    }
+  }
+
+  async setComercialActivo(id, activo) {
+    try {
+      await this.ensureComercialesActivoColumn();
+      if (!this.connected && !this.pool) {
+        await this.connect();
+      }
+      const flag = activo ? 1 : 0;
+      const [result] = await this.pool.execute(
+        'UPDATE comerciales SET Activo = ? WHERE Id = ? OR id = ?',
+        [flag, id, id]
+      );
+      return { affectedRows: result.affectedRows || 0, Activo: flag };
+    } catch (error) {
+      console.error('❌ Error actualizando Activo del comercial:', error.message);
+      throw error;
     }
   }
 
@@ -490,20 +566,22 @@ class MySQLCRM {
         ? String(plataformaPreferidaRaw).trim()
         : 'meet';
 
-      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual, plataforma_reunion_preferida) 
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+      const sql = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Activo, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual, plataforma_reunion_preferida) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
       const fijoMensualRaw = payload.fijo_mensual ?? payload.fijoMensual ?? payload.FijoMensual;
       let fijoMensual = 0;
       if (fijoMensualRaw !== undefined && fijoMensualRaw !== null && String(fijoMensualRaw).trim() !== '') {
         const n = Number(String(fijoMensualRaw).replace(',', '.'));
         fijoMensual = Number.isFinite(n) ? n : 0;
       }
+      const activoFlag = this._isActivoFlag(payload.Activo ?? payload.activo ?? 1) ? 1 : 0;
       const params = [
         payload.Nombre || payload.nombre || '',
         payload.Email || payload.email || '',
         payload.DNI || payload.dni || null,
         payload.Password || payload.password || null,
         payload.Roll ? (Array.isArray(payload.Roll) ? JSON.stringify(payload.Roll) : payload.Roll) : '["Comercial"]',
+        activoFlag,
         payload.Movil || payload.movil || null,
         payload.Direccion || payload.direccion || null,
         codigoPostalTexto || null,
@@ -513,8 +591,21 @@ class MySQLCRM {
         fijoMensual,
         plataformaPreferida
       ];
-      const [result] = await this.pool.execute(sql, params);
-      return { insertId: result.insertId, ...result };
+      try {
+        await this.ensureComercialesActivoColumn();
+        const [result] = await this.pool.execute(sql, params);
+        return { insertId: result.insertId, ...result };
+      } catch (insertErr) {
+        // Fallback si la columna Activo aún no existe en BD
+        if (String(insertErr.message || '').toLowerCase().includes('activo')) {
+          const sqlLegacy = `INSERT INTO comerciales (Nombre, Email, DNI, Password, Roll, Movil, Direccion, CodigoPostal, Poblacion, Id_Provincia, Id_CodigoPostal, fijo_mensual, plataforma_reunion_preferida) 
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+          const paramsLegacy = params.filter((_, i) => i !== 5);
+          const [result] = await this.pool.execute(sqlLegacy, paramsLegacy);
+          return { insertId: result.insertId, ...result };
+        }
+        throw insertErr;
+      }
     } catch (error) {
       console.error('❌ Error creando comercial:', error.message);
       throw error;

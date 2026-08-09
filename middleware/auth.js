@@ -13,6 +13,7 @@ const crypto = require('crypto');
  * @param {string} options.cookieName
  * @param {object} options.cookieConfig
  * @param {boolean} [options.isDevelopment]
+ * @param {(id: number|string) => Promise<boolean>} [options.isComercialActivo]
  */
 function createAuth(options) {
   const {
@@ -20,7 +21,8 @@ function createAuth(options) {
     jwtExpiresIn = '30d',
     cookieName,
     cookieConfig,
-    isDevelopment = false
+    isDevelopment = false,
+    isComercialActivo = null
   } = options;
 
   if (!jwtSecret) {
@@ -28,6 +30,74 @@ function createAuth(options) {
   }
   if (!cookieName) {
     throw new Error('createAuth: cookieName es obligatorio');
+  }
+
+  const activoCache = new Map(); // id -> { ok: boolean, at: number }
+  const ACTIVO_CACHE_MS = 20000;
+
+  async function assertComercialActivoOrLogout(req, res) {
+    if (!isComercialActivo || typeof isComercialActivo !== 'function') return true;
+    if (req.apiKeyAuth) return true;
+
+    const id = req.comercialId || req.session?.comercialId || req.user?.id;
+    if (!id) return true;
+
+    const now = Date.now();
+    const cached = activoCache.get(String(id));
+    let ok = cached && (now - cached.at) < ACTIVO_CACHE_MS ? cached.ok : null;
+    if (ok === null) {
+      try {
+        ok = await isComercialActivo(id);
+      } catch (e) {
+        console.warn('⚠️ [AUTH] No se pudo comprobar Activo:', e.message);
+        ok = true;
+      }
+      activoCache.set(String(id), { ok: !!ok, at: now });
+    }
+
+    if (ok) return true;
+
+    try {
+      res.clearCookie(cookieName, cookieConfig);
+      if (req.session) {
+        req.session.comercialId = null;
+        req.session.comercial = null;
+        if (typeof req.session.destroy === 'function') {
+          req.session.destroy(() => {});
+        }
+      }
+    } catch (_) {}
+
+    req.user = null;
+    req.comercialId = null;
+    req.comercial = null;
+
+    const originalUrl = String(req.originalUrl || req.url || '');
+    const pathOnly = originalUrl.split('?')[0];
+    const acceptHeader = req.headers.accept || '';
+    const acceptsJson = acceptHeader.includes('application/json');
+    const prefersHtml = acceptHeader.includes('text/html');
+    const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+    const isApiJsonRoute = pathOnly.startsWith('/api/') && !pathOnly.startsWith('/api-docs');
+
+    if (isAjax || (isApiJsonRoute && (acceptsJson || !prefersHtml))) {
+      res.status(403).json({
+        success: false,
+        error: 'Cuenta desactivada',
+        message: 'Tu cuenta está desactivada. Contacta con el administrador.',
+        redirect: '/auth/login?error=cuenta_desactivada'
+      });
+      return false;
+    }
+
+    res.redirect('/auth/login?error=cuenta_desactivada');
+    return false;
+  }
+
+  /** Invalidar caché al cambiar Activo (llamado desde rutas). */
+  function invalidateActivoCache(id) {
+    if (id == null) return;
+    activoCache.delete(String(id));
   }
 
   function parseRoll(rollValue) {
@@ -143,39 +213,42 @@ function createAuth(options) {
     next();
   }
 
-  const requireAuth = (req, res, next) => {
+  const requireAuth = async (req, res, next) => {
     try {
       if (req.apiKeyAuth) {
         return next();
       }
 
-      if (req.user && req.comercialId) {
-        return next();
+      const authenticated =
+        (req.user && req.comercialId) ||
+        (req.session && req.session.comercialId);
+
+      if (!authenticated) {
+        const originalUrl = String(req.originalUrl || req.url || '');
+        const pathOnly = originalUrl.split('?')[0];
+        const acceptHeader = req.headers.accept || '';
+        const acceptsJson = acceptHeader.includes('application/json');
+        const prefersHtml = acceptHeader.includes('text/html');
+        const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
+        const isApiJsonRoute =
+          pathOnly.startsWith('/api/') &&
+          !pathOnly.startsWith('/api-docs');
+
+        if (isAjax || (isApiJsonRoute && (acceptsJson || !prefersHtml))) {
+          return res.status(401).json({
+            success: false,
+            error: 'No autenticado',
+            redirect: '/auth/login'
+          });
+        }
+
+        return res.redirect('/auth/login');
       }
 
-      if (req.session && req.session.comercialId) {
-        return next();
-      }
+      const stillActive = await assertComercialActivoOrLogout(req, res);
+      if (!stillActive) return;
 
-      const originalUrl = String(req.originalUrl || req.url || '');
-      const pathOnly = originalUrl.split('?')[0];
-      const acceptHeader = req.headers.accept || '';
-      const acceptsJson = acceptHeader.includes('application/json');
-      const prefersHtml = acceptHeader.includes('text/html');
-      const isAjax = req.headers['x-requested-with'] === 'XMLHttpRequest';
-      const isApiJsonRoute =
-        pathOnly.startsWith('/api/') &&
-        !pathOnly.startsWith('/api-docs');
-
-      if (isAjax || (isApiJsonRoute && (acceptsJson || !prefersHtml))) {
-        return res.status(401).json({
-          success: false,
-          error: 'No autenticado',
-          redirect: '/auth/login'
-        });
-      }
-
-      return res.redirect('/auth/login');
+      return next();
     } catch (error) {
       console.error('❌ [AUTH] Error en requireAuth:', error.message);
       next(error);
@@ -335,7 +408,8 @@ function createAuth(options) {
     isComercial,
     getUsuarioRol,
     getComercialId,
-    getUserIsAdmin: isAdmin
+    getUserIsAdmin: isAdmin,
+    invalidateActivoCache
   };
 }
 

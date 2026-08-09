@@ -9,7 +9,9 @@ function createComercialesRoutes(deps) {
   const {
     crm,
     normalizeUTF8,
-    normalizeObjectUTF8
+    normalizeObjectUTF8,
+    invalidateActivoCache,
+    getComercialId
   } = deps;
 
   // GET /dashboard/comerciales
@@ -286,6 +288,39 @@ function createComercialesRoutes(deps) {
         error: error.message || 'Error al actualizar el comercial',
         isNew: false
       });
+    }
+  });
+
+  // POST /dashboard/comerciales/:id/toggle-activo — solo Admin (ruta ya protegida)
+  router.post('/:id/toggle-activo', async (req, res) => {
+    try {
+      const id = req.params.id;
+      const selfId = typeof getComercialId === 'function'
+        ? getComercialId(req)
+        : (req.comercialId || req.session?.comercialId || req.user?.id);
+
+      if (selfId != null && String(selfId) === String(id)) {
+        return res.redirect('/dashboard/comerciales?error=' + encodeURIComponent('No puedes desactivar tu propia cuenta.'));
+      }
+
+      const comercial = await crm.getComercialById(id);
+      if (!comercial) {
+        return res.redirect('/dashboard/comerciales?error=' + encodeURIComponent('Comercial no encontrado.'));
+      }
+
+      const actual = crm._isActivoFlag(comercial.Activo ?? comercial.activo);
+      const nuevo = !actual;
+      await crm.setComercialActivo(id, nuevo);
+
+      if (typeof invalidateActivoCache === 'function') {
+        invalidateActivoCache(id);
+      }
+
+      const q = nuevo ? 'comercial_activado' : 'comercial_desactivado';
+      return res.redirect(`/dashboard/comerciales?success=${q}`);
+    } catch (error) {
+      console.error('Error cambiando Activo del comercial:', error);
+      return res.redirect('/dashboard/comerciales?error=' + encodeURIComponent(error.message || 'No se pudo cambiar el estado.'));
     }
   });
 

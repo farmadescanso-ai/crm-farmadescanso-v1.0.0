@@ -70,10 +70,22 @@
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 <% } %>
+                <% if (query && query.success === 'comercial_activado') { %>
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>Comercial activado. Ya puede iniciar sesión.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
+                <% if (query && query.success === 'comercial_desactivado') { %>
+                <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                    <i class="fas fa-ban me-2"></i>Comercial desactivado. No podrá iniciar sesión ni usar el CRM.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                <% } %>
                 <% if (error || (query && query.error)) { %>
                 <div class="alert alert-danger alert-dismissible fade show" role="alert">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    <%= error || 'No se pudo completar la acción solicitada.' %>
+                    <%= error || (typeof query.error === 'string' ? query.error : 'No se pudo completar la acción solicitada.') %>
                     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                 </div>
                 <% } %>
@@ -87,6 +99,7 @@
                                 <th>Email</th>
                                 <th>DNI</th>
                                 <th>Rol</th>
+                                <th>Estado</th>
                                 <th>Móvil</th>
                                 <th>Provincia</th>
                                 <th class="text-center">Acciones</th>
@@ -99,7 +112,7 @@
                             %>
                             <% if (!comercialesList || comercialesList.length === 0) { %>
                             <tr>
-                                <td colspan="8" class="text-center text-muted py-4">
+                                <td colspan="9" class="text-center text-muted py-4">
                                     <i class="fas fa-inbox fa-2x mb-2"></i><br>
                                     No hay comerciales registrados
                                 </td>
@@ -127,24 +140,44 @@
                                     rollDisplay = String(comercial.Roll || 'Comercial');
                                 }
                             }
+                            const activoRaw = comercial.Activo ?? comercial.activo;
+                            const estaActivo = (activoRaw === undefined || activoRaw === null)
+                                ? true
+                                : (Number(activoRaw) === 1 || activoRaw === true || String(activoRaw) === '1');
+                            const comercialId = comercial.id || comercial.Id;
                             %>
-                            <tr class="comercial-row">
-                                <td><%= comercial.id || comercial.Id %></td>
+                            <tr class="comercial-row<%= estaActivo ? '' : ' table-secondary' %>">
+                                <td><%= comercialId %></td>
                                 <td><strong><%= comercial.Nombre || comercial.nombre %></strong></td>
                                 <td><%= comercial.Email || comercial.email %></td>
                                 <td><%= comercial.DNI || comercial.dni || '-' %></td>
                                 <td><span class="badge bg-info"><%= rollDisplay %></span></td>
+                                <td>
+                                    <% if (estaActivo) { %>
+                                    <span class="badge bg-success">Activo</span>
+                                    <% } else { %>
+                                    <span class="badge bg-secondary">Inactivo</span>
+                                    <% } %>
+                                </td>
                                 <td><%= comercial.Movil || comercial.movil || '-' %></td>
                                 <td><%= comercial.nombreProvincia || '-' %></td>
                                 <td class="text-center">
                                     <div class="btn-group" role="group">
-                                        <a class="btn btn-sm btn-outline-primary" title="Ver" href="/dashboard/comerciales/<%= comercial.id || comercial.Id %>">
+                                        <a class="btn btn-sm btn-outline-primary" title="Ver" href="/dashboard/comerciales/<%= comercialId %>">
                                             <i class="fas fa-eye"></i>
                                         </a>
-                                        <a class="btn btn-sm btn-outline-warning" title="Editar" href="/dashboard/comerciales/<%= comercial.id || comercial.Id %>/editar">
+                                        <a class="btn btn-sm btn-outline-warning" title="Editar" href="/dashboard/comerciales/<%= comercialId %>/editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="/dashboard/comerciales/<%= comercial.id || comercial.Id %>/eliminar" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar este comercial? Esta acción no se puede deshacer.');">
+                                        <form action="/dashboard/comerciales/<%= comercialId %>/toggle-activo" method="POST" class="d-inline"
+                                              onsubmit="return confirm('<%= estaActivo ? '¿Desactivar este comercial? No podrá iniciar sesión ni usar el CRM.' : '¿Activar este comercial?' %>');">
+                                            <button type="submit"
+                                                    class="btn btn-sm <%= estaActivo ? 'btn-outline-success' : 'btn-outline-secondary' %>"
+                                                    title="<%= estaActivo ? 'Desactivar' : 'Activar' %>">
+                                                <i class="fas <%= estaActivo ? 'fa-toggle-on' : 'fa-toggle-off' %>"></i>
+                                            </button>
+                                        </form>
+                                        <form action="/dashboard/comerciales/<%= comercialId %>/eliminar" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar este comercial? Esta acción no se puede deshacer.');">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
                                                 <i class="fas fa-trash"></i>
                                             </button>

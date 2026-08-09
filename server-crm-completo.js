@@ -911,7 +911,16 @@ const auth = createAuth({
   jwtExpiresIn: JWT_EXPIRES_IN,
   cookieName: COOKIE_NAME,
   cookieConfig,
-  isDevelopment
+  isDevelopment,
+  isComercialActivo: async (id) => {
+    try {
+      if (!crm.connected) await crm.connect();
+      return await crm.isComercialActivo(id);
+    } catch (e) {
+      console.warn('⚠️ [AUTH] isComercialActivo falló:', e.message);
+      return true;
+    }
+  }
 });
 const {
   parseRoll,
@@ -929,7 +938,8 @@ const {
   isComercial,
   getUsuarioRol,
   getComercialId,
-  getUserIsAdmin
+  getUserIsAdmin,
+  invalidateActivoCache
 } = auth;
 
 app.use(attachJwtFromCookie);
@@ -1567,7 +1577,9 @@ const { createComercialesApiRoutes } = createComercialesRoutes;
 app.use('/dashboard/comerciales', requireAuth, requireAdmin, createComercialesRoutes({
   crm,
   normalizeUTF8,
-  normalizeObjectUTF8
+  normalizeObjectUTF8,
+  invalidateActivoCache,
+  getComercialId
 }));
 app.use('/api/comerciales', requireAuth, createComercialesApiRoutes({
   crm,
