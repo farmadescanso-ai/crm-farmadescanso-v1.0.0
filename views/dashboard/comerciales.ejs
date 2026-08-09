@@ -30,6 +30,33 @@
         .comercial-row:hover {
             background-color: rgba(11, 137, 27, 0.05);
         }
+        #modalConfirmacionComercial .modal-content {
+            border: 1px solid var(--farmadescaso-border, #e2e8e4);
+            border-radius: var(--farmadescaso-radius, 10px);
+            box-shadow: var(--farmadescaso-shadow-lg, 0 8px 24px rgba(26, 46, 34, 0.1));
+            font-family: var(--farmadescaso-font, 'DM Sans', system-ui, sans-serif);
+        }
+        #modalConfirmacionComercial .modal-header {
+            border-bottom: 1px solid var(--farmadescaso-border, #e2e8e4);
+            background: #fff;
+            padding: 1rem 1.15rem;
+        }
+        #modalConfirmacionComercial .modal-title {
+            font-weight: 650;
+            color: var(--farmadescaso-text-primary, #1a2e22);
+            font-size: 1.05rem;
+        }
+        #modalConfirmacionComercial .modal-body {
+            color: var(--farmadescaso-text-secondary, #64748b);
+            padding: 1.15rem;
+            font-size: 0.95rem;
+        }
+        #modalConfirmacionComercial .modal-footer {
+            border-top: 1px solid var(--farmadescaso-border, #e2e8e4);
+            background: #fff;
+            padding: 0.85rem 1.15rem;
+            gap: 0.5rem;
+        }
     </style>
 
     <%- include('../partials/navbar-styles') %></head>
@@ -169,19 +196,24 @@
                                         <a class="btn btn-sm btn-outline-warning" title="Editar" href="/dashboard/comerciales/<%= comercialId %>/editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        <form action="/dashboard/comerciales/<%= comercialId %>/toggle-activo" method="POST" class="d-inline"
-                                              onsubmit="return confirm('<%= estaActivo ? '¿Desactivar este comercial? No podrá iniciar sesión ni usar el CRM.' : '¿Activar este comercial?' %>');">
-                                            <button type="submit"
-                                                    class="btn btn-sm <%= estaActivo ? 'btn-outline-success' : 'btn-outline-secondary' %>"
-                                                    title="<%= estaActivo ? 'Desactivar' : 'Activar' %>">
-                                                <i class="fas <%= estaActivo ? 'fa-toggle-on' : 'fa-toggle-off' %>"></i>
-                                            </button>
-                                        </form>
-                                        <form action="/dashboard/comerciales/<%= comercialId %>/eliminar" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de eliminar este comercial? Esta acción no se puede deshacer.');">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Eliminar">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
+                                        <button type="button"
+                                                class="btn btn-sm <%= estaActivo ? 'btn-outline-success' : 'btn-outline-secondary' %> btn-confirm-action"
+                                                title="<%= estaActivo ? 'Desactivar' : 'Activar' %>"
+                                                data-action-url="/dashboard/comerciales/<%= comercialId %>/toggle-activo"
+                                                data-action-title="<%= estaActivo ? 'Desactivar comercial' : 'Activar comercial' %>"
+                                                data-action-message="<%= estaActivo ? '¿Desactivar este comercial? No podrá iniciar sesión ni usar el CRM.' : '¿Activar este comercial? Podrá iniciar sesión y usar el CRM.' %>"
+                                                data-confirm-class="<%= estaActivo ? 'btn-warning' : 'btn-success' %>">
+                                            <i class="fas <%= estaActivo ? 'fa-toggle-on' : 'fa-toggle-off' %>"></i>
+                                        </button>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger btn-confirm-action"
+                                                title="Eliminar"
+                                                data-action-url="/dashboard/comerciales/<%= comercialId %>/eliminar"
+                                                data-action-title="Eliminar comercial"
+                                                data-action-message="¿Estás seguro de eliminar este comercial? Esta acción no se puede deshacer."
+                                                data-confirm-class="btn-danger">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -194,8 +226,66 @@
         </div>
     </div>
 
+    <!-- Modal confirmación (activar / desactivar / eliminar) -->
+    <div class="modal fade" id="modalConfirmacionComercial" tabindex="-1" aria-labelledby="modalConfirmacionComercialLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalConfirmacionComercialLabel">
+                        <i class="fas fa-exclamation-circle me-2 text-primary"></i>
+                        <span id="modalConfirmacionTitulo">Confirmar</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-0" id="modalConfirmacionMensaje"></p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="modalConfirmacionAceptar">Aceptar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <form id="formConfirmacionComercial" method="POST" class="d-none" aria-hidden="true"></form>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="/js/go-to-top.js"></script>
+    <script>
+      (function () {
+        const modalEl = document.getElementById('modalConfirmacionComercial');
+        const formEl = document.getElementById('formConfirmacionComercial');
+        const titleEl = document.getElementById('modalConfirmacionTitulo');
+        const msgEl = document.getElementById('modalConfirmacionMensaje');
+        const acceptBtn = document.getElementById('modalConfirmacionAceptar');
+        if (!modalEl || !formEl || !acceptBtn) return;
+
+        const modal = new bootstrap.Modal(modalEl);
+
+        document.querySelectorAll('.btn-confirm-action').forEach((btn) => {
+          btn.addEventListener('click', function () {
+            const url = btn.getAttribute('data-action-url');
+            const title = btn.getAttribute('data-action-title') || 'Confirmar';
+            const message = btn.getAttribute('data-action-message') || '¿Confirmas esta acción?';
+            const confirmClass = btn.getAttribute('data-confirm-class') || 'btn-primary';
+
+            formEl.setAttribute('action', url);
+            titleEl.textContent = title;
+            msgEl.textContent = message;
+
+            acceptBtn.className = 'btn ' + confirmClass;
+            acceptBtn.textContent = 'Aceptar';
+            modal.show();
+          });
+        });
+
+        acceptBtn.addEventListener('click', function () {
+          if (!formEl.getAttribute('action')) return;
+          formEl.submit();
+        });
+      })();
+    </script>
 
     <!-- Go to Top Button -->
     <button id="goToTop" class="go-to-top" title="Ir arriba">
