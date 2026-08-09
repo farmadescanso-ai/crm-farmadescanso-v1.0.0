@@ -420,10 +420,28 @@ class MySQLCRM {
   async getComerciales() {
     try {
       await this.ensureComercialesActivoColumn();
-      const sql = 'SELECT * FROM comerciales ORDER BY id ASC';
-      const rows = await this.query(sql);
+      let rows;
+      try {
+        rows = await this.query(
+          'SELECT * FROM comerciales ORDER BY Activo DESC, Nombre ASC'
+        );
+      } catch (orderErr) {
+        // Fallback si Activo aún no existe en BD
+        console.warn('⚠️ [COMERCIALES] ORDER BY Activo no disponible, ordenando en memoria:', orderErr.message);
+        rows = await this.query('SELECT * FROM comerciales ORDER BY Nombre ASC');
+        rows = (Array.isArray(rows) ? rows : []).slice().sort((a, b) => {
+          const aAct = this._isActivoFlag(a.Activo ?? a.activo) ? 1 : 0;
+          const bAct = this._isActivoFlag(b.Activo ?? b.activo) ? 1 : 0;
+          if (bAct !== aAct) return bAct - aAct;
+          const aName = String(a.Nombre || a.nombre || '').localeCompare(
+            String(b.Nombre || b.nombre || ''),
+            'es',
+            { sensitivity: 'base' }
+          );
+          return aName;
+        });
+      }
       console.log(`✅ Obtenidos ${rows.length} comerciales`);
-      // Asegurar que siempre devolvemos un array
       return Array.isArray(rows) ? rows : [];
     } catch (error) {
       console.error('❌ Error obteniendo comerciales:', error.message);
